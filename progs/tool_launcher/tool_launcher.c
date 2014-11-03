@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mount.h>
 
 #define SYSERROR -1
 #define EXIT_SUCCESS 0
@@ -114,7 +115,8 @@ char *messages[] = {
   "Execve failure",
   "Can't get working directory",
   "Working directory outside root",
-  "Couldn't chdir to working directory after chroot"
+  "Couldn't chdir to working directory after chroot",
+  "Couldn't mount procfs on the /proc"
 };
 
 static void giveup(int code, int errn)
@@ -303,6 +305,15 @@ int main(int argc, char *argv[])
   cwd_is_root = strlen(root) == strlen(cwd);
   if(!testing && chdir(cwd_is_root?"/":newcwd) == SYSERROR) {
     giveup(chdir_after_chroot_failure, errno);
+  }
+
+  /* 如果 / 下有个 proc 的目录, 则将 proc 伪文件系统 mount 上.
+   * 有些应用程序需要 proc 获得系统和进程信息, 如 quartus, vcs 等. */
+  struct stat sb;
+  if ((stat("/proc", &sb) == 0) && (S_IFDIR & sb.st_mode)) {
+    if (mount("none", "/proc", "proc", MS_RDONLY, NULL) == -1) {
+      giveup(mount_proc_failure, errno);
+    }
   }
 
   /* Change effective user id back to real user id. */
