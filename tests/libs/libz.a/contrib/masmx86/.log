@@ -1,0 +1,5 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: gvmat32.asm -> 0x9695914c 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: gvmat32c.c -> 0x9695914d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: inffas32.asm -> 0x9695914e 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: mkasm.bat -> 0x9695914f 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: readme.txt -> 0x96959150 23:35:44 02-12-2009

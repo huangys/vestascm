@@ -1,0 +1,42 @@
+#! /bin/sh
+# 
+# Print change history of a Vesta package.
+#
+# Usage: vhistory [-v] vestapackage
+# vestapackage can be either absolute or relative to DefaultPackageParent
+# With the -v flag, prints all the attributes of each version; without it,
+#   prints only the change message.
+#
+# This should probably be reimplemented in C, using the skeleton of vlatest.
+# Limitations of the sh version:
+#   - Should have an -m flag to look in the master repository.  Without
+#     this, you see only the versions that happen to be in your repository.
+#   - The sorting is crude.
+#   - The way vattrib has to be used inside of find is ugly.  
+#     We need a vattrib feature similar to vattrib -q -i but that works
+#     on the type tag (and master/nonmaster status).
+#   - It would be nice to be able to print different subsets of the attribs.
+
+vattrib_args='-g message'
+case $1 in
+  -v) vattrib_args='' ; shift ;;
+  *) ;;
+esac
+
+pkg=`echo $1 | sed 's:/*$::'`
+len=`echo $pkg | sed 's:/*$:/:' | wc -c | sed 's/ //g'`
+
+cd `vgetconfig UserInterface DefaultPackageParent`
+if vattrib -q -i type package $pkg ; then
+    :
+else
+    echo 1>&2 \"$pkg\" is not a package
+    exit 1
+fi
+find $pkg/ -name checkout -prune \
+	  -o -exec sh -c 'test `vattrib -T $0` = immutableDirectory' {} \; \
+             -print -prune |\
+   sort -r -k 1.${len}nr |\
+   awk '{ print "echo ==========; echo ", $0,\
+          "; echo ==========; vattrib '"$vattrib_args"'", $0 }' |\
+   sh

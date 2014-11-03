@@ -1,0 +1,117 @@
+#!/bin/sh
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+# Mount the repository locally.  Assumes it is already running on the
+# host specified in the active vesta.cfg file.
+
+# Pick up parameters from vesta.cfg
+MountFlags=`vgetconfig Repository MountFlags 2>/dev/null || echo "-S -I"`
+VolatileMountFlags=`vgetconfig Run_Tool VolatileMountFlags 2>/dev/null \
+                    || echo "-I"`
+NFS_host=`vgetconfig Repository NFS_host`
+NFS_port=`vgetconfig Repository NFS_port`
+AppendableRootName=`vgetconfig UserInterface AppendableRootName`
+MutableRootName=`vgetconfig UserInterface MutableRootName`
+VolatileRootName=`vgetconfig Run_Tool VolatileRootName`
+
+# Note which operating system we're on
+uname=`uname`
+
+# Define function to mount one of the repository's roots
+# do_vmount <root handle number> <mount point> <flags for vmount>
+do_vmount()
+{
+  handle=$1; shift
+  root=$1; shift
+  flags=$*
+
+  # If the mount point doesn't exist, try to create it
+  if [ ! -d $root ] ; then 
+    mkdir $root || return 1
+  elif df $root | grep -q $root ; then
+    # If it's already mounted, don't try to mount it again
+    echo $0: $root already mounted
+    return 0
+  fi
+
+  # Mount the repository
+  vmount -p $NFS_port $flags $NFS_host $handle $root || return 1
+
+  # On Linux, we need to do some extra work to get our mounts
+  # recognized by df and into /etc/mtab
+  if [ $uname = "Linux" ]; then
+    mount -f $NFS_host:$NFS_port/$handle $root
+  fi
+
+  # Indicate that all is well
+  return 0
+}
+
+# This function does all the real work of the script.
+do_mountrepos()
+{
+  # Mount the appendable root
+  do_vmount 0    $AppendableRootName $MountFlags
+
+  # Mount the mutable root
+  do_vmount 0001 $MutableRootName    $MountFlags
+
+  # Quit if the mutable root isn't mounted.  Note that do_mount might
+  # have returned 1 because the mutable root was *already* mounted, and
+  # we don't want to quit in that case.
+  if df $MutableRootName | grep -q $NFS_host.$NFS_port ; then
+    true
+  else
+    exit 1
+  fi
+
+  # Mount the volatile root
+  do_vmount 0002 $VolatileRootName   $VolatileMountFlags
+}
+
+# Run the function that does all the work in a background process.
+# Wait up to 60 seconds for it to complete.  If it completes, pass on
+# its exit status as our own.  If it doesn't complete within that time
+# (maybe the repository daemon is down or wedged?), exit the main
+# process but the leave the background one running.  It might complete
+# later, or it might fail.
+
+do_mountrepos < /dev/null &
+bg_pid=$!
+
+# On some systems this works and allows us to take less than 1 second
+# total when the mount completes quickly.
+sleep 0.1 > /dev/null 2>&1
+
+timeout=60
+while kill -0 $bg_pid >/dev/null 2>&1; do
+    if [ $timeout -eq 0 ]; then
+        echo "$0: timed out, continuing in background"
+	exit 1
+    fi
+    sleep 1
+    timeout=`expr $timeout - 1`
+done
+
+wait $bg_pid
+RETVAL=$?
+exit $RETVAL

@@ -1,0 +1,12 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: PkgBuild.C -> 0x9c44d54e 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: WeederConfig.C -> 0xb67575bd 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: RootTbl.C -> 0x9c44d573 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: PrintWeederVars.C -> 0xb30f0d6d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: PkgBuild.H -> 0x9c44d54d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: WeederConfig.H -> 0xb67575be 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: RootTbl.H -> 0x9c44d55d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.am -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: NEWS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: README -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: AUTHORS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChangeLog -> literal 23:35:44 02-12-2009

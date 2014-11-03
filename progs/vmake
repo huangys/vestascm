@@ -1,0 +1,104 @@
+#! /bin/sh -f
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+#
+# vmake
+#   Shell script to invoke vadvance, then
+#   invoke the evaluator on the new(est) version.
+#
+# Environment:
+#   Add default flags for evaluator by setting $VESTAFLAGS.
+#
+# Configuration:
+#   If VESTAFLAGS is not set, a default is taken from
+#     [UserInterface]vestaflags in the vesta.cfg file.
+#
+#   If vesta.cfg does not set a default, the default is ''
+#
+
+# Test whether the current working directory is in the Vesta
+# reposuitory and has a particular type
+
+cwd_isa()
+{
+    vattrib -q -C $1 > /dev/null 2>&1
+    return $?
+}
+
+# Could the current working directory be a subdirectory of a Vesta
+# checkout working directory?
+
+maybe_inside_wd()
+{
+    if cwd_isa mutableDirectory; then
+	if vattrib -q -G session-dir > /dev/null 2>&1; then
+	    # Mutable directory with a session-dir attribute: this is the
+	    # working directory, so we're done
+	    return 1
+	fi
+    elif ! cwd_isa immutableDirectory; then
+	# Neither a mutable directory nor an immutable directory: not
+	# inside a working directory
+	return 1
+    fi
+    return 0
+}
+
+# Find the enclosing working directory of the current working
+# directory (if any).
+
+enclosing_wd()
+{
+    while maybe_inside_wd; do
+	cd ..
+    done
+    if ! cwd_isa mutableDirectory; then
+	return 1
+    fi
+    pwd
+    return 0
+}
+
+wd=`enclosing_wd`
+if [ -n "$wd" ]; then
+  # Get syubdirectory of the working directory, if any
+  dir_sub=`pwd | sed -e "s|^$wd||;"`
+  # In working directory: try to advance
+  vadvance $wd || exit $?
+  session_ver_arc=`vattrib -q -G session-ver-arc $wd`
+  # Strip canonical root from session-dir, making it relative to the
+  # repository root
+  session_dir=`vattrib -G session-dir $wd | sed -e "s/^\/vesta\///"`
+  # cd to the repository root (wherever it's mounted), then into the
+  # latest snapshot by a relative path.
+  cd `vgetconfig UserInterface AppendableRootName`
+  cd $session_dir/$session_ver_arc$dir_sub
+else 
+  # Just run vesta in the current directory
+  echo 'vmake: Not in working directory; vadvance omitted'
+fi
+
+interp=`vgetconfig UserInterface Interpreter`
+vestaflags=${VESTAFLAGS-`\
+  vgetconfig UserInterface vestaflags 2>/dev/null || true`}
+
+exec $interp $vestaflags $* 

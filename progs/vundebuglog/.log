@@ -1,0 +1,8 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vundebuglog.C -> 0x8a97e598 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: VestaLog.H -> 0xba5237f4 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: VestaLogPrivate.H -> 0xbcea4f61 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.am -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: NEWS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: README -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: AUTHORS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChangeLog -> literal 23:35:44 02-12-2009

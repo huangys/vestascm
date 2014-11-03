@@ -1,0 +1,138 @@
+/* ReposConfig.h.in.  Generated from configure.ac by autoheader.  */
+
+/* authunix_parms.gid is type int */
+#undef AUTHUNIX_PARMS_GID_T_GID
+
+/* authunix_parms.gid is type int */
+#undef AUTHUNIX_PARMS_INT_GID
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `initstate_r' function. */
+#undef HAVE_INITSTATE_R
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `random' function. */
+#undef HAVE_RANDOM
+
+/* Define to 1 if you have the `random_r' function. */
+#undef HAVE_RANDOM_R
+
+/* Define to 1 if you have the `rand_r' function. */
+#undef HAVE_RAND_R
+
+/* Define to 1 if you have the `srandom' function. */
+#undef HAVE_SRANDOM
+
+/* Define to 1 if you have the `statfs' function. */
+#undef HAVE_STATFS
+
+/* Define to 1 if you have the `statvfs' function. */
+#undef HAVE_STATVFS
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/mount.h> header file. */
+#undef HAVE_SYS_MOUNT_H
+
+/* Define to 1 if you have the <sys/param.h> header file. */
+#undef HAVE_SYS_PARAM_H
+
+/* Define to 1 if you have the <sys/statfs.h> header file. */
+#undef HAVE_SYS_STATFS_H
+
+/* Define to 1 if you have the <sys/statvfs.h> header file. */
+#undef HAVE_SYS_STATVFS_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `_authenticate' function. */
+#undef HAVE__AUTHENTICATE
+
+/* Define to 1 if you have the `__authenticate' function. */
+#undef HAVE___AUTHENTICATE
+
+/* initstate_r takes arguments (unsigned int, char *, size_t, char **, struct
+   random_data *) */
+#undef INITSTATE_R_ARGS_SEED_STATE_SIZE_CHARPP_RD
+
+/* initstate_r takes arguments (unsigned int, char *, size_t, struct
+   random_data *) */
+#undef INITSTATE_R_ARGS_SEED_STATE_SIZE_RD
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* random_r takes arguments (int *, struct random_data *) */
+#undef RANDOM_R_ARGS_INT_RANDOM_DATA
+
+/* random_r takes arguments (struct random_data *, int *) */
+#undef RANDOM_R_ARGS_RANDOM_DATA_INT
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* SVCXPRT has the xp_fd field */
+#undef SVCXPRT_XP_FD
+
+/* SVCXPRT has the xp_sock field */
+#undef SVCXPRT_XP_SOCK
+
+/* svc_freeargs works in C++ as-is */
+#undef SVC_FREEARGS_WORKS_AS_IS
+
+/* svc_freeargs works in C++ with xp_freeargs type correction */
+#undef SVC_FREEARGS_WORKS_WITH_TYPE_FIX
+
+/* svc_getargs works in C++ as-is */
+#undef SVC_GETARGS_WORKS_AS_IS
+
+/* svc_getargs works in C++ with xp_getargs type correction */
+#undef SVC_GETARGS_WORKS_WITH_TYPE_FIX
+
+/* svc_recv works in C++ as-is */
+#undef SVC_RECV_WORKS_AS_IS
+
+/* svc_recv works in C++ with xp_recv type correction */
+#undef SVC_RECV_WORKS_WITH_TYPE_FIX
+
+/* Version number of package */
+#undef VERSION

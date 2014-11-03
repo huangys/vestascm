@@ -1,0 +1,4 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: datastart.c -> 0x9e58bb9a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: dataend.c -> 0x9e58bb9b 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: MacOS_config.h -> 0x9e58bb9c 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: MacOS_Test_config.h -> 0x9e58bb9d 23:35:44 02-12-2009

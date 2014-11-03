@@ -1,0 +1,15 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChangeLogUnzip -> 0x96959151 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: crypt.h -> 0x96959152 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ioapi.c -> 0x96959153 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ioapi.h -> 0x96959154 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: iowin32.c -> 0x96959155 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: iowin32.h -> 0x96959156 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile -> 0x96959157 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: miniunz.c -> 0x96959158 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: minizip.c -> 0x96959159 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: mztools.c -> 0x9695915a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: mztools.h -> 0x9695915b 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: unzip.c -> 0x9695915c 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: unzip.h -> 0x9695915d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zip.c -> 0x9695915e 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zip.h -> 0x9695915f 23:35:44 02-12-2009

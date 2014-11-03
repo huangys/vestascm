@@ -1,0 +1,3 @@
+lib_LIBRARIES = libVestaCacheCommon.a
+libVestaCacheCommon_a_SOURCES = BitVector.C CacheArgs.C CacheConfig.C CacheIndex.C CacheIntf.C CacheState.C CompactFV.C Debug.C Derived.C FV.C FV2.C GraphLog.C ImmutableVal.C LookupStats.C NewVal.C PKPrefix.C PrefixTbl.C ReadConfig.C TextIO.C Timer.C VestaVal.C BitVector.H CacheArgs.H CacheConfig.H CacheIndex.H CacheIntf.H CacheState.H CompactFV.H Debug.H Derived.H FV.H FV2.H GraphLog.H ImmutableVal.H LookupStats.H Model.H NewVal.H PKEpoch.H PKPrefix.H PrefixTbl.H ReadConfig.H TextIO.H Timer.H VestaVal.H
+INCLUDES = -I../libVestaReposUI.a -I../libVestaReposLeaf.a -I../libVestaFP.a -I../libVestaLog.a -I../libVestaSRPC.a -I../libVestaConfig.a -I../libz.a -I../libOS.a -I../libGenerics.a -I../libBasics.a -I../libpcre

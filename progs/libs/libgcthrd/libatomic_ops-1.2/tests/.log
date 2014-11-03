@@ -1,0 +1,11 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: CVS -> directory 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.am -> 0xb08fa2c9 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.in -> 0xb08fa2ca 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: list_atomic.template -> 0xb08fa2cb 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: run_parallel.inc -> 0xb08fa2cc 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: test_atomic.c -> 0xb08fa2cd 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: test_atomic.template -> 0xb08fa2ce 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: test_atomic_include.h -> 0xb08fa2cf 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: test_malloc.c -> 0xb08fa2d0 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: test_stack.c -> 0xb08fa2d1 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: list_atomic.c -> 0xb08fa2d2 23:35:44 02-12-2009

@@ -1,0 +1,11 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.am -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: CacheC.C -> 0xa8354ef4 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ParCacheC.C -> 0x8a5fe2bd 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: WeederC.C -> 0xb3043b29 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: CacheC.H -> 0xa8354ef3 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ParCacheC.H -> 0x9d3b7e10 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: WeederC.H -> 0xb22ec432 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: NEWS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: README -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: AUTHORS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChangeLog -> literal 23:35:44 02-12-2009

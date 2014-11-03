@@ -1,0 +1,10 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: AssemblyInfo.cs -> 0x96959128 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChecksumImpl.cs -> 0x96959129 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: CircularBuffer.cs -> 0x9695912a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: CodecBase.cs -> 0x9695912b 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Deflater.cs -> 0x9695912c 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: DotZLib.cs -> 0x9695912d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: DotZLib.csproj -> 0x9695912e 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: GZipStream.cs -> 0x9695912f 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Inflater.cs -> 0x96959130 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: UnitTests.cs -> 0x96959131 23:35:44 02-12-2009

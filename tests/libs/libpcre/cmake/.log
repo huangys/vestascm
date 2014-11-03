@@ -1,0 +1,3 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: COPYING-CMAKE-SCRIPTS -> 0xa5410009 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: FindPackageHandleStandardArgs.cmake -> 0xa541000a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: FindReadline.cmake -> 0xa541000b 23:35:44 02-12-2009

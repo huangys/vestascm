@@ -1,0 +1,3 @@
+lib_LIBRARIES = libVestaReposLeaf.a
+libVestaReposLeaf_a_SOURCES = ArcTable.C ShortIdBlock.C SourceOrDerived.C ShortIdClient.C VDirSurrogate.C VDirSurrogateOnly.C VestaSourceAtomic.C VestaSourceCommon.C AccessControlClient.C ReposStats.C VestaSourceSRPC.C perfDebugControl.C VSStream.C AccessControl.H ArcTable.H Evaluator_Dir_SRPC.H Mastership.H ReadersWritersLock.H SourceOrDerived.H VDirSurrogate.H VestaAttribs.H VestaSource.H VestaSourceAtomic.H VLeaf.H VRErrorCode.H CharsSeq.H ShortIdKey.H ReposStats.H ReposStatsSRPC.H perfDebugControl.H VSStream.H
+INCLUDES = -I../libVestaFP.a -I../libVestaLog.a -I../libVestaSRPC.a -I../libVestaConfig.a -I../libz.a -I../libOS.a -I../libGenerics.a -I../libBasics.a -I../libpcre

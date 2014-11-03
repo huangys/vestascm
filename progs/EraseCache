@@ -1,0 +1,147 @@
+#! /bin/sh
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+# messages
+syntax="SYNTAX: EraseCache [ -f ] [ -v ]"
+abort="Nothing erased."
+
+# process command line
+force=0
+verb=0
+
+while [ $# -gt 0 ]; do
+  case $1 in
+  -f)
+    force=1
+    ;;
+  -v)
+    verb=1
+    ;;
+  *)
+    echo "Unrecognized argument: $1"
+    echo $syntax
+    ;;
+  esac
+  shift
+done
+
+# set directory names to correspond to configuration file
+MetaDataRoot=`vgetconfig CacheServer MetaDataRoot`
+MetaDataDir=`vgetconfig CacheServer MetaDataDir`
+SCacheDir=`vgetconfig CacheServer SCacheDir`
+SVarsDir=`vgetconfig CacheServer StableVarsDir`
+WeededLogDir=`vgetconfig CacheServer WeededLogDir`
+CacheLogDir=`vgetconfig CacheServer CacheLogDir`
+EmptyPKLogDir=`vgetconfig CacheServer EmptyPKLogDir`
+GraphLogDir=`vgetconfig CacheServer GraphLogDir`
+CILogDir=`vgetconfig CacheServer CILogDir`
+
+# weeder stable files
+WMetaDataDir=`vgetconfig Weeder MetaDataDir`
+
+# set "MetaDataRoot" if empty
+if [ -z "$MetaDataRoot" ]; then
+  MetaDataRoot=.
+fi
+
+# print cache directory
+CacheDir=$MetaDataRoot/$MetaDataDir
+echo "Cache directory:"
+echo "  $CacheDir"
+
+# ask for confirmation
+if [ $force -ne 1 ]; then
+  echo " "
+  echo 'Warning! You should never erase a stable cache that is in use'
+  echo 'by some cache server. Doing so will most cause the cache server'
+  echo 'to crash and may lead to data corruption and strange errors '
+  echo 'after the facts.'
+  echo " "
+  echo -n "Are you sure you want to erase this cache (y/n)? "
+  read response
+  case $response in
+  [yY]*)
+    ;;
+  *)
+    echo " "
+    echo $abort
+    exit 0
+    ;;
+  esac
+fi
+
+# Abort if the cache server is up
+if VCacheMonitor -check > /dev/null 2>&1; then
+  echo
+  echo "---------------FATAL ERROR---------------"
+  echo "The cache server seems to be running!"
+  echo "---------------FATAL ERROR---------------"
+  echo
+  echo $abort
+  exit 1
+fi
+
+# delete log files
+echo " "
+echo "Deleting log files:"
+log_dirs="$CacheLogDir $CILogDir $EmptyPKLogDir $GraphLogDir $WeededLogDir"
+(cd $CacheDir || exit;
+ files="";
+ for dir in $log_dirs; do
+   files="$files $dir/*";
+ done;
+ ls -l $files 2> /dev/null)
+for dir in $log_dirs; do
+  rm -f $CacheDir/$dir/*
+done
+
+# delete stable variable files
+echo " "
+echo "Deleting stable variable files:"
+(cd $CacheDir || exit; ls -l $SVarsDir/* 2> /dev/null)
+rm -f $CacheDir/$SVarsDir/*
+
+# delete stable cache entry files
+echo " "
+echo "Deleting stable cache-entry files:"
+if [ $verb -eq 0 ]; then
+  echo "Listing suppressed; use -v to list deleted cache entry files"
+  (cd $CacheDir/$SCacheDir || exit;
+   find gran-* -type f -exec rm -f '{}' \;)
+else
+  (cd $CacheDir/$SCacheDir || exit;
+   find gran-* -type f -ls -exec rm -f '{}' \; |
+   awk '{ print substr($0,index($0,$3));}')
+fi
+# delete nested directories
+(cd $CacheDir/$SCacheDir || exit; rm -rf gran-*/*)
+
+# delete weeder stable files
+echo " "
+echo "Deleting stable weeder files:"
+(cd $MetaDataRoot || exit; ls -l $WMetaDataDir/* 2> /dev/null)
+rm -f $MetaDataRoot/$WMetaDataDir/*
+
+# clean up
+echo " "
+echo "Done."
+exit 0

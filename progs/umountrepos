@@ -1,0 +1,67 @@
+#!/bin/sh
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+# umountrepos: Unmount the repository locally.
+
+# Get variables we need to do our work
+
+NFS_host=`vgetconfig Repository NFS_host`
+NFS_port=`vgetconfig Repository NFS_port`
+AppendableRootName=`vgetconfig UserInterface AppendableRootName`
+MutableRootName=`vgetconfig UserInterface MutableRootName`
+VolatileRootName=`vgetconfig Run_Tool VolatileRootName`
+
+# The method of unmounting depends on which operating system this is
+
+case `uname` in
+  OSF1)
+    /usr/sbin/umount -f $NFS_host.$NFS_port:0002
+    /usr/sbin/umount -f $NFS_host.$NFS_port:0001
+    /usr/sbin/umount -f $NFS_host.$NFS_port:0
+    ;;
+
+  Linux)
+    # Newer versions of Linux support umount -l, which is preferable
+    # in that it will work even when a mount point is in use.  (If the
+    # repository is down or unreachable, this can be very helpful.)
+
+    /bin/umount -l $VolatileRootName 2>/dev/null || /bin/umount $VolatileRootName
+    /bin/umount -l $MutableRootName 2>/dev/null || /bin/umount $MutableRootName
+    /bin/umount -l $AppendableRootName 2>/dev/null || /bin/umount $AppendableRootName
+    ;;
+
+  Darwin|FreeBSD)
+    /sbin/umount -f $VolatileRootName
+    /sbin/umount -f $MutableRootName
+    /sbin/umount -f $AppendableRootName
+    ;;
+
+  SunOS)
+    /usr/sbin/umount -f $VolatileRootName
+    /usr/sbin/umount -f $MutableRootName
+    /usr/sbin/umount -f $AppendableRootName
+    ;;
+
+  *)
+    echo "$0: don't know how to unmount the repository on this OS"
+    exit 1
+esac

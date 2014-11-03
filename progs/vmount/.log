@@ -1,0 +1,11 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: configure.ac -> 0xa0eb409a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: Makefile.am -> 0xa0eb4091 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vmount_linux.c -> 0x8e17a689 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vmount_tru64.c -> 0xab2ee414 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vmount_solaris.c -> 0xab2ee411 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vmount_freebsd.c -> 0xab2ee412 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: vmount_darwin.c -> 0x8e17a6a3 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: NEWS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: README -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: AUTHORS -> literal 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ChangeLog -> literal 23:35:44 02-12-2009

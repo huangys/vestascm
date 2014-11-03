@@ -1,0 +1,4 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: readme.txt -> 0x96959124 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ZLib.pas -> 0x96959125 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: ZLibConst.pas -> 0x96959126 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlibd32.mak -> 0x96959127 23:35:44 02-12-2009

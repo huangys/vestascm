@@ -1,0 +1,100 @@
+----------------------------------------------------------------------
+If you are upgrading from release/11 or earlier:
+----------------------------------------------------------------------
+
+The RunToolServer network protocol has changed.  The new evaluator
+cannot talk to the old RunToolServer, so you'll need to restart your
+RunToolServer(s) after upgrading.
+
+The default mastership policy of vmkdir, vcreate, and vbranch has
+changed.  Unless explicitly requested, mastership of the new object
+will be left with the repository that has mastership of its parent
+directory.  (The old default was to always acquire mastership in the
+local repository.)  There are the configuration variables in the
+[UserInterface] section that can be set to restore the old default
+behavior:
+
+  vmkdir_acquires
+  vcreate_acquires
+  vbranch_acquires
+
+See the vmkdir(1), vcreate(1), and vbranch(1) man pages for more
+information.
+
+----------------------------------------------------------------------
+If you are upgrading from release/10 or earlier:
+----------------------------------------------------------------------
+
+The way "latest" links work has been changed.  After upgrading and
+restarting your repository, you should run the latest.sh script as
+vadmin to update all your latest links.  This script is included in
+binary kits and can be found in:
+
+  /vesta/vestasys.org/vesta/repos_ui/latest/src/latest.sh
+
+In more detail, the "symlink-to" attribute on latest links used to
+contain the name of a particular version that the link pointed to.
+Now latest links have their symlink-to attribute set to the special
+value "$LAST".  This solves a small bug with replication that caused
+latest links to not be updated if the user running the replicator
+didn't have write permission to the latest link.
+
+----------------------------------------------------------------------
+If you are upgrading from release/8 or earlier:
+----------------------------------------------------------------------
+
+1. The cache server's cacheLog disk format has changed.  The simplest
+thing to do is erase your cache with EraseCache after stopping the old
+server and before starting the new one.  (It would then be best to run
+QuickWeed after starting the new cache server.)
+
+Alternatively, you can ensure that the cache log is empty before
+starting the new cache server.  Run FlushCache before stopping the old
+cache server.  After stopping the old cache server and before starting
+the new one, verify that the cache log is empty by running
+PrintCacheLog.  If it's empty, the output of PrintCacheLog will be:
+
+>>>>> EmptyPKLog <<<<<
+
+<<Empty>>
+
+>>>>>> CacheLog <<<<<<
+
+<<Empty>>
+
+If it is empty (with the old cache server stopped), it's safe to start
+the new cache server.  If it's not empty, restart the old cache server
+and run FlushCache again.
+
+2. The representation of evaluator values in the cache has changed to
+support inter-operation between systems of different byte orders.
+This means that the new evaluator will not be able to get a cache hit
+on entries created by the old evaluator.
+
+----------------------------------------------------------------------
+If you are upgrading from release/7 or earlier:
+----------------------------------------------------------------------
+
+The cach server protocol has changed.  The old evaluator will not be
+able to talk to the new cache server and vice/versa.  If you multiple
+Vesta clients, make sure that they *all* have the new binaries
+installed before starting the new cache server.
+
+----------------------------------------------------------------------
+If you are upgrading from release/5 or earlier:
+----------------------------------------------------------------------
+
+This release changes the storage format of the weeder's stable
+variables.  Before upgrading, make sure that there is not an
+outstanding partially completed weed: run PrintWeederVars and make
+sure the size of weeded set is zero.
+
+If the size of the weeded set is *not* zero, you have two options:
+
+- Re-run the weeder to complete the partially done weed.  After you
+run it, be sure to check the weeded set size again to make sure the
+weeder didn't fail again.
+
+- Erase your cache.  Shut down the cache server and run EraseCache.
+After starting the cache server again, run QuickWeed to clean up any
+derived files referenced by the old cache.

@@ -1,0 +1,4 @@
+bin_PROGRAMS = TestShortId
+TestShortId_SOURCES = TestShortId.C 
+TestShortId_LDADD = ../libs/libVestaCacheClient.a/libVestaCacheClient.a ../libs/libVestaCacheCommon.a/libVestaCacheCommon.a ../libs/libVestaReposUI.a/libVestaReposUI.a ../libs/libVestaReposLeaf.a/libVestaReposLeaf.a ../libs/libVestaFP.a/libVestaFP.a ../libs/libVestaLog.a/libVestaLog.a ../libs/libVestaSRPC.a/libVestaSRPC.a ../libs/libVestaConfig.a/libVestaConfig.a ../libs/libz.a/libz.a ../libs/libOS.a/libOS.a ../libs/libGenerics.a/libGenerics.a ../libs/libBasics.a/libBasics.a ../libs/libpcre/libpcreposix.la ../libs/libpcre/libpcre.la -lstdc++ -lpthread -lm -lc
+INCLUDES = -I../libs/libVestaCacheClient.a -I../libs/libVestaCacheCommon.a -I../libs/libVestaReposUI.a -I../libs/libVestaReposLeaf.a -I../libs/libVestaFP.a -I../libs/libVestaLog.a -I../libs/libVestaSRPC.a -I../libs/libVestaConfig.a -I../libs/libz.a -I../libs/libOS.a -I../libs/libGenerics.a -I../libs/libBasics.a -I../libs/libpcre

@@ -1,0 +1,105 @@
+#! /bin/sh
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+# Last modified on Mon Jan 17 19:12:22 EST 2005 by ken@xorian.net
+#      modified on Wed Oct 21 21:40:57 PDT 1998 by heydon
+
+# messages
+syntax="SYNTAX: ShowCache [ -v ]"
+
+# process command line
+verb=0
+while [ $# -gt 0 ]; do
+  case $1 in
+  -v)
+    verb=1
+    ;;
+  *)
+    echo "Unrecognized argument: $1"
+    echo $syntax
+    exit 1
+    ;;
+  esac
+  shift
+done
+
+# set directory names from configuration file
+MetaDataRoot=`vgetconfig CacheServer MetaDataRoot`
+MetaDataDir=`vgetconfig CacheServer MetaDataDir`
+SCacheDir=`vgetconfig CacheServer SCacheDir`
+SVarsDir=`vgetconfig CacheServer StableVarsDir`
+WeededLogDir=`vgetconfig CacheServer WeededLogDir`
+CacheLogDir=`vgetconfig CacheServer CacheLogDir`
+EmptyPKLogDir=`vgetconfig CacheServer EmptyPKLogDir`
+GraphLogDir=`vgetconfig CacheServer GraphLogDir`
+CILogDir=`vgetconfig CacheServer CILogDir`
+
+# weeder stable files
+WMetaDataDir=`vgetconfig Weeder MetaDataDir`
+
+# set "MetaDataRoot" if empty
+if [ -z "$MetaDataRoot" ]; then
+  MetaDataRoot=.
+fi
+
+# print cache directory
+CacheDir=$MetaDataRoot/$MetaDataDir
+echo "Cache directory:"
+echo "  $CacheDir"
+
+# list log files
+echo " "
+echo "Cache log files:"
+log_dirs="$CacheLogDir $CILogDir $EmptyPKLogDir $GraphLogDir $WeededLogDir"
+(cd $CacheDir || exit;
+ files="";
+ for dir in $log_dirs; do
+   files="$files $dir/*";
+ done;
+ ls -l $files 2> /dev/null)
+
+# list stable variable files
+echo " "
+echo "Stable variable files:"
+(cd $CacheDir || exit; ls -l $SVarsDir/* 2> /dev/null)
+
+# list stable cache entry files
+echo " "
+echo "Cache entry files:"
+if [ $verb -eq 0 ]; then
+  echo "Listing suppressed; use -v to list cache entry files"
+else
+  (cd $CacheDir/$SCacheDir || exit;
+   find gran-* -type f -ls |
+   awk '{ print substr($0,index($0,$3)); }')
+fi
+
+# weeder stable files
+echo " "
+echo "Weeder files:"
+(cd $MetaDataRoot || exit;
+ ls -l $WMetaDataDir/* 2> /dev/null)
+
+# clean up
+echo " "
+echo "Done."
+exit 0

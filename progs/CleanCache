@@ -1,0 +1,109 @@
+#! /bin/sh
+
+# ----------------------------------------------------------------------
+# Copyright (C) 2001, Compaq Computer Corporation
+# 
+# This file is part of Vesta.
+# 
+# Vesta is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# Vesta is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with Vesta; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# ----------------------------------------------------------------------
+
+# messages
+syntax="SYNTAX: CleanCache [ -f ]"
+abort="Nothing deleted."
+
+# process command line
+force=0
+while [ $# -gt 0 ]; do
+  case $1 in
+  -f)
+    force=1
+    ;;
+  *)
+    echo "Unrecognized argument: $1"
+    echo $syntax
+    exit 1
+    ;;
+  esac
+  shift
+done
+
+# set directory names from configuration file
+MetaDataRoot=`vgetconfig CacheServer MetaDataRoot`
+MetaDataDir=`vgetconfig CacheServer MetaDataDir`
+SCacheDir=`vgetconfig CacheServer SCacheDir`
+SVarsDir=`vgetconfig CacheServer StableVarsDir`
+
+# set "MetaDataRoot" if empty
+if [ -z "$MetaDataRoot" ]; then
+  MetaDataRoot=.
+fi
+
+# print cache directory
+CacheDir=$MetaDataRoot/$MetaDataDir
+echo "Cache directory:"
+echo "  $CacheDir"
+
+# list temp files in stable cache
+echo " "
+echo "Temporary files in stable cache:"
+(cd $CacheDir/$SCacheDir || exit; ls gran-*/*/*\;* 2> /dev/null)
+ls1=$?
+(cd $CacheDir/$SVarsDir || exit; ls *\;* 2> /dev/null)
+ls2=$?
+if [ $ls1 -ne 0 -a $ls2 -ne 0 ]; then
+  echo "  <None>"
+  echo " "
+  echo $abort
+  exit 0
+fi
+
+# ask for confirmation
+if [ $force -ne 1 ]; then
+  echo " "
+  echo 'Warning! You should not clean a stable cache that is currently in'
+  echo 'use by some cache server. Deleting a valid temporary file will'
+  echo 'most likely cause the cache server to crash.'
+  echo " "
+  echo -n "Are you sure you want to delete these temporary files (y/n)? "
+  read response
+  case $response in
+  [yY]*)
+    ;;
+  *)
+    echo " "
+    echo $abort
+    exit 0
+    ;;
+  esac
+fi
+
+# Abort if the cache server is up
+if VCacheMonitor -check > /dev/null 2>&1; then
+  echo
+  echo "---------------FATAL ERROR---------------"
+  echo "The cache server seems to be running!"
+  echo "---------------FATAL ERROR---------------"
+  echo
+  echo $abort
+  exit 1
+fi
+
+# delete the files
+(cd $CacheDir/$SCacheDir || exit; rm -f gran-*/*/*\;*)
+(cd $CacheDir/$SVarsDir || exit; rm -f *\;*)
+echo " "
+echo "Done."
+exit 0

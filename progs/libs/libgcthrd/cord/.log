@@ -1,0 +1,11 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: cord.am -> 0xa6f7c192 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: cordbscs.c -> 0x9e58bb6a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: cordprnt.c -> 0x954d70b2 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: cordtest.c -> 0x954d70b4 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: cordxtra.c -> 0x954d70b1 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de.c -> 0x954d70b3 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de_cmds.h -> 0x9e58bb71 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de_win.h -> 0x9e58bb70 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de_win.c -> 0xa6f7c19a 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de_win.RC -> 0x9e58bb73 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: de_win.ICO -> 0x9e58bb72 23:35:44 02-12-2009

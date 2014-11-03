@@ -1,0 +1,238 @@
+/* include/used_gc_flags.h.in.  Generated from configure.ac by autoheader.  */
+
+/* allows all pointers to the interior of objects to be recognized */
+#undef ALL_INTERIOR_POINTERS
+
+/* Define to enable atomic uncollectible allocation. */
+#undef ATOMIC_UNCOLLECTABLE
+
+/* DARWIN_DONT_PARSE_STACK */
+#undef DARWIN_DONT_PARSE_STACK
+
+/* DATASTART_IS_ETEXT */
+#undef DATASTART_IS_ETEXT
+
+/* Make sure that all objects have debug headers */
+#undef DBG_HDRS_ALL
+
+/* DGUX_THREADS */
+#undef DGUX_THREADS
+
+/* ECOS */
+#undef ECOS
+
+/* enables support for AIX threads */
+#undef GC_AIX_THREADS
+
+/* GC alpha version */
+#undef GC_ALPHA_VERSION
+
+/* Enable some internal GC assertion checking */
+#undef GC_ASSERTIONS
+
+/* enables support for Mac OS X pthreads */
+#undef GC_DARWIN_THREADS
+
+/* enables support for DB/UX on I386 threads */
+#undef GC_DGUX386_THREADS
+
+/* enables support for FreeBSD pthreads. */
+#undef GC_FREEBSD_THREADS
+
+/* Define to include support for gcj */
+#undef GC_GCJ_SUPPORT
+
+/* enables support for GNU threads (?) */
+#undef GC_GNU_THREADS
+
+/* GC_HAVE_BUILTIN_BACKTRACE */
+#undef GC_HAVE_BUILTIN_BACKTRACE
+
+/* enables support for HP/UX 11 pthreads. */
+#undef GC_HPUX_THREADS
+
+/* enables support for Irix pthreads */
+#undef GC_IRIX_THREADS
+
+/* enables support for Xavier Leroy's Linux threads */
+#undef GC_LINUX_THREADS
+
+/* enables support for NetBSD pthreads. */
+#undef GC_NETBSD_THREADS
+
+/* enables support for Tru64 pthreads */
+#undef GC_OSF1_THREADS
+
+/* enables support for Solaris (thr_) threads */
+#undef GC_SOLARIS_THREADS
+
+/* GC_USE_DLOPEN_WRAP */
+#undef GC_USE_DLOPEN_WRAP
+
+/* GC major version */
+#undef GC_VERSION_MAJOR
+
+/* GC minor version */
+#undef GC_VERSION_MINOR
+
+/* enables support for win32 threads */
+#undef GC_WIN32_THREADS
+
+/* ppc_thread_state64_t has field r0 */
+#undef HAS_PPC_THREAD_STATE64_R0
+
+/* ppc_thread_state64_t has field __r0 */
+#undef HAS_PPC_THREAD_STATE64___R0
+
+/* ppc_thread_state_t has field r0 */
+#undef HAS_PPC_THREAD_STATE_R0
+
+/* ppc_thread_state_t has field __r0 */
+#undef HAS_PPC_THREAD_STATE___R0
+
+/* x86_thread_state32_t has field eax */
+#undef HAS_X86_THREAD_STATE32_EAX
+
+/* x86_thread_state32_t has field __eax */
+#undef HAS_X86_THREAD_STATE32___EAX
+
+/* x86_thread_state64_t has field rax */
+#undef HAS_X86_THREAD_STATE64_RAX
+
+/* x86_thread_state64_t has field __rax */
+#undef HAS_X86_THREAD_STATE64___RAX
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* makes it somewhat safer to finalize objects out of order by specifying a
+   nonstandard finalization mark procedure */
+#undef JAVA_FINALIZATION
+
+/* Add code to save back pointers in debugging headers for objects allocated
+   with the debugging allocator */
+#undef KEEP_BACK_PTRS
+
+/* Define to optimize for large heaps or root sets */
+#undef LARGE_CONFIG
+
+/* Enable GC_PRINT_BACK_HEIGHT environment variable */
+#undef MAKE_BACK_GRAPH
+
+/* MUNMAP_THRESHOLD */
+#undef MUNMAP_THRESHOLD
+
+/* NO_CLOCK */
+#undef NO_CLOCK
+
+/* removes GC_dump and the debugging routines it calls */
+#undef NO_DEBUGGING
+
+/* may cause some or all of the heap to not have execute permission */
+#undef NO_EXECUTE_PERMISSION
+
+/* prevents the collector from looking at environment variables */
+#undef NO_GETENV
+
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* allows the marker to run in multiple threads */
+#undef PARALLEL_MARK
+
+/* causes free to be redirected to X */
+#undef REDIRECT_FREE
+
+/* causes malloc to be defined as alias for X */
+#undef REDIRECT_MALLOC
+
+/* causes GC_realloc to be redirected to X */
+#undef REDIRECT_REALLOC
+
+/* Set the number of call frames saved with objects allocated through the
+   debugging interface */
+#undef SAVE_CALL_COUNT
+
+/* tries to tune the collector for small heap sizes */
+#undef SMALL_CONFIG
+
+/* SOLARIS25_PROC_VDB_BUG_FIXED */
+#undef SOLARIS25_PROC_VDB_BUG_FIXED
+
+/* STACKBASE */
+#undef STACKBASE
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* SUNOS53_SHARED_LIB */
+#undef SUNOS53_SHARED_LIB
+
+/* Enables thread-local free lists and allocation */
+#undef THREAD_LOCAL_ALLOC
+
+/* use compiler-provided thread-local storage (I think?) */
+#undef USE_COMPILER_TLS
+
+/* USE_MMAP */
+#undef USE_MMAP
+
+/* USE_MUNMAP */
+#undef USE_MUNMAP
+
+/* Version number of package */
+#undef VERSION
+
+/* _POSIX_C_SOURCE */
+#undef _POSIX_C_SOURCE
+
+/* Required define if using POSIX threads */
+#undef _PTHREADS
+
+/* _REENTRANT */
+#undef _REENTRANT

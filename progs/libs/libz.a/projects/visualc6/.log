@@ -1,0 +1,5 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: example.dsp -> 0x9695919b 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: minigzip.dsp -> 0x9695919c 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: README.txt -> 0x9695919d 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlib.dsp -> 0x9695919e 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlib.dsw -> 0x9695919f 23:35:44 02-12-2009

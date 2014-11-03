@@ -1,0 +1,9 @@
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: gvmat32.obj -> 0x96959171 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: inffas32.obj -> 0x96959172 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: miniunz.vcproj -> 0x96959173 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: minizip.vcproj -> 0x96959174 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlib.rc -> 0x96959175 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlibstat.vcproj -> 0x96959176 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlibvc.def -> 0x96959177 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlibvc.sln -> 0x96959178 23:35:44 02-12-2009
+/vesta/vestasys.org/vesta/release/12.pre13/13/makefile.main.ves: zlibvc.vcproj -> 0x96959179 23:35:44 02-12-2009
