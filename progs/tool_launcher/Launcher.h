@@ -123,6 +123,10 @@ enum launcher_failure {
   chdir_after_chroot_failure = 12,   // Couldn't chdir to the working
 				     // directory after the chroot.
 
+  mount_proc_failure = 13,
+
+  mount_tmpfs_failure = 14,
+
   launcher_failure_enum_end          // new kinds of launcher failure
                                      // should be defined before
                                      // launcher_failure_enum_end value  

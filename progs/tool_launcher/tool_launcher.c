@@ -116,7 +116,8 @@ char *messages[] = {
   "Can't get working directory",
   "Working directory outside root",
   "Couldn't chdir to working directory after chroot",
-  "Couldn't mount procfs on the /proc"
+  "Couldn't mount procfs on the /proc",
+  "Couldn't mount tmpfs on the /tmp"
 };
 
 static void giveup(int code, int errn)
@@ -315,6 +316,15 @@ int main(int argc, char *argv[])
       giveup(mount_proc_failure, errno);
     }
   }
+
+  /* 如果 / 下有个 tmp 的目录, 则将 tmpfs 伪文件系统 mount 上.
+   * 有些应用程序需要 lock /tmp 目录里的文件, 如 icc 等. */
+  if ((stat("/tmp", &sb) == 0) && (S_IFDIR & sb.st_mode)) {
+    if (mount("none", "/tmp", "tmpfs", 0, "size=512M" ) == -1) {
+      giveup(mount_tmpfs_failure, errno);
+    }
+  }
+
 
   /* Change effective user id back to real user id. */
   if (setuid(getuid()) == SYSERROR) {
