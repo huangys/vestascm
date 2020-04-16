@@ -126,7 +126,7 @@ int Text::FindText(const Text &substr, int start) const throw ()
 {
     start = max(start, 0);
     if (start + substr.Length() > this->Length()) return -1;
-    char *match = strstr(this->s + start, substr.s);
+    const char *match = strstr(this->s + start, substr.s);
     if (match != (char *)NULL) return (match - this->s);
     return -1;
 }

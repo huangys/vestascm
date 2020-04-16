@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+#include <climits>
 #include <Basics.H>
 #include "Debug.H"
 

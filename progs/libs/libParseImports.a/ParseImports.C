@@ -26,6 +26,7 @@
 #include <strings.h>   // for index(3)
 #include <errno.h>
 
+#include <climits> 
 #include <Basics.H>
 #include <Sequence.H>
 #include <FS.H>

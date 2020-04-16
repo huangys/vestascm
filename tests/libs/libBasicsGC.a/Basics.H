@@ -26,6 +26,7 @@
 #ifndef _Basics
 #define _Basics
 
+#include <climits>
 // Local configuration results
 #include "BasicsConfig.h"
 

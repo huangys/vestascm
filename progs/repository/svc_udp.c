@@ -206,7 +206,7 @@ svcudp_stat(xprt)
 
 #define USECS_PER_SEC 1000000
 #define DBG_ALWAYS     0x0000 
-extern void dprintf(int level, const char *fmt, ...);
+//extern void dprintf(int level, const char *fmt, ...);
 
 static bool_t
 svcudp_recv(xprt, msg)

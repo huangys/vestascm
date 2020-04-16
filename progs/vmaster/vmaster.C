@@ -103,7 +103,7 @@ parserepos(/*IN*/const char* arg, /*OUT*/Text& host, /*OUT*/Text& port,
 
   if (strcmp(arg, "local") == 0) return;
 
-  char *colon = strchr(arg, ':');
+  const char *colon = strchr(arg, ':');
   if (colon == NULL) {
     host = arg;
     return;
@@ -116,7 +116,7 @@ parserepos(/*IN*/const char* arg, /*OUT*/Text& host, /*OUT*/Text& port,
     if (he != NULL) host = Text(he->h_name);
   }
 
-  char *colon2 = strchr(colon + 1, ':');
+  const char *colon2 = strchr(colon + 1, ':');
   if (colon2 == NULL) {
     port = Text(colon + 1);
     return;
@@ -190,7 +190,7 @@ main(int argc, char* argv[])
 {
   Text shost, sport, dhost, dport, hints;
   AccessControl::Identity swho = NULL, dwho = NULL;
-  char *src = "", *dst = "local";
+  const char *src = "", *dst = "local";
   bool recursive = false;
 
   program_name = argv[0];

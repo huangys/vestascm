@@ -351,8 +351,8 @@ bool
 arcPatternMatch(const char* arc, const char* pat, DirClosure* cl,
 		int bracedepth = 0)
 {
-  char *closebrak = NULL;
-  char *comma = NULL;
+  const char *closebrak = NULL;
+  const char *comma = NULL;
     
   for (;;) {
     bool first = strncmp(pat, "FIRST", 5) == 0;

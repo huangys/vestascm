@@ -388,14 +388,14 @@ parserepos(/*IN*/const char* arg, /*OUT*/Text& host, /*OUT*/Text& port,
 
   if (strcmp(arg, "local") == 0) return;
 
-  char *colon = strchr(arg, ':');
+  const char *colon = strchr(arg, ':');
   if (colon == NULL) {
     host = arg;
     return;
   }
   host = Text(arg, colon - arg);
   
-  char *colon2 = strchr(colon + 1, ':');
+  const char *colon2 = strchr(colon + 1, ':');
   if (colon2 == NULL) {
     port = Text(colon + 1);
     return;
@@ -415,7 +415,7 @@ main(int argc, char* argv[])
   Text shost, sport, dhost, dport;
   AccessControl::Identity swho = NULL, dwho = NULL;
   Replicator* repl;
-  char *src = "local", *dst = "local";
+  const char *src = "local", *dst = "local";
   Text rootDirectives = "";
 
   program_name = argv[0];

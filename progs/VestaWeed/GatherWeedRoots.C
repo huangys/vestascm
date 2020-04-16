@@ -387,8 +387,8 @@ static char* GatherWeedRoots_ReplaceInterval(const char *pattern)
 {
     Text res;
     while (!IsEmpty(pattern)) {
-	char *intvStart = index(pattern, OpenBracket);
-	char *intvEnd, *comma;
+	const char *intvStart = index(pattern, OpenBracket);
+	const char *intvEnd, *comma;
 	int low, high;
 	if (intvStart != (char *)NULL) {
 	    comma = index(intvStart, Comma);
@@ -462,7 +462,7 @@ static int GatherWeedRoots_CurlyMatchHelper(char *buff, char *end,
   const char *pattern, const char *name) throw (InputError, SysError)
 {
     // test for base case
-    char *openCurly, *closeCurly; // both pointers into "pattern"
+    const char *openCurly, *closeCurly; // both pointers into "pattern"
     if ((openCurly = index(pattern, OpenCurly)) == NULL) {
 	if (strcpy(end, pattern) == NULL) throw SysError("strcpy(3)");
 	return fnmatch(buff, name, FNM_PERIOD);
@@ -480,9 +480,9 @@ static int GatherWeedRoots_CurlyMatchHelper(char *buff, char *end,
 
     // iterate and recurse
     int res = FNM_NOMATCH;
-    char *curr; // pointer into "pattern", between "openCurly" & "closeCurly"
+    const char *curr; // pointer into "pattern", between "openCurly" & "closeCurly"
     for (curr = openCurly + 1; (curr-1) != closeCurly; curr++) {
-	char *wdEnd = index(curr, Comma);
+	const char *wdEnd = index(curr, Comma);
 	if (wdEnd == (char *)NULL || wdEnd > closeCurly) wdEnd = closeCurly;
 	int len = wdEnd - curr;
 	if (strncpy(end, curr, len) == NULL) throw SysError("strncpy(3)");

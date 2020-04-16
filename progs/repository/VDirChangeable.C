@@ -34,6 +34,7 @@
 #if __linux__
 #include <stdint.h>
 #endif
+#include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <BufStream.H>

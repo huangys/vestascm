@@ -1207,7 +1207,7 @@ VestaSource::lookupPathname(const char* pathname, VestaSource*& result,
     VestaSource* cur = this;
     while (*pathname) {
 	char arcbuf[MAX_ARC_LEN+1];
-	char* slash = strchr(pathname, pathnameSep);
+	const char* slash = strchr(pathname, pathnameSep);
 	if (slash != NULL) {
 	    strncpy(arcbuf, pathname, slash - pathname);
 	    arcbuf[slash - pathname] = '\000';
