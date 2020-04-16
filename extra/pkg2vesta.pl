@@ -414,6 +414,7 @@ vmkdir(1), vcreate(1), vbranch(1), vcheckout(1), vesta.cfg(5)
 	    'redhat'       => sub { $Options{'pkg-type'} = "rpm"; },
 	    'deb'          => sub { $Options{'pkg-type'} = "deb"; },
 	    'debian'       => sub { $Options{'pkg-type'} = "deb"; },
+	    'tgz'          => sub { $Options{'pkg-type'} = "tgz"; },
 	    'tru64'        => sub { $Options{'pkg-type'} = "tru64-subset"; },
 	    'tru64-subset' => sub { $Options{'pkg-type'} = "tru64-subset"; },
 	    'setld'        => sub { $Options{'pkg-type'} = "tru64-subset"; },
@@ -440,6 +441,7 @@ GetOptions(\%Options,
 	   'rpm', 'redhat',
 	   'deb', 'debian',
 	   'tru64', 'tru64-subset', 'setld',
+           'tgz',
 	   'package-pattern|pkg-pattern|pattern=s',
 	   'package-root|pkg-root|root=s',
 	   'work-dir-pattern|wd-pattern|wd-pat=s',
@@ -465,6 +467,7 @@ pod2usage(-exitstatus => 0,
 %Pkg_Types = (
 	      "deb" => 0,
 	      "rpm" => 0,
+	      "tgz" => 0,
 	      "tru64-subset" => 0
 	     );
 
@@ -613,6 +616,19 @@ sub pkg_file_kind ($ )
     # @@@ Tru64 subsets
 
     return undef;
+  }
+
+sub tgz_info ($ )
+  {
+    my $tgz_fname = shift;
+
+    $result{"name"} = $Options{'name'};
+
+    $result{"vendor"} = "debian";
+
+    $result{"aliases"} = [];
+
+    return \%result;
   }
 
 # deb_file_info(<.deb file name>)
@@ -879,6 +895,10 @@ sub pkg_info ($ )
 	    return undef;
 	  }
       }
+    elsif($type eq "tgz") 
+      {
+	return tgz_info($pkg);
+      }
     elsif(($type eq "tru64-subset") && (!-e $pkg))
       {
 	return tru64_subset_info($pkg);
@@ -1007,6 +1027,22 @@ sub save_rpm_info ($$@ )
 	    "/* Output of 'rpm -q --provides' */ provides");
   }
 
+sub save_tgz_info ($$@ )
+  {
+    my $work = shift;
+    my $target = shift;
+    my @subsets = @_;
+
+    my $descr_file = combine_path($target, "descriptions");
+    open DESCR_FILE, ">$descr_file";
+    print DESCR_FILE ("Subset\t\tDescription\n",
+		      "------\t\t-----------\n");
+
+    close DESCR_FILE;
+
+    return "descriptions";
+  }
+
 sub save_tru64_subset_info ($$@ )
   {
     my $work = shift;
@@ -1056,6 +1092,10 @@ sub save_pkg_info ($$@ )
       {
 	return save_tru64_subset_info($work, $target, @pkgs);
       }
+    elsif(($Options{'pkg-type'} eq "tgz") && !$Options{'from-installed'})
+      {
+	return save_tgz_info($work, $target, @pkgs);
+      }
 
     return undef;
   }
@@ -1084,6 +1124,21 @@ sub extract_rpm ($$)
       {
 	print STDERR ("error -- couldn't extract contents of ",
 		      $rpm, "\n");
+	exit(1);
+      }
+
+    return ();
+  }
+
+sub extract_tgz ($$)
+  {
+    my $root = shift;
+    my $tgz = shift;
+
+    if(system("tar", "zxvf", $tgz, "--directory", $root) != 0)
+      {
+	print STDERR ("error -- couldn't extract contents of ",
+		      $tgz, "\n");
 	exit(1);
       }
 
@@ -1283,6 +1338,10 @@ sub copy_pkg ($$)
 	  {
 	    return extract_rpm($root, $pkg);
 	  }
+      }
+    elsif(($Options{'pkg-type'} eq "tgz") && !$Options{'from-installed'})
+      {
+	return extract_tgz($root, $pkg);
       }
     elsif(($Options{'pkg-type'} eq "tru64-subset") &&
 	  $Options{'from-installed'})
@@ -2131,6 +2190,13 @@ sub deb_doc_paths (@ )
     return ("/usr/share/man", "/usr/share/doc");
   }
 
+sub tgz_doc_paths (@ )
+  {
+    print ("Note: With Tgz, --excludedocs assumes /usr/share/man and /usr/share/doc\n");
+
+    return ("/usr/share/man", "/usr/share/doc");
+  }
+
 sub tru64_doc_paths (@ )
   {
     print ("Note: With Tru64, --excludedocs assumes: /usr/share/man /usr/man /usr/doc /usr/examples\n");
@@ -2147,6 +2213,10 @@ sub pkg_doc_paths (@ )
     elsif($Options{'pkg-type'} eq "rpm")
       {
 	return rpm_doc_paths(@_);
+      }
+    elsif($Options{'pkg-type'} eq "tgz")
+      {
+	return tgz_doc_paths(@_);
       }
     elsif($Options{'pkg-type'} eq "tru64-subset")
       {
@@ -2355,6 +2425,10 @@ if(which("rpm") && which("rpm2cpio") && which("cpio"))
 if(which("setld"))
   {
     $Pkg_Types{'tru64-subset'} = 1;
+  }
+if(which("tar"))
+  {
+    $Pkg_Types{'tgz'} = 1;
   }
 
 # Packages to convert to Vesta packages providing OS components:
