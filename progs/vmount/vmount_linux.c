@@ -126,6 +126,9 @@ struct nfs_mount_data {
 #define NFS_MOUNT_KERBEROS	0x0100	/* 3 */
 #define NFS_MOUNT_NONLM		0x0200	/* 3 */
 
+#define NFS_MOUNT_LOCAL_FLOCK	0x100000
+#define NFS_MOUNT_LOCAL_FCNTL	0x200000
+
 #define NFS_FHSIZE 32
 
 #define DEFAULT_PORT 2049
@@ -156,7 +159,10 @@ main(int argc, char *argv[])
     nfsargs.acregmax = 60;
     nfsargs.acdirmin = 30;
     nfsargs.acdirmax = 60;
+    /* Disable lock manager support by default */ 
+    nfsargs.flags = NFS_MOUNT_NONLM | NFS_MOUNT_LOCAL_FLOCK | NFS_MOUNT_LOCAL_FCNTL;
 
+    
     optarg = NULL;
     while (!errflg && (c = getopt(argc, argv, ARGS)) != -1) {
 	switch (c) {
