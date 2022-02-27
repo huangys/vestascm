@@ -1,0 +1,3 @@
+PROC Main () IS
+	{ Rd () = 'x' -> Wr ("Oops") } | { Rd ('h') ; Wr ("hello world\n") }
+END;

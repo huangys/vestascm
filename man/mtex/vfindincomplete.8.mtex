@@ -1,0 +1,176 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% Copyright (C) 2004, Kenneth C. Schalk
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vfindincomplete - Find objects that have references to non-existent shortids}{vfindincomplete}{8}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vfindincomplete} - Find objects that have references to non-existent shortids
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vfindincomplete}
+[\link{#-v}{-v}]
+[\link{#-R}{-R \it{repos}}]
+[\link{#-l}{-l \it{delete-list-file}}]
+[\link{#-r}{-r \it{replicator-instr-file}}]
+[\it{directory...}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Configuration}{Configuration}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The Vesta repository stores all source and derived files in a single
+collection.  Individual files are referred to by a 32-bit number
+called a \it{shortid}.  Ordinarily, the repository manages creation
+and deletion of files in this collection, allocating new shortids and
+de-allocating them on weeding.  However certain catastrophes
+(filesystem corruption, incomplete backups) could cause your
+repository to have references to shortids that don't exist.
+
+One indication of this kind of problem are messages from the
+repository during weeding:
+
+\begin{verbatim}
+ 07/07/2004 01:45:40 missing: 0x945ba1bd
+ 07/07/2004 01:45:45 missing: 0xa45e4364
+ 07/07/2004 01:45:49 missing: 0xbdc5052e
+\end{verbatim}
+
+Another indication is files in the repository which, when examined
+(even with \tt{ls}) give "No such file or directory" errors.
+
+This problem can be hard to fix.  The repository's content-based
+fingerprinting will actually re-use the missing shortid without
+realizing that the previous file with identical contents is missing.
+(See the \link{vadvance.1.html}{\bf{vadvance}(1)} man page.)
+
+The recommended method for dealing with the problem of missing
+shortids is:
+
+\begin{itemize}
+\item Remove all references to the missing shortids (which can be
+found with \bf{vfindincomplete})
+\item \link{EraseCache.1.html}{Erase the cache}
+\item Run the weeder to purge the repository's memory of the missing
+shortids (\link{QuickWeed.1.html}{QuickWeed} is sufficient)
+\item \link{vrepl.1.html}{Replicate} back anything you can from peer
+repositories
+\end{itemize}
+
+The main purpose of \bf{vfindincomplete} is to locate objects which
+refer to missing shortids and should be deleted when following this
+procedure.  With \link{#-l}{the -l flag}, this tool can produce a list
+of everything that must be deleted to remove references to missing
+shortids.  This list can also be used to archive the other contents of
+the objects, which may be important if no replicas of them exist.
+
+By default, the appendable and mutable portions of the repository
+(\tt{/vesta} and \tt{/vesta-work}) are scanned.  Alternatively, you
+can provide a list of one or more directories to use as the root of
+the search.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+
+\item{\anchor{-v}{-v}}
+Verbose mode.  Causes the tool to print a message to standard output
+for each reference it finds to a missing shortid.
+
+\item{\anchor{-R}{-R \it{repos}}}
+Searches for missing shortids in \it{repos} instead of the default
+local repository.  The repository is specified by host name and TCP
+port number in the format \it{host}\tt{:}\it{port}.  The
+\tt{:}\it{port} portion may be omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\item{\anchor{-r}{-r \it{filename}}}
+Causes the specified filename to be filled with replicator
+instructions for copying any versions that contain references to
+missing shortids.
+
+\item{\anchor{-l}{-l \it{filename}}}
+Causes the specified filename to be filled with a list of all objects
+that must be deleted to remove references to missing shortids.
+
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+This tool does not scan the volatile root for references to missing
+shortids.  The assumption is that during recovery from a disaster, no
+builds are taking place.
+
+Even if all references to a missing shortid from source versions in
+the repository are removed, there can still be references from cache
+entires.  Before running the weeder, erasing the cache is
+recommeneded.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]}
+section of the Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vadvance.1.html}{\bf{vadvance}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{EraseCache.1.html}{\bf{EraseCache}(1)},
+\link{QuickWeed.1.html}{\bf{QuickWeed}(1)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk \tt{<\link{mailto&#58;ken&#64;xorian&#46;net}{ken@xorian.net}>}
+
+\begin{verbatim}
+Last modified on Thu Jul  8 09:59:17 EDT 2004 by ken@xorian.net
+\end{verbatim}

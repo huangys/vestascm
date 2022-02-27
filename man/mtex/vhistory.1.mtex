@@ -1,0 +1,84 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vhistory - Show the version history of a Vesta package}{vhistory}{1}
+
+\section{Name}
+
+\bf{vhistory} - Show the version history of a Vesta package
+
+\section{Synopsis}
+
+\bf{vhistory} [-v] \it{package}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vhistory} command is a small shell script that 
+prints the version history of a Vesta package.
+
+In more detail, \bf{vhistory} enumerates the versions of the
+specified package, sorts them from newest to oldest,
+and prints the \tt{message} attribute of each one.  
+If the name \it{package} does not
+begin with "\tt{/}", it is interpreted
+relative to the site's default parent directory for packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-v}{-v}}
+Verbose; print all the attributes of each version, not just its
+message attribute.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{DefaultPackageParent}}
+The default directory to look for packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+This program should probably be reimplemented in C, using the skeleton
+of \link{vlatest.1.html}{\bf{vlatest}(1)}.
+Limitations of the shell script version:
+
+\begin{itemize}
+\item Should have an -m flag to look in the master repository.  Without
+      this, you see only the versions that happen to be in your repository.
+\item Should have a -b flag to control whether to recurse into branches.
+      Currently it always recurses into branches.
+\item The sorting is crude.
+\item It would be nice to be able to print different subsets of the 
+      attributes.
+\end{itemize}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

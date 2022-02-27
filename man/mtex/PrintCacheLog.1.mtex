@@ -1,0 +1,105 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintCacheLog(1) man page}{PrintCacheLog}{1}
+
+\section{Name}
+
+PrintCacheLog - print the current Vesta-2 cache server cache log
+
+\section{Synopsis}
+
+\bf{PrintCacheLog} [ \bf{-verbose} ]
+
+\section{Description}
+
+The Vesta-2 cache server \link{VCache.1.html}{VCache(1)}
+keeps a stable log of new cache entries called the \it{cache log} that
+have yet to be written to stable cache entry files. It also keeps a
+stable log of PKFiles that have been deleted called the \it{empty PK
+log}. This program prints an ASCII representation of both logs to
+standard output.
+
+The empty PK log is a sequence of \it{(pk, pkEpoch)} pairs, where
+\it{pk} is the primary key identifying the deleted PKFile (a
+fingerprint), and \it{pkEpoch} is the epoch the PKFile would have had
+if it had not been deleted. For a description of this log and why it
+is needed, see the description on
+\link{VCacheImpl.7.html#CacheLog}{supporting deletions in the
+CacheLog}. 
+
+The cache log is a sequence of \it{(pk, pkEpoch, entry)} triples,
+where \it{pk} is the primary key of the entry (a fingerprint),
+\it{pkEpoch} is the epoch in effect for its PKFile when it was
+created, and \it{entry} is the entry itself.
+
+By default, the program writes a one-line summary of each cache log
+entry. If \bf{-verbose} is specified, it writes a complete description
+of each one.
+
+\section{Configuration Variables}
+
+\it{PrintCacheLog} locates the cache log file by reading site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. It first looks for this file in the current directory;
+if none is found there, it looks in your home directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by the
+\it{PrintCacheLog} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables it uses and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{CacheLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores its cache log.
+\end{description}
+
+\section{Files}
+
+\begin{description}
+\item{\tt{$MetaDataRoot/$MetatDataDir/$CacheLogDir/*.log}}
+CacheLog files. The cache log contains new cache entries that have not
+yet been written to stable cache files.
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:49:41 PST 1997 by heydon
+\end{verbatim}

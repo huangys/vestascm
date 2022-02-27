@@ -1,0 +1,156 @@
+% Copyright (C) 1997, Digital Equipment Corporation.
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vlibraries(5) man page}{vlibraries}{5}
+
+\section{Name}
+
+vlibraries - a guide to the organization of libraries in Vesta-2
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescriptionSect}{Description}
+\item \link{#NamingSect}{Library Naming}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescriptionSect}{Description}}
+
+This man page describes the organization of libraries in the standard
+Vesta-2 building environment. In particular, it documents the
+\tt{common/std_env/18} and \tt{common/cxx/14} packages (presumably,
+later versions of these packages will conform to this man page as
+well).
+
+The standard environment defines a collection of hierarchically
+arranged libraries. The leaves of this hierarchy are called,
+appropriately, \it{leaf libraries}. The non-leaves are called
+\it{umbrella libraries}.
+
+Each package exports a single library, although it is quite possible
+for a package to export an umbrella library one of whose children is
+defined in the same package (see the "\tt{vesta/basics}" package, for
+example). As a result, there is \it{not} a one-to-one correspondence
+between library packages and libraries. This point is important for
+understanding the distinction between how library packages are named
+and how the libraries themselves are named.
+
+In order to make it easy for the client of a library to arrange
+for it to be built suitably, the system model for a library
+doesn't actually build the library. Rather, it invokes a bridge function
+("\tt{leaf} or \tt{umbrella}) that simply records the parts that make up
+the library. (The parts of a leaf library are header files and
+source code files; the parts of an umbrella library are the other
+libraries of which it is composed.) The results of these libraries are
+called \it{library descriptions}, and they correspond to the Vesta-2
+type \link{vtypes.5.html#LibDesc}{\tt{LibDesc}} and its three subtypes:
+\link{vtypes.5.html#LeafLibDesc}{\tt{LeafLibDesc}},
+\link{vtypes.5.html#UmbrellaLibDesc}{\tt{UmbrellaLibDesc}}, and
+\link{vtypes.5.html#PrebuiltLibDesc}{\tt{PrebuiltLibDesc}}.
+
+When the client actually uses a particular set of libraries to build a
+program, the necessary pieces are built. (Of course, in many cases,
+the Vesta caching machinery makes the build fast.)
+
+Because the construction of libraries is delayed as long as
+possible, the client can influence the building process. For
+example, the client can:
+
+\begin{itemize}
+\item
+control which libraries are included in an umbrella,
+\item
+override the specific versions of
+libraries used at all levels of the hierarchy, and
+\item
+set the compilation switches used when the library is built (e.g., to
+enable debugging).
+\end{itemize}
+
+For more information about how to build a library with overrides, see
+the \link{voverrides.5.html}{voverrides(5)} man page.
+
+\section{\anchor{NamingSect}{Library Naming}}
+
+As previously described, libraries are arranged in a hierarchy. The
+leaves of the hierarchy are called leaf libraries, and the internal
+nodes of the hierarchy are called umbrella libraries.
+
+To override the way a library or some part of a library is built, you
+must provide a name for the library. There are two styles used
+for naming libraries: \it{flat} and \it{hierarchical}. If flat naming is
+being used, then all library names are assumed to be unique; the hierarchy of
+umbrellas isn't used to name libraries.
+
+The standard construction environment provides support for both flat
+and hierarchical library naming. Which naming scheme is used for a
+particular bridge depends on the value of the
+"\link{vtypes.5.html#BridgeOptions}{\tt{flat_lib_names}}" bridge
+option. If that value is true, flat naming is used; if it is false,
+hierarchical naming is used.
+
+Hierarchical naming is desirable if the number of leaf libraries is so
+large that there is likely to be a naming conflict, i.e., that two or
+more leaf libraries will have the same name. That is certainly
+allowed, but if the library name space were flat, it would be
+impossible to name a particular leaf library uniquely for overriding
+purposes. Hence, you can build your program using hierarchical naming,
+in which cases the overrides specifications are themselves
+hierarchical. Here are the details.
+
+If flat library naming is used, libraries in a library override are
+named by a single text corresponding to the the name provided to the
+"\tt{leaf}" or "\tt{umbrella}" call that creates the library. This is
+the simplest way to name a library, but it requires that all libraries
+have distinct names. In particular, it does not allow two different
+leaf libraries in different umbrella libraries to have the same name.
+
+If hierarchical naming is used, library overrides are bindings, and
+the libraries named by such a binding correspond to paths
+in that binding. The internal nodes of the override binding are the
+names of umbrella libraries. For example, if the leaf library
+"\tt{libBasics.a}" is part of the umbrella library
+"\tt{libBasicsUmb}", which in turn was part of the umbrella library
+"\tt{libVestaUmb}", the overrides "\tt{ovs}" for the leaf would be
+specified by a binding of the form:
+
+\begin{verbatim}
+[ libVestaUmb = [ libBasicsUmb = [ libBasics.a = ovs ] ] ];
+\end{verbatim}
+
+Using hierarchical names, it is possible for a single library override
+to effect multiple umbrella and leaf libraries. See the type
+"\link{#NamedLibOvs}{\tt{NamedLibOvs}}" for more details about the
+form taken by library overrides.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{vmodels.5.html}{vmodels(5)},
+\link{voverrides.5.html}{voverrides(5)},
+\link{vtypes.5.html}{vtypes(5)}.
+
+\section{Author}
+
+Allan Heydon
+
+\begin{verbatim}
+Last modified on Fri Nov  9 12:14:21 EST 2001 by ken@xorian.net
+     modified on Thu May 29 14:22:22 PDT 1997 by heydon
+\end{verbatim}

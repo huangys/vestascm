@@ -1,0 +1,150 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vcollapsebase(8) man page}{vcollapsebase}{8}
+
+\section{Name}
+
+vcollapsebase - Replace the chain of base directories of a mutable or
+immutable directory with a collapsed representation for increased
+efficiency.
+
+\section{Synopsis}
+
+\bf{vcollapsebase}
+[\link{#-c}{-c}]
+[\link{#-R}{-R \it{host[:port]}}]
+\it{directory [directory...]}
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Examples}{Examples}
+\item \link{#See Also}{See Also}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+\bf{vcollapsebase} asks the repository to replace the chain of base
+directories of one or more mutable or immutable directories with a
+collapsed representation.  This can improve efficiency of listing or
+performing a lookup in such directories.
+
+To determine whether it there would be any benefit to using
+\bf{vcollapsebase} on a directory, use
+\link{vmeasure.8.html}{\bf{vmeasure}(8)}.
+
+Using \bf{vcollapsebase} on a directory with no base directory or a
+directory with a base chain of length 1 has no effect.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-R}{-R} \it{repos}}
+Collapse in \it{repos} instead of the default local repository.  The
+repository is specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-c}{-c}}
+Perform a paranoid consistency check to make sure that collapsing the
+base chain of a directory does not change it.  (This option was added
+for testing purposes and is probably only useful for repository
+developers.)
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Suppose there's a package with a high number of versions.  First,
+we'll measure it to see how long its base chain is:
+
+\begin{verbatim}
+% vmeasure /vesta/example.com/builds/big_build/1389 \
+           /vesta/example.com/builds/big_build/1389/params
+/vesta/example.com/builds/big_build/1389:
+        base chain length = 1283
+        used entry count  = 9
+        total entry count = 1365
+        used entry size   = 310
+        total entry size  = 24369
+/vesta/example.com/builds/big_build/1389/params:
+        base chain length = 844
+        used entry count  = 9
+        total entry count = 921
+        used entry size   = 383
+        total entry size  = 38571
+\end{verbatim}
+
+These would be good candidates for base-chain collapsing.  Some users
+may still be using other recent versions of this package, so we'll
+collapse a version in the middle of its base chain:
+
+\begin{verbatim}
+% vcollapsebase /vesta/example.com/builds/big_build/1300 \
+                /vesta/example.com/builds/big_build/1300/params
+\end{verbatim}
+
+If we measure the highest version again, we'll see that this has
+affected it as well:
+
+\begin{verbatim}
+% vmeasure /vesta/example.com/builds/big_build/1389 \
+           /vesta/example.com/builds/big_build/1389/params
+/vesta/example.com/builds/big_build/1389:
+        base chain length = 90
+        used entry count  = 9
+        total entry count = 106
+        used entry size   = 310
+        total entry size  = 1845
+/vesta/example.com/builds/big_build/1389/params:
+        base chain length = 90
+        used entry count  = 9
+        total entry count = 105
+        used entry size   = 383
+        total entry size  = 4259
+\end{verbatim}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{See Also}{See Also}}
+
+\link{repository.8.html}{\bf{repository}(8)},
+\link{vmeasure.8.html}{\bf{vmeasure}(8)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{Author}
+
+Ken Schalk (\tt{ken@xorian.net}) and
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Wed Feb 23 18:19:21 EST 2005 by ken@xorian.net
+\end{verbatim}

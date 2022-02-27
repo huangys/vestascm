@@ -1,0 +1,2 @@
+PROC Main() IS DO Wr(Rd()) OD END;
+

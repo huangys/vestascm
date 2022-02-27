@@ -1,0 +1,5 @@
+PROC Main() IS
+    VAR temp := 1 IN
+        temp -> Wr("hello world\n")
+    END
+END;

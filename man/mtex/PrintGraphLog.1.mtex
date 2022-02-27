@@ -1,0 +1,272 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintGraphLog(1) man page}{PrintGraphLog}{1}
+
+\section{Name}
+
+PrintGraphLog - print the current Vesta-2 cache server graph log
+
+\section{Synopsis}
+
+\bf{PrintGraphLog}
+[ \link{#-verbose}{\bf{-verbose}} | \link{#-brief}{\bf{-brief}} ]
+[ \link{#-stats}{\bf{-stats}} [ \link{#-size-cutoff}{\bf{-size-cutoff} \it{size}} ] ]
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescSect}{Description}
+\item \link{#OptionsSect}{Options}
+\item \link{#Examples}{Examples}
+\item \link{#ConfigSect}{Configuration Variables}
+\item \link{#FilesSect}{Files}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescSect}{Description}}
+
+The Vesta-2 cache server \link{VCache.1.html}{VCache(1)} keeps a
+stable log called the \it{graph log} of the cache entries and deriveds
+reachable from new cache entries. It also records any root nodes that
+have been checkpointed by the client. The graph log is read by the
+Vesta-2 weeder \link{VestaWeed.1.html}{VestaWeed(1)} to determine
+which entries and deriveds are reachable from the roots.  This program
+prints an ASCII representation of the complete graph log and
+optionally some statistics about it to standard output.
+
+By default, one line is printed per entry in the graph log, followed
+by the total number of root and node entries.  If the
+\link{#-verbose}{\bf{-verbose}} option is specified, the complete
+contents of each graph log entry is printed.  If the
+\link{#-brief}{\bf{-brief}} option is specified, the entries are not
+printed but the totals still are.
+
+With the \link{#-stats}{\bf{-stats}} option, statistics about the top
+contributors to the size of the graph log are gathered and displayed
+after the totals.  (Occasionally, new SDL code or modifications to SDL
+code will cause a significant increase in the amount of information in
+the cache server's graph log.  This option is intended to help track
+down the cause of such issues.)  Statistics are gathered both by
+primary key and by model shortid.  The
+\link{#-size-cutoff}{\bf{-size-cutoff}} option can be used to reduce
+the amount of output produced in the statistics section.
+
+\section{\anchor{OptionsSect}{Options}}
+
+\bf{PrintGraphLog} recognizes the following command-line options:
+
+\begin{description}
+\item{\anchor{-verbose}{\bf{-verbose}}}
+
+Print the full contents of every graph log entry rather than a
+one-line summary.  (Note: this can produce a very larger amount of
+output.)
+
+\item{\anchor{-brief}{\bf{-brief}}}
+
+Do not print anything for each graph log entry, not even a one-line
+summary.  Useful if you're more interested in the total number of
+roots and nodes, or when using \link{#-stats}{\bf{-stats}}.
+
+\item{\anchor{-stats}{\bf{-stats}}}
+
+Gather size statistics of the graph log nodes by primary key and model
+shortid.
+
+\item{\anchor{-size-cutoff}{\bf{-size-cutoff} \it{size}}}
+
+Set the minimum amount of space a primary key or model shortid must
+contirubte to the total size of the graph log to be listed in the
+output produced by \link{#-stats}{\bf{-stats}}.  Defaults to 100k it
+\bf{-size-cutoff} is not given on the command line.
+
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Here's an excerpt of the output of \bf{PrintGraphLog}:
+
+\begin{verbatim}
+% PrintGraphLog
+Graph log entries:
+  Node: pk = 4d28ba275bd7cd24 5cc9cf0103e42be9, ci = 1, ...
+  Node: pk = ec6361d61d032a6b 29312a8f3ac688ea, ci = 2, ...
+  Node: pk = b97934ad0e8f5845 551f0482be0ab312, ci = 3, ...
+  Node: pk = d8e6dd3e6d5ea5d1 bf54afed8db26f60, ci = 4, ...
+  Node: pk = 733c95a1c4fea3e3 ff08a6dd44075832, ci = 5, ...
+  Node: pk = 0e6ecfcedd47b02a 437108cf9e2ee53c, ci = 6, ...
+  Node: pk = 1879331b6c33b6b5 ce82e2f61b396efb, ci = 7, ...
+  Node: pk = e9e6bcaab9aec292 86654b582bb17ee2, ci = 8, ...
+  Node: pk = 95d87e0baf353729 7c236ecf0b3cc288, ci = 9, ...
+[...]
+  Node: pk = a935cbd69cc8954d 982de0b7929ea1ae, ci = 11502, ...
+  Node: pk = 7481130ce040dee2 aa81237a7e972034, ci = 11503, ...
+  Node: pk = 7e2abcebab435119 0ce2eae67f67d2e2, ci = 11504, ...
+  Node: pk = 5c780935b759751f ed23ccd8991a7647, ci = 11505, ...
+  Node: pk = 2328fdf4c2a094b5 732586c61eb0f94f, ci = 11506, ...
+  Node: pk = e9a69922f62b3e81 c58f6384d1c667c9, ci = 11507, ...
+  Root: pkgFP = 6bb57df860bcb28d f6f669f5b63fcf40, model = 2165291531, ...
+*** Totals ***
+  roots = 217
+  nodes = 33463
+\end{verbatim}
+
+With \link{#-verbose}{\bf{-verbose}}, it produces much more
+information:
+
+\begin{verbatim}
+% PrintGraphLog -verbose
+*** Entry 0 ***
+  Node: 
+    pk = 4d28ba275bd7cd24 5cc9cf0103e42be9
+    ci = 1
+    model = 2613891739
+    kids = {  }
+    refs = {
+      0x6ff13dd4, 0x7c34d092, 0x4fd6536b, 0x6c723e45, 0x6232203f, 
+      0x6362d311, 0x6362d311, 0x4bf8cc86, 0x5b6a2c23, 0x7b850c86, 
+      0x472232b1, 0x5e5c263b, 0x47b7ae10, 0x737cb62d, 0x55463ad7, 
+      0x5b9a6202, 0x55a88c34, 0x59784e47, 0x51bef979, 0x4b4b8236, 
+      0x508391d8, 0x62e8a075, 0x4ec1aed1, 0x50422555, 0x7a1b18d9, 
+      0x5317996d, 0x5fbc458f, 0x6c723e45, 0x5cc429a3 }
+
+*** Entry 1 ***
+  Node: 
+    pk = ec6361d61d032a6b 29312a8f3ac688ea
+    ci = 2
+    model = 2610071581
+    kids = {  }
+    refs = { 0x9b92881e, 0x5e5c263b }
+
+[...]
+
+*** Entry 33811 ***
+  Node: 
+    pk = b428b015f402e06c e255db71b4869b31
+    ci = 11671
+    model = 2800349642
+    kids = {
+      11508, 16743, 11512, 11509, 11513, 11640, 11670, 11529 }
+    refs = {
+      0x7e2680d7, 0x7e2680d7, 0x7e2680d7, 0x7e2680d7, 0x48d3a02d, 
+      0x48d3a02d, 0x8fab7469, 0x8fab746e, 0x8fab7476, 0x8fab747e, 
+      0x8fab7486, 0x8fab748e, 0x8fab7496, 0x8fab749e, 0x88d36d63, 
+      0x8fab746a, 0x8fab7472, 0x8fab747a, 0x8fab7482, 0x8fab748a, 
+      0x8fab7492, 0x8fab749a, 0x8fab74a3, 0xbb189d58, 0xbb189d59, 
+      0xbb189d5a, 0xbb189d5b, 0xbb189d5c, 0x8fab74ac, 0x9c637d88, 
+      0x9c637d8a, 0x9c637d8c, 0x9c637d8e, 0x9c637d90, 0x9c637d92, 
+      0x9c637d94, 0x9c637d96, 0x9c637d98, 0x9c637d9a, 0x9c637d9c, 
+      0x8fab745f, 0x9c637da0, 0x9c637da2, 0x9c637da4, 0x9c637da6, 
+      0x9c637da8, 0x9c637daa, 0x9c637dac, 0x9c637dae, 0x9c637db0, 
+      0x9c637d89, 0x9c637d8b, 0x9c637d8d, 0x9c637d8f, 0x9c637d91, 
+      0x9c637d93, 0x9c637d95, 0x9c637d97, 0x9c637d9b, 0x9c637d9d, 
+      0x8fab745e, 0x9c637da1, 0x9c637da3, 0x9c637da5, 0x9c637dad, 
+      0x9c637db1, 0x9c637d99, 0x9c637da7, 0x9c637da9, 0x9c637dab, 
+      0x9c637daf }
+
+*** Entry 33812 ***
+  Root: 
+    pkgFP = ebb57df860bcb28d 7ef669f5b63fcf40
+    model = 2800349642
+    time = Fri May 19 14:29:09 2006
+    done = true
+    cis = { 11671 }
+
+*** Totals ***
+  roots = 220
+  nodes = 33593
+\end{verbatim}
+
+Here's how you might use \link{#-stats}{\bf{-stats}},
+\link{#-brief}{\bf{-brief}}, and
+\link{#-size-cutoff}{\bf{-size-cutoff}} to investigate where the most
+graph log space is being consumed.
+
+\begin{verbatim}
+% PrintGraphLog -stats -brief -size-cutoff 500k
+*** Totals ***
+  roots = 225
+  nodes = 33791
+*** Stats ***
+  --- By PK ---
+    74459200bf3b0874 da9bc211ab846063 = 1.1M bytes
+    f49aba5af4969f73 f4b1271cb1aaebac = 1.0M bytes
+    984848d1136328ba 6a4ef335e9d94c70 = 583K bytes
+    96e44a34db01449b fcb8b45cfd6bacac = 581K bytes
+    565deebbe7ae516d 14ebcf453c8ad109 = 544K bytes
+    8b3952719ad8cd6f a749d1994cd9cfc9 = 527K bytes
+    111d0139bf8bf24b 8b5810b41c74f43c = 523K bytes
+    56c64a4365a6ef67 2f719315baea2db2 = 521K bytes
+    c730a9ac5b684cee 657c52b8f010986f = 516K bytes
+  (Skipping PKs with less than 500K)
+  --- By Model ---
+    /var/lib/vesta/sid/a6b/c12/97 = 14M bytes
+    /var/lib/vesta/sid/97c/cda/8a = 3.1M bytes
+    /var/lib/vesta/sid/859/585/c8 = 1.6M bytes
+  (Skipping Models with less than 500K)
+\end{verbatim}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+\bf{PrintGraphLog} locates the graphLog file by reading site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. It first looks for this file in the current directory;
+if none is found there, it looks in your home directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by the
+\bf{PrintGraphLog} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables it uses and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{GraphLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores its graph log.
+\end{description}
+
+\section{\anchor{FilesSect}{Files}}
+
+\begin{description}
+\item{\tt{$MetaDataRoot/$MetatDataDir/$GraphLogDir/*.log}}
+GraphLog files. The graph log records elements of the cache entry
+graph for use by the Vesta-2 weeder.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VestaWeed.1.html}{VestaWeed(1)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+

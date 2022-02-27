@@ -1,0 +1,363 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vreposmonitor(8) man page}{vreposmonitor}{8}
+
+\section{Name}
+
+vreposmonitor - monitor the state of the Vesta repository
+
+\section{Synopsis}
+
+\bf{vreposmonitor}
+[ \link{#UpdateOpt}{\bf{-update} \it{time}} ]
+[ \link{#TsOpt}{\bf{-ts} \it{time}} ]
+[ \link{#NOpt}{\bf{-n} \it{num}} ]
+[ \link{#RowsOpt}{\bf{-rows} \it{num}} ]
+[ \link{#CheckOpt}{\bf{-check}} ]
+[ \link{#ReposOpt}{\bf{-R} \it{host[:port]}} ]
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescSect}{Description}
+\item \link{#SwitchesSect}{Switches}
+\item \link{#FieldDescSect}{Fields}
+\item \link{#ConfigSect}{Configuration Variables}
+\item \link{#Example}{Example}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescSect}{Description}}
+
+\it{vreposmonitor} is a client application for monitoring the state
+of a running Vesta repository.
+
+The program starts by printing information that identifies the
+repository, including:
+
+\begin{itemize}
+\item
+the name of the host on which the repository is running,
+\item
+the port number on which the repository is listening for connections,
+\item
+the version identifier of the repository,
+\item
+the date and time at which the repository was started.
+\item
+the amount of time the repository has been running
+\end{itemize}
+
+The program then prints status lines describing various aspects of the
+repository's state. See the \link{#FieldDescSect}{Fields} section
+below for descriptions of each of the fields on a status line.
+
+If \it{vreposmonitor} is unable to contact the repository it was
+monitoring, it prints an error message and continues to poll the
+repository until a connection can be re-established. Once it is able
+to contact the repository again, it resumes monitoring where it left off.
+This behavior can be changed with \link{#CheckOpt}{the \bf{-check}
+flag}.
+
+\section{\anchor{SwitchesSect}{Switches}}
+
+Prefixes of switch names are recognized. For example, ``-u''
+can be used instead of ``-update''.
+
+\begin{description}
+\item{\anchor{UpdateOpt}{\bf{-update} \it{time}}}
+By default, a new status line is printed every 10 seconds. If
+\bf{-update} is specified, then a new line is printed every
+\it{time} seconds. \it{time} must be a non-negative integer.
+To specify an update time in units other than seconds, \it{time}
+can end with one of the following unit identifiers: \it{m} (minutes),
+\it{h} (hours), and \it{d} (days).
+
+\item{\anchor{TsOpt}{\bf{-ts} \it{time}}}
+If \bf{-ts} is specified, a timestamp is printed every \it{time}
+seconds. By default, timestamps are never printed. To specify a
+timestamp interval in units other than seconds, \it{time}
+can end with one of the following unit identifiers: \it{m} (minutes),
+\it{h} (hours), and \it{d} (days).
+
+\item{\anchor{NOpt}{\bf{-n} \it{num}}}
+By default, vreposmonitor prints status lines indefinitely. If \bf{-n}
+is specified, then only \it{num} status lines are printed.
+
+\item{\anchor{RowsOpt}{\bf{-rows} \it{num}}}
+By default, \it{vreposmonitor} prints the column headings once at the
+start of the program. If you specify \bf{-rows} \it{num}, then new
+heading columns are printed every \it{num} status lines.
+
+\item{\anchor{CheckOpt}{\bf{-check}}}
+By default, \it{vreposmonitor} prints the number of requested status
+lines and then exits with status 0.  If \bf{-check} is specified, it
+will only attempt to print one line.  If it was able to successfully
+contact the repository and print the line it will exit with status 0.
+If there was an error in reaching the repository or getting its
+status, it will exit with status 1.
+
+\item{\anchor{ReposOpt}{\bf{-R} \it{host[:port]}}}
+By default, \it{vreposmonitor} prints statistics for the local
+repository.  You can have it monitor an alternate repository by
+specifying the host and port of a different server.  If not specified,
+the port defaults to the same port your local repository uses.
+
+\item{\anchor{-mem}{\bf{-mem}}}
+Print information about the repository daemon's total memory usage.
+(See \bf{\tt{MEMORY}} under \link{#FieldDescSect}{Fields}.)
+
+\item{\anchor{-nfs}{\bf{-nfs}}}
+Print informaiton about the number of NFS transactions processed and
+the average time take to process them.  (See \bf{\tt{NFS}} under
+\link{#FieldDescSect}{Fields}.)
+
+\item{\anchor{-srpc}{\bf{-srpc}}}
+Print informaiton about the number of SRPC transactions processed and
+the average time take to process them.  (See \bf{\tt{NFS}} under
+\link{#FieldDescSect}{Fields}.)
+
+\item{\anchor{-dupe}{\bf{-dupe}}}
+Print statistics about the repository's NFS duplicate suppression
+mechanism.  (See \bf{\tt{DUPE}} under \link{#FieldDescSect}{Fields}.)
+
+\item{\anchor{-fdcache}{\bf{-fdcache}}}
+Print statistics about the repository's file descriptor cache.  (See
+\bf{\tt{FDCACHE}} under \link{#FieldDescSect}{Fields}.)
+
+\item{\anchor{-vmempool}{\bf{-vmempool}}} Print statistics about the
+repository's packaed CMemPool heap.  (See \bf{\tt{VMEMPOOL}} under
+\link{#FieldDescSect}{Fields}.)
+
+\end{description}
+
+\section{\anchor{FieldDescSect}{Fields}}
+
+The output is divided up into sections corresponding to diferent kinds
+of information.  The kinds of information and the order they appear in
+are controlled by the command-line options.  If no options requesting
+specific information are given, the default is:
+\link{#-mem}{\bf{-mem}} \link{#-nfs}{\bf{-nfs}}
+\link{#-srpc}{\bf{-srpc}} \link{#-dupe}{\bf{-dupe}}
+\link{#-fdcache}{\bf{-fdcache}}.
+
+\bf{\tt{MEMORY}}
+
+Information about the repository's memory usage.
+
+\begin{description}
+\item{\tt{SIZE}}
+The total memory size of the repository.
+\item{\tt{RES}}
+The memory size of the repository resident in physical memory.
+\end{description}
+
+\bf{\tt{NFS}}
+
+Information about the rate of NFS transaction processing.
+
+\begin{description}
+\item{\tt{NUM}}
+The number of NFS transactions since the previously printed line.
+\item{\tt{AVG}}
+The average time to process an NFS transaction since the previously
+printed line.
+\end{description}
+
+\bf{\tt{SRPC}}
+
+Information about the rate of SRPC transaction processing.
+
+\begin{description}
+\item{\tt{NUM}}
+The number of SRPC transactions since the previously printed line.
+\item{\tt{AVG}}
+The average time to process an SRPC transaction since the previously
+printed line.
+\end{description}
+
+\bf{\tt{DUPE}}
+
+Information about NFS duplicate suppression.
+
+\begin{description}
+\item{\tt{NEW}}
+The number of new NFS requests which have arrived since the previously
+printed line.
+\item{\tt{INPR}}
+The number of duplicate NFS requests corresponding to transactions
+still being processed which have arrived since the previously printed
+line.
+\item{\tt{DONE}}
+The number of duplicate NFS requests corresponding to transations
+previously completed which have arrived since the previously printed
+line.
+\end{description}
+
+\bf{\tt{FDCACHE}}
+
+Information about the repository's file descriptor cache.
+
+\begin{description}
+\item{\tt{HELD}}
+The number of file descriptors in the file descriptor cache.
+\item{\tt{HITS}}
+The number of requests for a file descriptor which were able to use an
+already open file descriptor from the file descriptor cache.  The
+value represents the number since the previously printed line.
+\item{\tt{OMIS}}
+The number of requests for a file descriptor which did not find a
+match in the file descriptor cache and for which a new file descriptor
+must be opened.  The value represents the number since the previously
+printed line.
+\item{\tt{TMIS}}
+The number of requests for a file descriptor which did not find a
+match in the file descriptor cache that will proceed without a file
+descriptor.  (For example, using stat(2) instead of fstat(2).)  The
+value represents the number since the previously printed line.
+\item{\tt{EVIC}}
+The number of file descriptors evicted from the file descriptor cache
+because the cache was full.  The value represents the number since the
+previously printed line.
+\item{\tt{EXPR}}
+The number of file descriptors expired from the file descriptor cache
+after going unused for a period of time.  The value represents the
+number since the previously printed line.
+\end{description}
+
+\bf{\tt{VMEMPOOL}}
+
+Information about the repository's special purpose tightly-packaed
+heap used to store directory structure and attributes.
+
+\begin{description}
+\item{\tt{SIZE}}
+Total size of VMemPool heap.
+\item{\tt{NEFL}}
+Total number of non-empty VMemPool free lists.  (Separate free lists
+are maintained for different block sizes to make allocations more
+efficient.)
+\item{\tt{FBLK}}
+Total number of blocks on all the VMemPool free lists.
+\item{\tt{FBYT}}
+Total number of bytes in all blocks on the VMemPool free lists.
+\item{\tt{B/FB}}
+Avergae number of bytes in blocks on the VMemPool free lists
+(i.e. \tt{FBYT} divided by \tt{FBLK})
+\item{\tt{WBYT}}
+Total number of wasted bytes due to alignment.  (Blocks start on an
+8-byte aligned boundary.  When a block is allocated of a size not
+evenly divisible by 8, some bytes are wasted to round up to the
+alignment boundary.  These bytes can be reclaimed if the block is
+later freed.)
+\item{\tt{ALOC}}
+Number of calls to VMemPool::allocate
+\item{\tt{AAVG}}
+Average time for a VMemPool::allocate call
+\item{\tt{BRJS}}
+Number of free blocks considered and rejected by VMemPool::allocate
+for being too small to be used for the requested allocation.
+\item{\tt{BRJL}}
+Number of free blocks considered and rejected by VMemPool::allocate
+for being too large to be used for the requested allocation.  (This is
+done to avoid fragmentation from splitting large blocks and only
+happens when the next block on the free list is a better fit.)
+\item{\tt{FB/A}}
+Average number of free blocks considered and rejected per call to
+VMemPool::allocate. (i.e. \tt{BRJS}+\tt{BRJL} divided by \tt{ALOC}).
+\item{\tt{ASBL}}
+Number of allocations serviced by splitting a large block.  (Splitting
+blocks leads to fragmentation.)
+\item{\tt{ANBL}}
+Number of allocations serviced with a new block created by expanding
+the heap.  (Some expansions require calling VMemPool::grow.)
+\item{\tt{FREE}}
+Number of calls to VMemPool::free
+\item{\tt{FAVG}}
+Average time for a VMemPool::free call
+\item{\tt{FCOB}}
+Number of times that a freed block was coalesced with a free block
+before it in memory.  (Freed blocks are combined with adjacent free
+blocks when possible to reduce fragmentation.)
+\item{\tt{FCOA}}
+Number of times that a freed block was coalesced with a free block
+after it in memory.
+\item{\tt{GROW}}
+Number of calls to VMemPool::grow (expanding the heap by mmap-ing more
+space)
+\end{description}
+
+\tt{SIZE}, \tt{NEFL}, \tt{FBLK}, \tt{FBYT}, \tt{B/FB}, anf \tt{WBYT}
+always represent the current values.  \tt{ALOC}, \tt{AAVG}, \tt{BRJS},
+\tt{BRJL}, \tt{FB/A}, \tt{ASBL}, \tt{ANBL}, \tt{FREE}, \tt{FAVG},
+\tt{FCOB}, \tt{FCOA}, and \tt{GROW} represent the number since the
+previously printed line and are totals since the repository was
+started on the first line.
+
+\section{\anchor{Example}{Example}}
+
+Here's some sample output:
+
+\begin{verbatim}
+Repository:     vesta.example.com:21776
+Server Version: release/13
+Started:        Sat Jan 29 00:57:59 EST 2005
+Uptime:         24 days 16 hours 47 minutes 39 seconds
+
+
+  MEMORY  |   NFS    |   SRPC   |     DUPE     |           FDCACHE           |
+SIZE  RES |NUM   AVG |NUM   AVG |NEW  INPR DONE|HELD HITS OMIS TMIS EVIC EXPR|
+---- ----- ---- ----- ---- ----- ---- ---- ---- ---- ---- ---- ---- ---- ---- 
+480M 480M 260M 0.3ms 284M 0.3ms 260M 2.8K 8.1K   10 297M  85M  19M  85M 123K 
+480M 480M 2.7K 0.1ms 5.0K 0.1ms 2.7K    0    0   10    0    0  975    0    0 
+480M 480M 2.3K 0.1ms 7.2K 0.1ms 2.3K    0    0   10    0    0  894    0    0 
+480M 480M 5.0K 0.5ms 4.4K 0.1ms 5.0K    0    0  362  281  462 1.3K  110    0 
+480M 480M 3.3K 100us 3.8K 0.1ms 3.3K    0    0  362    0    0  710    0    0 
+\end{verbatim}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{vreposmonitor} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{vreposmonitor} are in the section denoted by \tt{[Repository]}.
+Here are the relevant variables and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\it{VestaSourceSRPC_host} (string)}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port} (integer)}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{repository.8.html}{\bf{repository}(8)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{Author}
+
+Ken Schalk (\tt{ken@xorian.net})
+
+Based on \link{VCacheMonitor.1.html}{\bf{VCacheMonitor}}, which was
+written by Allan Heydon (\tt{caheydon@yahoo.com})

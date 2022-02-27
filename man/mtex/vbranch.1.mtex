@@ -1,0 +1,587 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vbranch - Create a Vesta branch}{vbranch}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vbranch} - Create a new branch of a package in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vbranch} [\link{#-q}{-q}] [\link{#-Q}{-Q}]
+[\link{#-v}{-v}]
+[\link{#-aA}{-a} | \link{#-aA}{-A}]  [\link{#-f}{-f}] [\link{#-F}{-F}]
+[\link{#-o}{-o \it{old-version}} | \link{#-O}{-O}] 
+[\link{#-m}{-m \it{message}} | \link{#-M}{-M}]
+[\link{#-h}{-h \it{hints}}]
+[\link{#-R}{-R \it{repos}}]
+[\it{package}\tt{/}\it{branch}]
+
+In the most common usage, only the package/branch argument is given,
+to specify the new branch's name.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Message}{Message Entry}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#Env_Vars}{Environment Variables}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+ho\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vbranch} command creates a branch of a package in the Vesta
+repository. A branch is a new package that is (usually) 
+placed as a subdirectory
+of the parent package, with a name based on one of the versions of the
+parent package (the \it{branch base}), and with a version 0 that is
+identical to the branch base.
+
+For example, if \tt{common/cxx/2} is an existing package version,
+"\tt{vbranch common/cxx/2.bugfix}" will create a new package named
+\tt{common/cxx/2.bugfix}, with version \tt{common/cxx/2.bugfix/0}
+being identical to the branch base \tt{common/cxx/2}.
+
+\begin{html}
+\<IMG SRC="vbranch.gif" ALT="vbranch figure"
+WIDTH=386 HEIGHT=387 BORDER=0\>
+\end{html}
+
+In more detail, \bf{vbranch}:
+\begin{itemize}
+\item Prompts the user to enter a branch descriptive \it{message}.
+(\link{#Message}{See the "Message Entry" section below.})
+\item Creates a new appendable directory named \it{package}\tt{/}\it{branch}, 
+containing an appendable subdirectory named \tt{checkout}.
+\item Creates a master stub named \tt{latest} in each of those directories.
+\item Binds the name \it{package}\tt{/}\it{branch}\tt{/0} to the same
+immutable directory named by \it{old-version} or to an empty directory
+if \link{#-O}{the -O flag} was given.
+\item Sets attributes as follows:
+\begin{description}
+\item{On \it{branch}}
+\tt{created-by}, \tt{creation-time}, \tt{old-version}, \tt{type} 
+(= \{"package", "branch"\}), and optionally \tt{message}.
+\item{On \it{branch}\tt{/checkout}}
+\tt{type}.
+\item{On \it{branch}\tt{/latest}}
+\tt{symlink-to} (= $LAST).
+\item{On \it{branch}\tt{/checkout/latest}}
+\tt{symlink-to} (= $LAST).
+\item{On \it{branch}\tt{/0}}
+\tt{old-version}.
+\item{On \it{old-version}}
+\tt{next-branches}
+\end{description}
+\end{itemize}
+
+If the name \it{package} is unqualified (does not have "\tt{/}", "\tt{.}", or
+"\tt{..}"  as its first arc), it is interpreted relative to the site's
+default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.  If \it{package} is
+omitted (that is, if the argument to \bf{vbranch} does not contain a
+"\tt{/}"), it defaults to "\tt{.}".  If the name \it{old-version} is
+unqualified, it is interpreted relative to \it{package}.
+
+You must have write access to \it{package}.
+The newly created branch is owned by you, but
+has access permissions inherited from \it{package}.
+
+In the presence of replication, branch creation cannot always be
+carried out entirely in the local repository.  In particular, the
+local repository may contain no replica of one of the needed objects,
+or it may contain a non-master replica where the master replica is
+needed.  Also, the \link{#-aA}{-a/-A} flags control which repository
+\bf{vbranch} will give mastership of the created branch.  (See
+\link{vrepl.1.html}{\bf{vrepl}(1)} and
+\link{vmaster.1.html}{\bf{vmaster}(1)} for more information about
+replication and mastership.)  The exact steps are slightly different
+depending on which repository has the master copy of \it{package} and
+whether the local repository is to have the master copy of the created
+branch (controlled by the \link{#-aA}{-a/-A} flags).
+
+If \it{package} is mastered locally, \bf{vbranch} creates the branch
+in the local repository (and the \link{#-aA}{-a/-A} flags have no
+effect).  However, if \it{old-version} does not exist locally,
+\bf{vbranch} searches for a copy and replicates it to the local
+repository before creating the branch.
+
+If \it{package} is not mastered locally, \bf{vbranch} may give
+mastership of \it{branch} to the local repository, if either the
+\link{#-aA}{-a} flag is specified or
+\link{#vbranch_acquires}{\it{[UserInterface]vbranch_acquires}} is set
+to true.  If \it{old-version} does not exist locally, \bf{vbranch}
+searches for a copy and replicates it to the local repository.
+\bf{vbranch} then creates the branch remotely in the master copy of
+\it{package} (except for inserting \it{old-version}), replicates it to
+the local repository, transfers mastership, and finally inserts
+\it{old-version}.
+
+If the \link{#-aA}{-A} flag is specified or
+\link{#vbranch_acquires}{\it{[UserInterface]vbranch_acquires}} is set
+to false and \it{package} is mastered remotely, \bf{vbranch} will
+leave mastership of \it{branch} with the master repository of
+\it{package}.  In this case, if \it{old-version} does not exist in the
+remote master repository, \bf{vbranch} searches for a copy and
+replicates it to that repository.  \bf{vbranch} then creates the
+branch remotely in the master copy of \it{package} (including
+inserting \it{old-version}), and replicates it to the local
+repository.
+
+\bf{vbranch} returns status 0 for success,
+1 for parameter syntax errors, or 2 for more serious errors.  (Note
+that if any of the \link{#Triggers}{trigger commands} fail,
+\bf{vbranch} returns status 2.)
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+\item{\anchor{-o}{-o} \it{old-version}}
+The branch base: the version in the parent package from which the new package
+branches off.
+Defaults to the initial substring of \it{branch} that consists only of
+decimal digits; if this substring is empty, -o or -O must be specified
+explicitly.
+\item{\anchor{-O}{-O}}
+Bind \it{branch}\tt{/0} to an empty directory and omits setting the
+\tt{old-version} attribute.
+\item{\anchor{-m}{-m} \it{message}}
+Specify the branch descriptive message.  If the \it{message} argument
+is \tt{"-"}, the user will be prompted to enter a message.
+(\link{#Message}{See the "Message Entry" section below.})  If
+\it{message} is any other text, it will be used as the branch
+descriptive message without prompting the user.  If neither the -m
+flag nor the \link{#-M}{-M flag} is used, the default is "\tt{-m -}"
+(although this can be changed with the
+\link{#Configuration}{\tt{[UserInterface]vbranch_message}
+configuration setting}).
+\item{\anchor{-M}{-M}}
+Omit the branch descriptive message.
+\item{\anchor{-h}{-h} \it{hints}}
+If \bf{vbranch} fails to find the master copy of a directory it needs
+to modify (or fails to find any copy of the old version) in either the
+local repository or any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-R}{-R} \it{repos}}
+Create the branch in \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-aA}{-a or -A}}
+Do (-a) or do not (-A) acquire mastership of the created branch when
+the local repository doesn't have mastership of \it{package}.  The
+default is controlled by the
+\link{#vbranch_acquires}{\it{[UserInterface]vbranch_acquires}}
+configuration setting.  (Note that if \it{package} is mastered in the
+local repository, these flags have no effect.)
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.  
+If the -f flag is not given,
+the parent directory of \it{package}\tt{/}\it{branch} must be of type 
+"package" (that is, its \tt{type} attribute must include this value).
+\item{\anchor{-F}{-F}}
+Create the branch under 
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} directory.
+Useful mostly in cases when the master repository of the branch parent is
+inaccessible or won't grant a permission for the operation. The root of 
+the branch path is replaced with the
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} setting.
+Any directories on this path which don't exist will be created. 
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Message}{Message Entry}}
+
+\bf{vbranch}'s default behavior is to prompt the user for a
+\it{branch descriptive message}.  If the \tt{EDITOR}
+\link{#Env_Vars}{environment variable} is set, the external editor
+program it specifies is invoked to edit the message.  Otherwise, the
+message is read from standard input.  A prompt is printed if the
+standard input is a terminal:
+
+\begin{verbatim}
+Enter branch description, terminated with ^D or . on a line by itself
+: 
+\end{verbatim}
+
+If the standard input is not a terminal (e.g. it was redirected to a
+file or a pipe), no prompt will be printed, but the standard input
+will still be used as the branch descriptive message.  (Note that
+when \tt{EDITOR} is set, the external editor is invoked even if the
+standard input is not a terminal.)
+
+When using an external editor, the initial text will be "\tt{<enter
+branch description here>}".  If the initial text is left unedited or
+the user enters an empty message, they will be asked for confirmation
+before completing the operation:
+
+\begin{verbatim}
+Empty branch description.  Continue (y/n)? 
+\end{verbatim}
+
+This is the only chance to abort when \tt{EDITOR} is set.  (So if you
+change your mind and are using an external editor, exit the editor
+either with the message unedited or with an empty message.)
+
+The \link{#-m}{-m flag} can be used to specify the branch descriptive
+message on the command line.  The \link{#-M}{-M flag} can be used to
+omit the branch descriptive message.  In either of these cases, no
+external editor will be invoked, and the standard input will not be
+read.
+
+The default of prompting for a branch descriptive message can be
+disabled with the
+\link{#Configuration}{\tt{[UserInterface]vbranch_message}
+configuration setting}.  However, this can be overridden on the
+command line with "\tt{-m -}", which will always cause \bf{vbranch} to
+prompt for a branch descriptive message.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is optional.  If it is not set,
+\tt{[Repository]realm} is used.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\anchor{vbranch_acquires}{\it{vbranch_acquires}}}
+Sets the default policy for which repository should have mastership of
+the created branch when the master repository of the parent directory
+is remote.  If it is equal (without regard to case) to "yes", "on", or
+"true", or can be parsed as an integer that is non-zero, the local
+repository will acquire mastership (as if the \link{#-aA}{-a} flag had
+been given).  If it is equal (without regard to case) to "no", "off",
+or "false", or can be parsed as an integer that is zero, the master
+repository of the parent directory will retain mastership of the
+created branch (as if the \link{#-aA}{-A} flag had been given).  If
+not set, defaults to "false".
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for the master copy of an object and for a copy of \it{old-version}.
+Each repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to \it{[Repository]VestaSourceSRPC_port}.  This
+setting is optional.
+\item{\it{vbranch_message}}
+A boolean configuration setting.  Determines whether \bf{vbranch} will
+prompt the user for a descriptive message.  If it is equal (without
+regard to case) to "yes", "on", or "true", or can be parsed as an
+integer that is non-zero, \bf{vbranch} will ask the user to enter a
+message (as if "\tt{\link{#-m}{-m} -}" had been given on the command
+line).  If it is equal (without regard to case) to "no", "off", or
+"false", or can be parsed as an integer that is zero, \bf{vbranch}
+will not prompt for a message (as if the \link{#-M}{-M} flag had been
+given).  If not set, defaults to "true".
+\item{\it{ForeignParent}}
+The directory under which all foreign branches are placed. 
+(See the description of the \link{#-F}{-F flag} above.)  
+It is usually defined as \tt{/vesta/\bf{\it{<current-site>}}/foreign/}.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is only used if \tt{[UserInterface]realm} is
+not set.
+\end{description}
+
+Settings in the \tt{[vbranch pre trigger]} and \tt{[vbranch post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vbranch} modifies the repository.  Each setting in the
+\tt{[vbranch pre trigger]} section specifies a command to be run
+before any action is taken, and each setting in the \tt{[vbranch post
+trigger]} section specifies a command to be run after all actions are
+complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vbranch pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vbranch /vesta/example.com/...
+Tada:
+Hello,
+World!
+Creating branch /vesta/example.com/...
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vbranch pre trigger]} section exit
+with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vbranch} will exit without
+creating a branch.
+
+The commands in the \tt{[vbranch post trigger]} section will only be
+executed if a new branch is successfully created.  If \bf{vbranch}
+fails with an error, the commands in the \tt{[vbranch post trigger]}
+section \it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vbranch} will not create a branch.  If any of the post trigger
+commands runs forever, \bf{vbranch} will not complete.  (In other
+words, \it{a trigger command that hangs will cause \bf{vbranch} to
+hang}.)  If any of the pre or post trigger commands exit with error
+status or are terminated by a signal, \bf{vbranch} will exit without
+running any more commands from those sections.  (In other words, \it{a
+trigger command that fails will prevent further trigger commands from
+being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given, the trigger commands
+will not actually be run.
+
+Information about what \bf{vbranch} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vbranch}, this will always be "vbranch".)
+\item{VESTA_REPOS}
+The local repository (\it{host}\tt{:}\it{port}) \bf{vbranch}
+communicates with (either the default from the configuration file or
+the one specified with the \link{#-R}{-R flag}.
+\item{VESTA_MASTER_HINTS}
+Additional repositories which may have been consulted in order to find
+the master copy of the parent directory of the branch.  This is the
+combination of the argument to the \link{#-h}{-h flag} (if it was
+used) and the hints from the
+\link{#Configuration}{\it{[UserInterface]DefaultHints} configuration
+setting} (if set in the configuration file).
+\item{VESTA_MASTER_REMOTE}
+Set to 1 if the parent directory of the branch created by
+\bf{vbranch} is mastered in a remote repository, set to 0 otherwise.
+If this is set to 1, the branch will be created in the remote
+master ($VESTA_MASTER_REPOS) and replicated to the local repository
+($VESTA_REPOS).
+\item{VESTA_MASTER_REPOS}
+The repository (\it{host}\tt{:}\it{port}) with mastership of the
+parent directory of the branch created by \bf{vbranch}.  If this is
+different from $VESTA_REPOS, $VESTA_MASTER_REMOTE will be set to 1 and
+the branch is created at the remote master repository.
+\item{VESTA_BRANCH}
+The branch created by \bf{vbranch}.
+\item{VESTA_PACKAGE}
+The same as $VESTA_BRANCH.  (Remember that a branch is also a
+package.)  This facilitates using the same trigger with both
+\bf{vbranch} and \bf{vcreate}.
+\item{VESTA_OLD_VERSION}
+The path to the version the branch will be based upon (either
+automatically determined or specified with the \link{#-o}{-o flag}).
+This will become version 0 within the created branch.
+\item{VESTA_OMIT_OLD_VERSION}
+Set to 1 if there is no old version (if \link{#-O}{the -O flag} was
+given), set to 0 otherwise.
+\item{VESTA_OLD_VERSION_REMOTE}
+Set to 1 if the old version was not found in the master repository of
+the branch parent ($VESTA_MASTER_REPOS), set to 0 otherwise.  If set
+to 1, the old version will be replicated from the repository where it
+was found ($VESTA_OLD_VERSION_REPOS) to the master repository of the
+branch parent directory before creating the branch.
+\item{VESTA_OLD_VERSION_REPOS}
+The repository (\it{host}\tt{:}\it{port}) where a replica of the old
+version was found.  If this is different from $VESTA_MASTER_REPOS,
+$VESTA_OLD_VERSION_REMOTE will be 1.  If there is no old version, this
+will be set to the empty string.
+\item{VESTA_ACQUIRE_MASTERSHIP}
+Set to 1 if \bf{vbranch} is creating a branch at a remote master
+repository and acquiring mastership of it in the local repository, set
+to 0 otherwise.  (If $VESTA_REPOS is the same as $VESTA_MASTER_REPOS
+this will be 0.)  See \link{#-aA}{the description of the -a/-A flags
+above}.
+\item{VESTA_USE_FOREIGN_TREE}
+Set to 1 if \link{#-F}{the -F flag} was given, set to 0 otherwise.
+(Note that if the branch directory would be inside the directory
+specified in the
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} without this
+option, such as creating a branch of a branch previously created there
+with "vbranch -F", this may have no effect.)
+\item{VESTA_MESSAGE}
+The branch description message, or the empty string if there is no
+description message.
+\item{VESTA_OMIT_MESSAGE}
+Set to 1 if there is no branch description message (if \link{#-M}{the
+-M flag} was given or
+\link{#Configuration}{\tt{[UserInterface]vbranch_message}} was used to
+disable branch messages), set to 0 otherwise.
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vbranch pre trigger]
+// Force users to describe all branches
+50force_message = if [ $VESTA_OMIT_MESSAGE -eq 1 -o -z "$VESTA_MESSAGE" ]; then echo "Policy requires a branch description"; exit 1; fi
+
+[vbranch post trigger]
+// Add an attribute on all newly created branches in both the local
+// and master repositories declaring it to be an active area of work.
+50status_open = for r in $VESTA_MASTER_REPOS $VESTA_REPOS; do vattrib -R $r -s branch-status open $VESTA_BRANCH; done
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vbranch} is atomic if it modifies only the local
+repository.  If a remote repository must be modified, however, the
+action performed at each repository is individually atomic, but
+\bf{vbranch} can die between the actions on the remote and local
+repositories.  To make this problem less likely to occur, \bf{vbranch}
+ignores \tt{SIGINT} (the ^C interrupt) during the critical section.
+
+When using \link{#-F}{the -F flag}, if the foreign hierarchy does not
+yet contain the necessary directories for the foreign branch to be
+created, \it{they will be created before running \link{#Triggers}{the
+commands from the \tt{[vbranch pre trigger]} section of the config
+file}}.  (For example, if the command line is "\tt{vbranch -F
+/vesta/a.example.com/foo/3.bar}" and \tt{[UserInterface]ForeignParent}
+is set to \tt{/vesta/b.example.com}, the directory
+\tt{/vesta/b.example.com/a.example.com/foo} will be created if it does
+not already exist.)  This violates the rule of not altering the
+repository before the \tt{[vbranch pre trigger]} commands are run, but
+is necessary to determine which repository has mastership of the
+branch parent directory (to set the $VESTA_MASTER_REPOS trigger
+variable), as well as other information passed to the trigger
+commands.
+
+\section{\anchor{Env_Vars}{Environment Variables}}
+
+\begin{description}
+\item{\tt{VESTACONFIG}}
+If set, specifies the Vesta configuration file to be used. See
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}.
+\item{\tt{EDITOR}}
+If set, specifies the editor to use for
+\link{#Message}{editing the branch descriptive message}.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

@@ -1,0 +1,197 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintCacheVars(8) man page}{PrintCacheVars}{8}
+
+\section{Name}
+
+PrintCacheVars - print the current Vesta-2 cache daemon stable
+variables
+
+\section{Synopsis}
+
+\bf{PrintCacheVars} [ \bf{-verbose} ]
+
+\section{Description}
+
+The Vesta-2 cache daemon \link{VCache.1.html}{VCache(1)} keeps a few
+stable variables related to the weeding process.  (This information is
+primarily of interest to maintainers who need to debug the cache
+daemon's deletion processing.)
+
+\begin{description}
+\item{\bf{deleting} (boolean)}
+Are there pending deletions to be processed?  This allows the cache
+daemon to resume deletions that were interrupted.
+
+\item{\bf{hitFilter} (set of \it{cache indecies})}
+The \it{hit filter} is set during the weeding process.  If
+\bf{deleting} is false, then the hit filter is an initial guess at the
+set of cache entries to be deleted, some of which may be kept because
+ongoing evaluations are using them.  If \bf{deleting} is true, then
+the hit filter is the set of cache indecies for all the cache entries
+to be deleted.  (Note that the size of this set corresponds to the
+"\tt{NUM HF}" column in the output of
+\link{VCacheMonitor.1.html}{VCacheMonitor(1)}.)
+
+\item{\bf{mpksToWeed} (list of \it{multi-PK files})}
+The set of all the \it{multi-PK files} in which the cache entries to
+be deleted will be found.  When the cache has re-written all of these
+files, the deletion process is finished.
+
+\item{\bf{nextMPKToWeed} (index into \bf{mpksToWeed})}
+The cache daemon remembers its approximate place in \bf{mpksToWeed}.
+All the multi-PK files before this have definitely been re-written.  A
+small number of the following multi-PK files may have already been
+re-written, as the cache daemon does not update \bf{nextMPKToWeed}
+after every single multi-PK file is processed.  (Note that the
+"\tt{MPK WEED}" column in the output of
+\link{VCacheMonitor.1.html}{VCacheMonitor(1)} represents the number of
+remaining multi-PK files in \bf{mpksToWeed} starting at
+\bf{nextMPKToWeed}.)
+
+\end{description}
+
+This inspection utility will display these variables for you.
+
+By default, the program writes a summary by displaying only a subset
+of \bf{hitFilter} plus its size and only displaying a few entris from
+\bf{nextMPKToWeed} near \bf{mpksToWeed}. If \bf{-verbose} is specified,
+it prints the complete set of both \bf{hitFilter} and \bf{mpksToWeed}.
+
+\section{Example}
+
+The following is an example of the output (without using
+\bf{-verbose}) from a cache daemon that is currently processing
+deletions:
+
+\begin{verbatim}
+deleting = true
+
+hitFilter = 03000000201140a90d06001e55fdffff... (15168 total)
+
+nextMPKToWeed = 1490
+
+mpksToWeed = (6244 total)
+    ...
+    pfx[1479] = fe68000000000000
+    pfx[1480] = 71a5000000000000
+    pfx[1481] = a575000000000000
+    pfx[1482] = 8bef000000000000
+    pfx[1483] = cc20000000000000
+    pfx[1484] = 8116000000000000
+    pfx[1485] = 40e5000000000000
+    pfx[1486] = b422000000000000
+    pfx[1487] = cda8000000000000
+    pfx[1488] = c147000000000000
+    pfx[1489] = 0e9d000000000000
+ >> pfx[1490] = 29ab000000000000
+    pfx[1491] = 5cb7000000000000
+    pfx[1492] = 5056000000000000
+    pfx[1493] = dd19000000000000
+    pfx[1494] = 6aa0000000000000
+    pfx[1495] = 2b33000000000000
+    pfx[1496] = dea1000000000000
+    pfx[1497] = 9e70000000000000
+    pfx[1498] = 84ea000000000000
+    pfx[1499] = ab95000000000000
+    pfx[1500] = 054c000000000000
+    pfx[1501] = df65000000000000
+    ...
+\end{verbatim}
+
+Note that in the partial listing of \bf{mpksToWeed},
+\bf{nextMPKToWeed} is marked with a preceding "\tt{>>}".
+
+\section{Configuration Variables}
+
+\it{PrintCacheVars} locates the stable variables by reading
+site-specific configuration information from \link{vesta.cfg.5.html}{a
+Vesta-2 configuration file}.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by the
+\it{PrintCacheLog} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables it uses and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{StableVarsDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores its stable variables.
+
+\item{\tt{Deleting} (string)}
+The file (relative to the MetaDataRoot/MetaDataDir/StableVarsDir) in
+which the deleting boolean is stored.
+
+\item{\tt{HitFilter} (string)}
+The file (relative to the MetaDataRoot/MetaDataDir/StableVarsDir) in
+which the hit filter set is stored.
+
+\item{\tt{MPKsToWeed} (string)}
+The file (relative to the MetaDataRoot/MetaDataDir/StableVarsDir) in
+which the list of multi-PK files to be processed during deletions is
+stored.
+
+\item{\tt{WeededLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+cache server stores its log of multi-PK files which have already been
+re-written during deletions (i.e. where \bf{nextMPKToWeed} is stored).
+
+\end{description}
+
+\section{Files}
+
+\begin{description}
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$StableVarsDir/$Deleting}}
+Where \bf{deleting} is stored.
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$StableVarsDir/$HitFilter}}
+Where \bf{hitFilter} is stored.
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$StableVarsDir/$MPKsToWeed}}
+Where \bf{mpksToWeed} is stored.
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$WeededLogDir/*.log}}
+Where \bf{nextMPKToWeed} is stored.  It's written as a series of
+records indicating that \it{N} additional entries from \bf{mpksToWeed}
+have been completed.
+
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{VCacheMonitor.1.html}{VCacheMonitor(1)}
+
+\section{Author}
+
+Kenneth C. Schalk <\tt{ken AT xorian DOT net}>

@@ -1,0 +1,10 @@
+x;
+
+x y z;
+
+x (y z);
+
+LAMBDA x. x a;
+
+(LAMBDA x. x x) (LAMBDA x. x x);
+

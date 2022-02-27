@@ -1,0 +1,5 @@
+PROC Main() IS
+VAR n := 1 IN
+    n -> Wr("hello world\n")
+END
+END;

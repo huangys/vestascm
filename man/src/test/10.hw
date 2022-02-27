@@ -1,0 +1,8 @@
+PROC Main() IS
+    VAR n := 0 IN
+    TIL n = 10 -> Wr("Oops")
+      | n = 11 -> Wr("Oops")
+      | n = 12 -> Wr("hello world\n")
+    DO n := n + 3
+    END END
+END;

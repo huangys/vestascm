@@ -1,0 +1,133 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmount - Vesta mount program}{vmount}{8}
+
+\section{Name}
+
+\bf{vmount} - Low-level NFS mount program for Vesta
+
+\section{Synopsis}
+
+\bf{vmount} \link{#FLAGS}{[flags]} hostname filehandle /directory
+
+This program is mainly for use in shell scripts; refer to 
+\link{#See_Also}{See Also} below.
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vmount} command simply sets up arguments and calls the
+\it{mount()} system call to mount an NFS filesystem.  It is necessary
+because the standard mount(8) program is too elaborate.  The standard mount
+program interacts with the mount daemon to do name mapping, but Vesta
+needs to be able to mount the repository given only a host name, port,
+numeric filehandle, and mount point directory.
+
+The filehandle must be given in hex.  It is filled out to the
+requisite 32 bytes by adding trailing (not leading) zeros.  This is
+convenient considering the way the Vesta repository constructs
+filehandles.
+
+\section{\anchor{Flags}{Flags}}
+
+Each of the following flags sets one bit of the \it{mnt_flag} or one
+field of the \it{struct nfs_args} data structure passed to the
+\it{mount()} system call.  The flag descriptions are taken directly
+from the Tru64 Unix \it{mount.h} header file.  The flags are not all
+meaningful or useful when mounting the Vesta NFS server.
+
+\begin{description}
+\item{-p port}
+UDP port number for NFS server, default 2049.
+\item{-r}
+M_RDONLY: The file system should be treated as read only; no
+writing is allowed (even by a process with appropriate
+privilege).  Physically write-protected and magnetic
+tape file systems must be mounted read only or errors
+will occur when access times are updated, whether or
+not any explicit write is attempted.
+\item{-x}
+M_NOEXEC: Do not allow files to be executed from the file system.
+\item{-s}
+M_NOSUID: Do not honor setuid or setgid bits on files when executing them.
+\item{-d}
+M_NODEV: Do not interpret special files on the file system.
+\item{-y}
+M_SYNCHRONOUS: All I/O to the file system should be done synchronously.
+\item{-f}
+M_FMOUNT: Forcibly mount, even if the file system is unclean.
+\item{-u}
+M_UPDATE: The mount command is being applied to an already
+mounted file system.  This allows the mount flags to be
+changed without requiring that the file system be
+unmounted and remounted.
+\item{-g}
+M_GRPID: All new files and directories will inherit the group ID
+of the parent.  When this is not specified, SVID III
+semantics apply, for example, if the parent directory's
+mode bits include the parent's group ID.  If IS_GID is
+off, then it inherits the processes group ID.
+\item{-S}
+NFSMNT_SOFT: soft mount (hard is default)
+\item{-W size}
+NFSMNT_WSIZE: set write size (default 8192)
+\item{-R size}
+NFSMNT_RSIZE: set read size (default 8192)
+\item{-T tnths}
+NFSMNT_TIMEO: set initial timeout (in 1/10 secs; default 11)
+\item{-E count}
+NFSMNT_RETRANS: set number of request retries (default 4)
+\item{-H name}
+NFSMNT_HOSTNAME: set hostname for error printf (default host:hdl)
+\item{-I}
+NFSMNT_INT: allow interrupts on hard mount
+\item{-C}
+NFSMNT_NOCONN: no connect on mount - any responder
+\item{-A}
+NFSMNT_NOAC: don't cache attributes
+\item{-N sec}
+NFSMNT_ACREGMIN: set min seconds for file attr cache (def 3600)
+\item{-X sec}
+NFSMNT_ACREGMAX: set max seconds for file attr cache (def 36000)
+\item{-D sec}
+NFSMNT_ACDIRMIN: set min seconds for dir attr cache (def 3600)
+\item{-Y sec}
+NFSMNT_ACDIRMAX: set max seconds for dir attr cache (def 36000)
+\item{-O}
+NFSMNT_NOCTO: don't freshen attributes on open
+\item{-P}
+NFSMNT_POSIX: static pathconf kludge info (not supported)
+\item{-U}
+NFSMNT_AUTO: automount file system
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{mountrepos.8.html}{\bf{mountrepos}(8)},
+\link{umountrepos.8.html}{\bf{umountrepos}(8)},
+\link{repository.8.html}{\bf{repository}(8)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Tue Nov 13 12:58:25 EST 2001 by ken@xorian.net
+     modified on Tue Jul  6 19:11:03 PDT 1999 by mann
+\end{verbatim}

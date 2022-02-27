@@ -1,0 +1,215 @@
+% Copyright (C) 2009, Vesta free software project
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vdiff - Compare versions in the Vesta repository}{vdiff}{1}
+
+\section{Name}
+
+\bf{vdiff} - Compare versions in the Vesta repository
+
+\section{Synopsis}
+
+\bf{vdiff}
+ [\link{#--snap}{--snap}] [\link{#--why-snap}{--why-snap}]
+ [\link{#--diff-cmd}{--diff-cmd} \it{command}]
+ [\it{diff flags}] [\it{directory1} [\it{directory2}]]
+ [\link{#--}{--} \it{diff flags}]]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Examples}{Examples}
+\item \link{#Exit Status}{Exit Status}
+\item \link{#Configuration}{Configuration}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vdiff} command efficiently compares versions and working
+directories in the Vesta repository.  It's equivalent to a recursive
+directory comparison such as "\tt{diff -r}" performs, but can be
+faster by using information in the Vesta repository to avoid comparing
+files and directories which are known to be identical.  It also
+provides some useful defaults without forcing the user to explicitly
+specify the old and new versions to be compared.
+
+If two directories are given as arguments, those two directories are
+compared.
+
+If no directory arguments are provided, the current working directory
+is used as though it was given as a single argument.
+
+If a single directory argument is given (or the current working
+directory is assumed), the versions compared depend upon the type of
+directory and its attributes.
+
+\begin{itemize}
+\item If the argument is a working directory created by \link{vcheckout.1.html}{vcheckout}, the basis version of the checkout is compared to the working directory.  This choice can be modified with command-line flags:
+\begin{itemize}
+\item With \link{#--snap}{--snap}, the most recent immutable snapshot is compared to the working directory, which is typically the most recent one used in a build.  (In other words, it shows the changes which will be stored in the next immutable snapshot.)
+\item With \link{#--why-snap}{--why-snap}, the two most recent immutable snapshots are compared.  (In other words, it shows the changes which necessitated taking the most recent snapshot.) 
+\end{itemize}
+\item If the argument is a branch created by \link{vbranch.1.html}{vbranch} or a package with an \tt{old-version} attribute, the basis version of the package/branch is compared to the latest version in the package/branch.  (This shows the complete set of changes made since the branch was created.)
+\item If the argument is a checked in immutable version in a package or branch, the previous version (determined by the \tt{old-version} attribute) is compared to the specified version.
+\item If the argument is a session directory created by \link{vcheckout.1.html}{vcheckout}, the basis version of the checkout is compared to the latest immutable snapshot in the session directory.  (This shows the changes made since the checkout session was started.)
+\item If the argument is an immutable snapshot inside a session directory created by \link{vcheckout.1.html}{vcheckout}, the previous snapshot is compared to the specified snapshot.  (This shows the changes made in a specific snapshot.)
+\end{itemize}
+
+You may also supply a subdirectory or a specific file within an immutable version or a mutable working directory.   This will cause \bf{vdiff} to compare only that portion of the enclosing version or working directory.
+
+\section{\anchor{Flags}{Flags}}
+
+Any unrecognized command-line arguments starting with a dash will be treated as \it{diff flags} (i.e. passed along to the external diff command used to compare files).  This allows the user to alter the diff output by supplying common flags like "-u" (for unified output), "-c" (for a context diff), or "-w" (to ignore whitespace-only changes).
+
+\begin{description}
+\item{\anchor{--snap}{--snap}}
+Compare the most recent snapshot to the specified working directory.  Ignored unless the single argument (or current working directory) is a mutable working directory created by \link{vcheckout.1.html}{vcheckout}.
+\item{\anchor{--why-snap}{--why-snap}}
+Compare the most recent two snapshot of the specified working directory.  (Mnemonic: \bf{Why} was that last snapshot taken?)  Ignored unless the single argument (or current working directory) is a mutable working directory created by \link{vcheckout.1.html}{vcheckout}.
+\item{\anchor{--diff-cmd}{--diff-cmd \it{command}}}
+Change the external command invoked to compare files which are suspected to be different.  See the description of \tt{[UserInterface]diff_command} in the \link{#Configuration}{Configuration section below}.
+\item{\anchor{--}{--}}
+Any arguments following -- will be passed to the external file comparison command, even if they wouldn't otherwise be recognized as flags to be passed along.  (For example, if you wanted to pass "-U 5" to the file comparator the "5" would be treated as a directory to be compared; placing "-U 5" after "--" will allow it to be passed through.)
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Comparing the previous two snapshots with \link{#--why-snap}{--why-snap}:
+
+\begin{verbatim}
+% cd /vesta-work/ken/repos_ui.vdiff
+% vdiff --why-snap
+Comparing /vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/0
+     with /vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/1
+
+diff  '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/0/src/vdiff.C' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/1/src/vdiff.C'
+472c472
+<   Text cmd = Text::printf("%s %s %s",
+---
+>   Text cmd = Text::printf("%s '%s' '%s'",
+529c529
+<   Text cmd = Text::printf("%s %s/%s %s/%s",
+---
+>   Text cmd = Text::printf("%s '%s/%s' '%s/%s'",
+561c561
+<   Text cmd = Text::printf("%s %s/%s %s/%s",
+---
+>   Text cmd = Text::printf("%s '%s/%s' '%s/%s'",
+\end{verbatim}
+
+The changes made in a checkout session:
+
+\begin{verbatim}
+% vdiff -u1 /vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2
+Comparing /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1
+     with /vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/1
+
+diff -u1 '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/vdiff.C' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/1/src/vdiff.C'
+--- /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/vdiff.C   2009-12-05 08:24:51.000000000 -0500
++++ /vesta/vestasys.org/vesta/repos_ui/71.vdiff/checkout/2/1/src/vdiff.C        2009-12-08 08:52:00.000000000 -0500
+@@ -471,3 +471,3 @@
+ {
+-  Text cmd = Text::printf("%s %s %s",
++  Text cmd = Text::printf("%s '%s' '%s'",
+                          diff_cmd.cchars(),
+@@ -528,3 +528,3 @@
+   // an option like -N to have diff produce output in this case
+-  Text cmd = Text::printf("%s %s/%s %s/%s",
++  Text cmd = Text::printf("%s '%s/%s' '%s/%s'",
+                          diff_cmd.cchars(),
+@@ -560,3 +560,3 @@
+   // an option like -N to have diff produce output in this case
+-  Text cmd = Text::printf("%s %s/%s %s/%s",
++  Text cmd = Text::printf("%s '%s/%s' '%s/%s'",
+                          diff_cmd.cchars(),
+\end{verbatim}
+
+Which files have changed in a branch:
+
+\begin{verbatim}
+% vdiff -q /vesta/vestasys.org/vesta/repos_ui/71.vdiff
+Comparing /vesta/vestasys.org/vesta/repos_ui/71
+     with /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1
+
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/src/ReposUIPath.H' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/ReposUIPath.H'
+Files /vesta/vestasys.org/vesta/repos_ui/71/src/ReposUIPath.H and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/ReposUIPath.H differ
+Only in /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src: vdiff.1.mtex
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/src/docs.ves' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/docs.ves'
+Files /vesta/vestasys.org/vesta/repos_ui/71/src/docs.ves and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/docs.ves differ
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/src/ReposUIPath.C' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/ReposUIPath.C'
+Files /vesta/vestasys.org/vesta/repos_ui/71/src/ReposUIPath.C and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/ReposUIPath.C differ
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/src/progs.ves' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/progs.ves'
+Files /vesta/vestasys.org/vesta/repos_ui/71/src/progs.ves and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src/progs.ves differ
+Only in /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/src: vdiff.C
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/linux_x86_64_deb_sarge.main.ves' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/linux_x86_64_deb_sarge.main.ves'
+Files /vesta/vestasys.org/vesta/repos_ui/71/linux_x86_64_deb_sarge.main.ves and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/linux_x86_64_deb_sarge.main.ves differ
+diff -q '/vesta/vestasys.org/vesta/repos_ui/71/pkg_ovs.ves' '/vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/pkg_ovs.ves'
+Files /vesta/vestasys.org/vesta/repos_ui/71/pkg_ovs.ves and /vesta/vestasys.org/vesta/repos_ui/71.vdiff/1/pkg_ovs.ves differ
+\end{verbatim}
+
+\section{\anchor{Exit Status}{Exit Status}}
+
+Like diff(1), \bf{vdiff} uses its exit status to indicate whether
+differences were found.  \bf{vdiff} returns status 0 when no
+differences are found and status 1 when differences are found.  In the
+event of an error, \bf{vdiff} returns status 2.
+
+Note also that \bf{vdiff} uses the exit status of the external command
+invoked to compare files to determine whether they are different.
+(See \link{#--diff-cmd}{the description of the --diff-cmd flag above}
+and the description of \tt{[UserInterface]diff_command} in the
+\link{#Configuration}{Configuration section below}.)  If it exits with
+status 0, \bf{vdiff} considers the files being compared to be
+identical.  If it exits with status 1, \bf{vdiff} considers the files
+being compared to be different.  If it exits with any other status,
+\bf{vdiff} assumes an error occurred and exits with status 2.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{diff_command}}
+The external command to invoke for comparing files which differ.  This
+makes it possible to substitute some other comparator (e.g. tkdiff,
+kdiff, meld, etc.).  If not set, this defaults to "diff".  This
+setting can be over-ridden on the command line with the
+\link{#--diff-cmd}{--diff-cmd} flag.  This command should exit with
+status 0 if there are no differences, status 1 if there are
+differences, and a status higher than 1 in the event of some other
+problem.
+\item{\it{diff_flags}}
+If no \it{diff flags} are provided on the command line, this
+configuration setting is used instead.  This allows the user to set
+default diff options.  For example, a user who prefers unified diff
+output might use "-u" or "-u -N" to always produce output that could
+be used with patch(1).
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}, diff(1), \link{vcheckout.1.html}{\bf{vcheckout}(1)}.
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk

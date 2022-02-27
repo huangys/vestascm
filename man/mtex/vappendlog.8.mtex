@@ -1,0 +1,62 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vappendlog - Append to a VestaLog file}{vappendlog}{8}
+
+\section{Name}
+
+\bf{vappendlog} - Append standard input to a VestaLog file
+
+\section{Synopsis}
+
+\bf{vappendlog} [\link{#-n}{-n \it{number}}] [\it{directory}]
+
+\section{\anchor{Description}{Description}}
+
+Append standard input to a log file written by 
+VestaLog (see \tt{VestaLog.H}).
+The append is done as a single atomic action.
+If \it{directory} is omitted, the log is found in
+the current directory.
+
+If there is no log in the given directory, \bf{vappendlog} creates
+a new log and appends to that.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-n}{-n} \it{number}}
+If -n is omitted, recovery begins from
+the highest-numbered log file in the directory;
+otherwise, recovery begins from \it{number}.log.
+New records are always appended to the highest-numbered log file.
+(This flag is not particularly useful.)
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vdumplog.8.html}{\bf{vdumplog}(8)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Fri Nov  9 14:19:11 EST 2001 by ken@xorian.net
+     modified on Fri Aug  9 12:28:36 PDT 1996 by mann
+\end{verbatim}

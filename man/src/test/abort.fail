@@ -1,0 +1,3 @@
+PROC Main() IS
+    FAIL | SKIP; Wr("hello world\n"); ABORT
+END;

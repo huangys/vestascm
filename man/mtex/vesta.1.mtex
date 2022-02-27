@@ -1,0 +1,880 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vesta - The Vesta evaluator}{vesta}{1}
+
+\section{Name}
+
+\bf{vesta} - Evaluate a Vesta system model
+
+\section{Synopsis}
+
+\bf{vesta}
+[ \link{#options}{\it{options}} ... ]
+[ \it{modelfile} ]
+
+\section{\anchor{contents}{Contents}}
+
+\begin{itemize}
+\item \link{#description}{Description}
+\item \link{#options}{Options}
+\begin{itemize}
+\item \link{#shipping-options}{Shipping Options}
+\item \link{#eval-options}{Evaluation Options}
+\item \link{#debug-options}{Debugging Options}
+\item \link{#cache-options}{Caching Options}
+\item \link{#repos-options}{Repository Options}
+\end{itemize}
+\item \link{#pragmas}{Recognized Pragmas}
+\item \link{#duplicateSuppression}{Duplicate Suppression}
+\item \link{#configuration}{Configuration Variables}
+\item \link{#runtool}{Runtool Host Selection}
+\item \link{#ToolCore}{Tools That Dump Core}
+\item \link{#EnvVars}{Environment Variables}
+\item \link{#see_also}{See Also}
+\item \link{#author}{Author}
+\end{itemize}
+
+\section{\anchor{description}{Description}}
+
+\bf{vesta} is the Vesta evaluator. It evaluates the model in
+\it{modelfile}. If no \it{modelfile} is specified, a default filename
+is taken from the \link{#configuration}{Vesta configuration
+file}. If \it{modelfile} names a directory, the evaluator appends the
+default filename.  The \tt{.ves} extension can be omitted in
+\it{modelfile}.
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section for
+definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how model names given on the command
+line are looked up.
+
+\section{\anchor{options}{Options}}
+All options marked with \it{*toggleable*} have both a positive and a
+negative form.  The negative form is the positive form with "no-"
+prepended to it.  A few examples: -k/-no-k, -CLEAN/-no-CLEAN
+
+\bf{\anchor{shipping-options}{Shipping Options}}
+
+The following options can be used to ship derived files to a regular
+file system. By default, no derived files are shipped.
+
+\begin{description}
+\item{\anchor{-shipto}{-shipto} \it{pathname}}
+Ship the evaluation result to the directory specified by \it{pathname},
+appending a log of the items shipped to the file \it{pathname}\tt{/.log}.
+The \it{-shipto} flag must be specified if any of the \it{-shipfrom},
+\it{-s}, \it{-clean}, and/or \it{-CLEAN} flags are present.
+
+The specified \it{pathname} may be a file (rather than a directory) if
+the \it{-shipfrom} flag is given and specifies exactly one value of
+type text.  In this case the specified value is shipped to the given
+file, and the \tt{.log} file is not written.
+
+\item{\anchor{-shipfrom}{-shipfrom} \it{pathname}}
+Specify the component in the evaluation result to be shipped. By
+default, the complete evaluation result is shipped to the directory
+specified by the \it{-shipto} switch.
+
+\item{\anchor{-s}{-s}				\it{*toggleable*}}
+Ship the evaluation result by symbolic links. By default,
+the evaluation result is shipped by copying.  Note: these symbolic links 
+point to derived files that are not protected from deletion by VestaWeed.
+Use this form of shipping with caution.
+
+\item{\anchor{-clean}{-clean}			\it{*toggleable*}}
+Remove the old contents of the "shipto" directory (including
+subdirectories and the \tt{.log} file) before shipping into it.  If the
+directory is nonempty, it must contain a \tt{.log} file; this feature
+is meant to protect against inadvertently cleaning out the wrong
+directory in the event of a typo.  If this flag is not given, the
+shipped value is merged with the existing contents of the "shipto"
+directory.
+
+\item{\anchor{-CLEAN}{-CLEAN}			\it{*toggleable*}}
+Same as \it{-clean}, except that the directory is always cleaned,
+regardless of whether a \tt{.log} file exists in it.
+
+\item{\anchor{-hushship}{-hushship}			\it{*toggleable*}}
+Only prints that the evaulator has started and finished shipping
+instead of printing that it's shipping each file.
+
+\item{\anchor{-log}{-log}			\it{*toggleable*}}
+Place a .log file in every directory that's shipped that records
+the shortid shipped to each file name.  This defaults to on.
+\end{description}
+
+\bf{\anchor{eval-options}{Evaluation Options}}
+
+\begin{description}
+\item{\anchor{-result}{-result}			\it{*toggleable*}}
+Print out the result of the evaluation.
+
+\item{\anchor{-maxthreads}{-maxthreads} \it{n}}
+Set the maximum number of threads that can be run in parallel by 
+all invocations of the \tt{_par_map} primitive to \it{n}.
+Roughly speaking, this is the number of tool
+invocations (e.g., compilations) that can be run in parallel.
+The default is set in the Vesta configuration file; see below.
+
+\item{\anchor{-k}{-k}				\it{*toggleable*}}
+When specified, keep evaluating even when the tool fails in a
+primitive run_tool call. Any other kind of run-time error (such as
+selecting a non-existent field of a binding) is considered fatal,
+and terminates the evaluation.
+
+\item{\anchor{-parse}{-parse}			\it{*toggleable*}}
+Parse the model only; do not evaluate the model.  Yes, the negative
+version does both parse and execute in spite of being -no-parse.
+
+\item{\anchor{-version}{-version}			\it{*toggleable*}}
+Print the evaluator's version number.
+
+\item{\anchor{-mstats}{-mstats}			\it{*toggleable*}}
+Print memory statistics after the evaluation (but before shipping).
+Sample output:
+
+\begin{verbatim}
+Memory Stats:
+  Total Memory Size        :  86M   (89735168)
+  Resident Size            :  39M   (41304064)
+  GC Heap Size             :  34M   (36044800)
+  GC Total Allocated Bytes : 2.0G (2163721448)
+  Garbage Collection Count :  244
+  Major Page Faults        :    0
+\end{verbatim}
+
+"Total Memory Size" is the total virtual memory size of the evaluator
+process and "Resident Size" is the portion in physical memory as
+reported by the operating system.  The evaluator uses a library for
+dynamic memory allocations that supports garbage collection.  "GC Heap
+Size" is the portion of the processes memory which is used for dynamic
+memory needs (some of which may be free space at the time the
+statistics are printed).  "GC Total Allocated Bytes" is the total
+number of bytes allocated dynamically since the evaluator started
+(including those reclaimed by garbage collection).  "Garbage
+Collection Count" is the number of times that a garbage collection has
+been performed.  "Major Page Faults" is the number of times the kernel
+needed to perform I/O retrieve a page of memory for the evaluator to
+access (i.e. a page of memory was swapped in from disk).  If the value
+is non-zero (which is unusual), "Times Swapped Out" may also be
+printed.  (See \tt{getrusage(2)} for more information about page
+faults and swapping, specifically the fields \tt{ru_majflt} and
+\tt{ru_nswap} in \tt{struct rusage}.)  The numbers in parentheses
+after some values are raw byte totals.
+
+\end{description}
+
+\bf{\anchor{debug-options}{Debugging Options}}
+
+The following options cause the evaluator to print various sorts of
+debugging information.
+
+\begin{description}
+\item{\anchor{-stack}{-stack}			\it{*toggleable*}}
+Print the function call stack when a runtime error occurs.  This is
+useful for debugging Vesta evaluation errors.
+
+\item{\anchor{-trace}{-trace}			\it{*toggleable*}}
+Turn on trace mode.  At the end of the evaluation, print the function
+call graph for the current evaluation, including the cache hit/miss
+status of each function call, to standard output.  (Note: the call
+graph below below any cache hits will not be included.)  This is
+useful for debugging the caching behavior of Vesta builds.
+
+\item{\anchor{-fsdeps}{-fsdeps}			\it{*toggleable*}}
+Print file system dependencies to the standard error output. Whenever
+an external tool touches a file in the file system, the name of that
+file is printed. This is useful for debugging the case when an
+external tool fails because the environment in which it was run does
+not contain enough files.
+
+\item{\anchor{-evalcalls}{-evalcalls}		\it{*toggleable*}}
+Print to the standard error output all requests made by the repository
+in response to file system references by an external tool. The output
+generated by this switch is a superset of that generated by the
+\it{-fsdeps} switch.
+
+\item{\anchor{-ps}{-ps}				\it{*toggleable*}}
+Print the current evaluator process status right before it exits.
+
+\item{\anchor{-dependency-check}{-dependency-check} \it{*toggleable*}}
+Compare the dependencies detected dynamically to those recorded in the
+Vesta cache.  When a function call results in a cache hit, the same
+function is re-evaluated.  The dependencies are then compared,
+printing any differences.  This option is most useful to someone
+modifying the evaluator, though it may also be useful to bridge
+writers as it can demonstrate subtle tool issues (e.g. recording
+dependencies on random temp file names).
+
+\item{\anchor{-printtimings}{-printtimings} \it{level}}
+Reports on the wall clock time required to perform certain
+operations during the build.
+\begin{itemize}
+\item \it{none} is silent
+\item \it{tool} reports on the time taken by running of each tool
+\item \it{func} reports on the time taken for user-defined SDL functions
+\item \it{detail} reports the duration of various portions of bookkeeping performed in function calls.  Additional details may be added later.
+\end{itemize}
+Each level includes all lower levels.  The default level is \it{none}.
+
+\item{\anchor{-timingfile}{-timingfile} \it{filename}}
+Sends the timing report generated by -printtimings to the file \it{filename}.
+If this option is not specified, stdout is used.  If \it{filename}
+already exists, it will be overwritten.
+
+\item{\anchor{-timing-regexp}{-timing-regexp} \it{regexp}}
+Specifies that timing information should only be recorded for calls
+that match a specified regular expression.  This option can be repeated
+to supply multiple regular expressions.  The string that is matched against
+depends on the type of call:
+\begin{itemize}
+\item A user-defined function is formatted as "\tt{<immutable path>/<function name>(), line <line no.>, col <char no.>}".
+\item A model is formatted as "\tt{<immutable path>() (normal)}"
+\item A tool is formatted as "\tt{<thread no.>/<run tool hostname>: <command line> }"
+\end{itemize}
+
+\item{\anchor{-timing-regexp-file}{-timing-regexp-file}} \it{filename}
+Specifies a file containing one regular expression per line (similar
+to grep(1)'s -f option).  Each regular expression is treated as if
+specified by \it{-timing-regexp}.  Blank lines are ignored.
+
+\item{\anchor{-timing-args-depth}{-timing-args-depth}} \it{n}
+In the timing output for function calls, complex nested values of arguments
+to the functions are printed to the specified depth.  Simple values are
+printed in their entirety.  If this option is not specified, it defaults to 2.
+
+\item{\anchor{-verbose-dup-msgs}{-verbose-dup-msgs} \it{*toggleable*}}
+Increase the amount of information included in messages about the
+supression of duplicate work in parallel.  This provides more
+informaion than most users want, but may be helpful when trying to
+increase the parallelism of a build.  See
+"\link{#duplicateSuppression}{Duplicate Suppression}" below for more
+information.
+
+\item{\anchor{-stop-before-tool}{-stop-before-tool}}
+Stop execution and print information about where each tool is about to
+be run.  The evaluator will stop and wait for the user to press Enter.
+
+\item{\anchor{-stop-after-tool}{-stop-after-tool}}
+Stop execution and print information about where each tool was just
+run.  The evaluator will stop and wait for the user to press Enter.
+
+\item{\anchor{-stop-after-tool-signal}{-stop-after-tool-signal}}
+Stop execution and print information about where any tool that was
+killed by a signal was just run.  The evaluator will stop and wait
+for the user to press Enter.
+
+\item{\anchor{-stop-after-tool-error}{-stop-after-tool-error}}
+Stop execution and print information about where any tool that exited
+with non-zero status was just run.  The evaluator will stop and wait
+for the user to press Enter.
+
+\end{description}
+
+Using any of the last four options
+(\link{#-stop-before-tool}{-stop-before-tool},
+\link{#-stop-after-tool}{-stop-after-tool},
+\link{#-stop-after-tool-signal}{-stop-after-tool-signal},
+\link{#-stop-after-tool-error}{-stop-after-tool-error}) gives the user
+the opportunity to make changes which may affect the result of a
+\tt{_run_tool} call.  For this reason, any \tt{_run_tool} calls
+affected by using these options (which in some cases will be all
+\tt{_run_tool} calls) are not cached.  Also, anything which uses the
+result of an affected \tt{_run_tool} call will not be cached.
+
+\bf{\anchor{cache-options}{Caching Options}}
+
+The following options control caching behavior.
+
+\begin{description}
+
+\item{\anchor{-pk-salt}{-pk-salt} \it{salt}}
+Modify the keys used to store and lookup entries in the Vesta cache by
+using the supplied \it{salt} string.  The \it{salt} argument can be
+any string; it is not parsed in any way, but rather is used like a
+hash table key.  This feature allows you to simulate having a private
+cache that is shared only among those evaluations with the same
+\it{salt} string.  When using this feature, the evaluator will
+\bf{not} re-use results in the cache created by evaluations with a
+different \it{salt} string (or that didn't use -pk-salt at all).
+("pk" is short for \it{primary key}, a term which is explained below
+in the \link{#pragmas}{Recognized Pragmas} section.)
+
+\item{\anchor{-cache}{-cache} \it{level}}
+Specify the caching level.  There are four different caching levels:
+\it{none} means not to use the Vesta cache; \it{runtool} means to
+cache runtool calls only; \it{model} means to cache runtool and
+model calls only; \it{all} means to cache all cacheable function
+calls.  When the caching level is \it{model} or \it{all}, precise 
+fine grained dependency analysis is enabled.  The default caching
+level is \it{all}.
+
+\item{\anchor{-noaddentry}{-noaddentry}		\it{*toggleable*}}
+Prevent any new cache entry from being added to the cache. This option
+is useful when one wants to reproduce repeatedly the same behavior of
+an evaluation in the presence of a Vesta cache. Note that this option
+is different from "-cache none" because the evaluator can get hits on
+existing cache entries when this option is used. This has two negative
+versions: -no-noaddentry and -addentry.
+
+\item{\anchor{-cstats}{-cstats}			\it{*toggleable*}}
+Print cache statistics after the evaluation.
+
+\item{\anchor{-cdebug}{-cdebug} \it{level}}
+Print cache debugging information. The relevant options (in increasing
+order of verbosity) are: \it{None} (the default), \it{AddEntryOp},
+\it{OtherOps}, and \it{All}. See
+\link{VCache.1.html#OptionsSect}{\bf{VCache}(1)} for more details.
+\end{description}
+
+\bf{\anchor{repos-options}{Repository Options}}
+
+The following options control how the evaluator interacts with the
+Vesta repository:
+
+\begin{description}
+\item{\anchor{-autorepl}{-autorepl}		\it{*toggleable*}}
+If any imported packages are missing in the local repository, this
+option causes the evaluator to try to automatically locate a copy
+in a peer repository and replicate it.  (See
+\link{vrepl.1.html}{vrepl(1)}.)  Defaults to on.  Use
+\it{-no-autorepl} to disable this feature.  (When disabled, a missing
+import is always a fatal error.)
+\end{description}
+
+\section{\anchor{pragmas}{Recognized Pragmas}}
+
+The evaluator recognizes three stylized comments, or \it{pragmas}. Two
+of them control how it caches calls of user-defined functions.  The
+third controls how aggressively it will execute user-defined functions
+in parallel.  The three pragmas are \tt{/**nocache**/}, \tt{/**pk**/},
+and \tt{/**waitdup**/}.  We expect that these pragmas will be required
+only in bridge models, not typical client models.
+
+When a user-defined function is called, the evaluator first looks to
+see if that function has already been evaluated with sufficiently
+similar arguments. If so, it gets a hit in the cache and uses the
+function result returned by the cache. Otherwise, it evaluates the
+called function and adds an entry to the cache for the result.
+
+To do a cache lookup, the evaluator provides a cache key. The cache
+key is actually composed of two parts: the run-time values on which
+the function result is thought to depend, which together comprise the
+\it{primary key}, and the run-time values on which the function result
+may depend, which together comprise the \it{secondary key}.
+
+By default, calls of all user-defined functions are cached.
+If the \tt{/**nocache**/} pragma appears immediately before a
+function definition, calls of that function are not cached.
+The \tt{/**nocache**/} pragma can be used if the work performed by the
+function is trivial and if the number of calls made by the function is
+known or expected to be small (preferably 0 or 1).
+
+By default, the primary key is a combination of the closure value
+(i.e., the function) being called and the values of all actual
+arguments that are not composite values (i.e., not of type list,
+binding, or closure). If the \tt{/**pk**/} pragma appears immediately
+before the name of a function's formal parameter, the value of the
+corresponding actual parameter is also folded into the function's
+primary key, regardless of whether it is a composite value or not. The
+\tt{/**pk**/} pragma can be used to include a composite value into the
+function's primary key when the function's result is known to depend
+on the \it{entire} composite value.
+
+The \link{#-pk-salt}{-pk-salt} command line option allows you to
+combine an additional arbitrary string into the primary key of every
+function call.
+
+By default, when multiple threads are executing the same function
+it may be executed multiple times in parallel.  The \tt{/**waitdup**/}
+pragma will cause any threads after the first one that are about to
+execute a function with the same \it{primary key} to wait on the hope
+that once the first function adds an entry to the cache the later
+threads will hit on that entry.  This pragma is placed similarly to
+the \tt{/**nocache**/} one.  It will also control the execution of
+models if placed just before the opening brace.  For models, the
+\it{primary key} is the immutable path to the model file itself.  See
+"\link{#duplicateSuppression}{Duplicate Suppression}" below for more
+information.
+
+\section{\anchor{duplicateSuppression}{Duplicate Suppression}}
+
+Aggressive use of the \tt{_par_map} primitive function can lead to
+multiple evaluator threads doing the same work in parallel
+(e.g. running the same tool or evaluating the same SDL function).  If
+a previous build had completed the same work and added an entry to the
+Vesta cache both threads could get a cache hit on that entry.  The
+result is wasted effort in duplicate work.
+
+To help you put resources to better use, the evaluator can pause any
+threads that try to evaluate a function call that is already being
+processed.  These threads will be woken up after the first thread has
+finished the call.  Once the first thread adds an entry to the Vesta
+cache, any threads that waited will hopefully hit on that entry.
+
+Unfortunately, it's not possible to be certain that two function calls
+are identical before evaluating them.  When two function calls have
+the same \it{primary key}, the evaluator guesses that they may be the
+same and makes subsequent threads calling the same function wait.  To
+indicate the heuristic nature of this suppression, any thread that
+waits will print an informational message that starts with "Waiting on
+possibly identical" followed by either "model", "function", or "tool"
+depending on the type of evaluation that is waiting.
+
+The \tt{_run_tool} primitive function always waits when another thread
+is executing a potential duplicate.  By default, a user-defined
+function or model may be executed multiple times in parallel.  The
+\tt{/**waitdup**/} pragma will cause user-defined functions and models
+to wait when another thread is executing a possible duplicate.  (See
+"\link{#pragmas}{Recognized Pragmas}" above.)
+
+Here are some examples of the default "Waiting on possibly identical"
+informational messages:
+
+\begin{verbatim}
+3/Waiting on possibly identical tool (6/... /usr/bin/g++-3.4)
+5/Waiting on possibly identical function (program)
+7/Waiting on possibly identical model
+\end{verbatim}
+
+If a thread waited on a possible duplicate but got a subsequent cache
+miss, another informational message is printed:
+
+\begin{verbatim}
+5/Function missed after waiting (program).
+\end{verbatim}
+
+This can indicate cases where waiting for possible duplicates isn't
+helping.  In some cases, the solution is to include more values in the
+\it{primary key} (e.g. with the \tt{/**pk**/} pragma).  In others, the
+solution may be to remove the \tt{/**waitdup**/} pragma.
+
+If you want to identify more precisely where parallelism is being
+limited by waiting, use the
+\link{#-verbose-dup-msgs}{-verbose-dup-msgs} command-line option.
+This increases the amount of information provided about the possible
+duplicate.  The above messages might then look like this:
+
+\begin{verbatim}
+3/Waiting on possibly identical tool (6/... /usr/bin/g++-3.4 -c -pipe -O0 -g2 Version.C)
+5/Waiting on possibly identical function (/vesta/vestasys.org/bridges/c_like/9/build.ves/program(), line 812, col 12)
+7/Waiting on possibly identical model (/vesta/example.com/foo/bar/checkout/12/34/build.ves)
+...
+5/Function missed after waiting (/vesta/vestasys.org/bridges/c_like/9/build.ves/program(), line 812, col 12).
+\end{verbatim}
+
+\section{\anchor{configuration}{Configuration Variables}}
+
+The evaluator reads site-specific configuration information from a Vesta
+configuration file named \it{vesta.cfg}.
+
+The following values are obtained from the [Evaluator] section of the
+Vesta configuration file:
+
+\begin{description}
+\item{\it{DefaultMain}}
+Gives one or more default model names to evaluate if none is
+explicitly specified.  Multiple names are given separated by
+whitesapce, and are tried in order.  (For example, if set to
+"\tt{linux_alpha.main.ves linux_ia32.main.ves .main.ves}", if a model
+named "\tt{linux_alpha.main.ves}" exists it will be evaluated, or if
+not and a model named "\tt{linux_ia32.main.ves}" exists it will be
+evaluated, otherwise if a model named "\tt{.main.ves}" exists it will
+be evaluated.)  If not set, "\tt{.main.ves}" is used.
+
+\item{\it{Switches}}
+Specifies evaluator command line switches that will be used on every
+run. These switches are overridden by any explicit switches used on
+the evaluator command line.
+
+\item{\it{MaxThreads}}
+Gives the default value for the -maxthreads option; see above.
+
+\item{\it{FpContent}}
+Newly created derived files that are strictly less than \it{FpContent}
+bytes long are fingerprinted deterministically according to their
+contents.  Longer files are fingerprinted with arbitrary unique
+identifiers.  The cost of fingerprinting a file's contents is
+non-trivial, but doing so allows for cache hits in cases where two
+evaluations depend on files that have identical contents but were
+created in separate evaluations.  The special value -1 causes all
+files to be fingerprinted by contents, while 0 causes all files to be
+fingerprinted by unique identifier.  (See the documentation for the
+\tt{_run_tool} primitive function for more information.)
+
+\item{\it{server_max_threads}}
+A tuning parameter which controls the number of file access callbacks
+from the repository simultaneously served during a tool invocation.  A
+reasonable value is 4.  There's normally no need to change it. (Note
+that there is no built-in default value.)
+
+\item{\it{NegligibleExternalLoadPerCPU}}
+A tuning parameter which controls how hosts are selected for
+_run_tool() jobs.  It is a scaling factor that is multiplied by the
+number of CPUs in the candidate Run Tool Host.  If the load average is
+below the result of this multiplication and the RunToolServer is
+running no other jobs, the host is immediately chosen to run the tool
+invocation.  (If not, it may still be chosen later if it's the least
+loaded candidate host.)  If not set, it defaults to 0.75.
+
+\item{\it{core_dump_regexp}}
+When a tool dies with a core dump, the evaluator searches the
+filesystem used for the tool for core dumps.  (It can't know
+necessarily where they will be, as the tool could change working
+directories.)  The evaluator will print information about any files
+with names matching this regular expression written by a tool that
+dumped core.  If not set, defaults to "\tt{core(\\.[0-9][0-9]*)?}".
+
+\item{\it{WorkerStackSize}}
+Threads created when using \tt{_par_map} have their stack size
+determined by this setting. If your SDL models use deep recursion,
+you may want to increase it. If not set, defaults to 1048576 (1 MB).
+
+\item{\it{print_numeric_sid}}
+When printing a text value backed by a shortid file (either as part of
+the result printed by the \link{#-result}{-result} option or the
+\tt{_print} primitive function), this setting enables printing the
+shortid as a hexadecimal number (in addition to the path normally
+printed).  (This is probably only interesting to people actively
+developing Vesta.)  This is a boolean configuration setting.  If equal
+(without regard to case) to "yes", "on", or "true", or can be parsed
+as an integer that is non-zero, the hexadecimal shortid will be
+printed.  If equal (without regard to case) to "no", "off", or
+"false", or can be parsed as an integer that is zero, the hexadecimal
+shortid will \it{not} be printed.  If not set, defaults to "false".
+
+\item{\it{PickleParanoia}}
+Can be used to enable paranoid double-checking of data stored into a
+serialized (aka "pickled") evaluator value to be added to the Vesta
+cache.  Currently only two settings are recognized: 0 (disabled) and 1
+(enabled).  (It's disabled by default.)  In the future, other higher
+values might be added for greater levels of paranoid checking.  This
+should be totally unnecessary as it simply reads back data encoded
+into a bytes stream (just integers at level 1).  Unfortunately, we've
+observed a few cases where the evaluator seems to have encoded the
+wrong integer which causes problems later when another evaluator gets
+a cache hit on the bad entry.  (This could happen if you have a large
+number of clients and some have flaky hardware.)  Turning this on may
+prevent such incorrectly written entries from making it into the
+cache.
+
+\item{\it{symlink_sid_root}}
+If set, the value replaces \tt{[Repository]metadata_root} in the
+target of symlinks created when shipping with the \link{#-s}{-s} flag.
+This could be used with an alternative method of distributing build
+results to client hosts.  Note that \tt{[Repository]sid_dir} and the
+path for the shortid made up of hex digits will be appended to this
+when forming the symlink target.  For example, if
+\it{symlink_sid_root} is set to "\tt{/foo/bar}" and
+\tt{[Repository]sid_dir} is set to "\tt{sid}" (as it typically is),
+the the link target for shortid 0xa1b2c3d4 would be
+"\tt{/foo/bar/sid/a1b/2c3/d4}".
+
+\item{\anchor{accel_binding_threshold}{\it{accel_binding_threshold}}}
+Optional integer setting.  Lookup-by-name operations in bindings
+larger than the value will be faster at the cost of using additional
+memory.  The Vesta SDL binding data type is an ordered list of
+name/value pairs.  This makes lookup operations take O(n) time.  To
+speed them up, a hash table is needed in addition to the list.
+Lookups typically become a performance concern when using bindings
+with thousands of entries (e.g. tools that read thousands of files
+contained in a single directory).  As with all performance tuning
+parameters, selecting the right value requires empirical measurement.
+If not set the default value is 100, which should provide a small
+performance benefit at a small memory cost for most builds.  If set to
+a value less than 1, the feature is disabled entirely (no hash tables
+are ever built, all binding lookups perform a linear search).
+
+\item{\anchor{accel_binding_stats}{\it{accel_binding_stats}}}
+Optional boolean setting.  If set to "true", "on", "yes", or a
+non-zero integer, statistics about the binding acceleration feature
+will be printed at the end of the evaluation (similar to
+\link{#-mstats}{-mstats} and \link{#-cstats}{-cstats}).  Specifically
+it shows how many hash tables were created, how many entries were
+added to those has tables, how many lookups were performed using the
+hash tables, and the hit/miss rate of the hash table lookups.  Sample
+output:
+
+\begin{verbatim}
+Binding Accelerator Stats:
+  Number Created : 28234
+  Entires Added  : 711460 (25.20 per accelerator)
+  Lookups        : 3358442 (118.95 per accelerator, 4.72 per entry added)
+    Hits         : 3207160 (95.50%)
+    Misses       : 151282 (4.50%)
+\end{verbatim}
+
+This information may help in determining a good value for the
+\it{accel_binding_threshold} setting. If not set, or if set to
+"false", "off", "no" or "0", no statistics will be printed.
+
+\item{\anchor{block_assign_report_secs}{\it{block_assign_report_secs}}}
+When using "\link{#-printtimings}{-printtimings} detail", the time
+taken to unwind assignments at the end of a block is reported if it is
+at least the amount of time specified by this setting.  If not set,
+defaults to 1 second (i.e. by default any block whose assignments take
+at least 1 second to unwind will be reported).  Note that a block with
+more than \it{block_assign_report_count} assignments will be reported
+even if unwinding them takes less time than
+\it{block_assign_report_count} specifies.
+
+\item{\anchor{block_assign_report_count}{\it{block_assign_report_count}}}
+When using "\link{#-printtimings}{-printtimings} detail", the time
+taken to unwind assignments at the end of a block is reported if the
+number of assignments to unwind is at least the number specified by
+this setting.  If not set, defaults to 100 assignments (i.e. by
+default any block with at least 100 assignments to unwind will be
+reported).  Note that a block where unwinding takes more than
+\it{block_assign_report_secs} will be reported even if it has fewer
+assignments than \it{block_assign_report_count} specifies.
+
+\item{\anchor{lookup_report_secs}{\it{lookup_report_secs}}}
+When using "\link{#-printtimings}{-printtimings} detail", the time
+taken to perform a function cache lookup is reported if it is at least
+the amount of time specified by this setting.  If not set, defaults to
+1 second (i.e. by default any function cache lookup which takes at
+least 1 second will be reported).  Note that a function cache lookup
+more than \it{lookup_report_fv_count} free variables will be reported
+even if the lookup takes less time than \it{lookup_report_secs}
+specifies.
+
+\item{\anchor{lookup_report_fv_count}{\it{lookup_report_fv_count}}}
+When using "\link{#-printtimings}{-printtimings} detail", the time
+taken to perform a function cache lookup is reported if the number of
+free variables is at least the number specified by this setting.  If
+not set, defaults to 5000 free variables (i.e. by default any function
+cache lookup with at least 5000 free variables will be reported).
+Note that a function cache lookup which takes more than
+\it{lookup_report_secs} will be reported even if it has fewer free
+variables than \it{lookup_report_fv_count} specifies.
+
+\end{description}
+
+The following values are obtained from the [CacheServer] section of the
+Vesta configuration file:
+
+\begin{description}
+\item{\it{MetaDataRoot}}
+See \link{VCache.1.html#ConfigSect}{\bf{VCache}(1)}.
+
+\item{\it{Host}}
+See \link{ChkptCache.1.html#ConfigSect}{\bf{ChkptCache}(1)}.
+\end{description}
+
+The following values are obtained from the [Repository] section of the
+Vesta configuration file:
+
+\begin{description}
+\item{\it{metadata_root}}
+\item{\it{umask}}
+See \link{repository.8.html#Configuration}{\bf{repository}(8)}.
+\end{description}
+
+The following values are obtained from the [Run_Tool] section of the
+Vesta configuration file:
+
+\begin{description} 
+
+\item{\it{SRPC_port}} The default port at which to contact the
+RunToolServer.  (See the next section.)
+
+\item{\it{get_info_read_timeout}} Maximum number of seconds that the
+evaluator will wait for a response from a RunToolServer when getting
+information about its configuration (OS, architecture, etc.) and
+number of allowed and currently running tools.  This allows the
+evaluator to give up and move on to another candidate host if one is
+very slow in responding.  Defaults to 120 seconds (2 minutes).  (Note
+that this timeout only applies after a connection is established, and
+is only provided to guard against misbehaving or overloaded peers.)
+
+\end{description} 
+
+See also the next section.
+
+\section{\anchor{runtool}{Runtool Host Selection}}
+
+When the \tt{_run_tool} primitive is invoked to run an external tool,
+the evaluator must choose a specific host machine to run the tool on.
+To do so, it first looks up the \it{platform} argument in a
+correspondingly named section of the Vesta configuration file,
+[\it{platform}].  This section describes the platform type by giving a
+list of characteristics that a host machine of this type must have,
+and it includes a list of candidate hosts to try.  The evaluator
+searches the list for a host that matches the description and is not
+too heavily loaded.  The following names must be defined in a platform
+section:
+
+\begin{description}
+\item{\it{sysname}}
+Specifies the name of the operating system, as returned by the
+uname(2) system call in the sysname field.  The given value can be a glob(3)
+pattern (a pattern using \tt{*}, \tt{?}, and \tt{[]}
+characters as in shell filename 
+matching).  Typical values are "OSF1" for Tru64 Unix, or "Linux" for Linux.
+
+\item{\it{release}}
+The release of the operating system, as returned by the uname(2) system
+call in the release field.  This value can be a glob(3) pattern.
+Typical values are "V[45].0" to match either Tru64 Unix 4.0 or 5.0, or
+"2.4.*" to match any 2.4-series Linux kernel.
+
+\item{\it{version}}
+The minor version number of the operating system, as returned by the
+uname(2) system call in the version field.  This value can be a
+glob(3) pattern.  Typically "*" is used in this field, as the OS minor
+version number is not usually significant in choosing a machine 
+to run tools on.
+
+\item{\it{machine}}
+The type of processor, as returned by the
+uname(2) system call in the version field.  This value can be a
+glob(3) pattern.  Typical values are "alpha" to select an Alpha processor,
+or "i?86" to select an Intel x86 processor.
+
+\item{\it{cpus}}
+The minimum number of CPUs present.  Use 1 if a uniprocessor is acceptable.
+
+\item{\it{cpuMHz}}
+The minimum CPU clock speed, in megahertz.  Typically set to 0, but
+you can specify a larger number if only machines of at least a certain
+speed are acceptable.
+
+\item{\it{memKB}}
+The minimum number of kilobytes of physical memory.  Typically set to
+0, but you can specify a larger number if only machines with at least a
+certain amount of memory are acceptable.
+
+\item{\it{hosts}} A list of candidate hosts to try, separated by
+spaces.  Hosts are specified as either \it{hostname}, or
+\it{hostname}\tt{:}\it{port}.  If the port is not specified, it
+defaults to the standard RunToolServer port, given in section
+[Run_Tool], value \it{SRPC_port}.  There must be a
+\link{RunToolServer.1.html}{RunToolServer(1)} at the given port on
+each host; if not, the evaluator prints a warning and drops the host
+from the list.  The evaluator also prints a warning if a host on the
+list does not match the platform description.
+
+If the first hostname is the string "localhost", the local host will
+always be considered first.  If the string "localhost" appears
+elsewhere in the list, the local host will be considered but not given
+any special preference.  If the string "localhost" does not appear,
+the local host will be used only if its name appears explicitly.  If
+the same host appears twice (in particular, if it appears both as
+"localhost" and under its own name), the duplicates are eliminated.
+\end{description}
+
+By convention, the following target platform names are normally used:
+
+\begin{description}
+
+\item{\it{DU4.0}} An Alpha machine running version 4.0x of the Digital
+Unix (aka Compaq/HP Tru64 Unix) operating system
+
+\item{\it{Linux-alpha}} An Alpha machine running Linux
+
+\item{\it{Linux-i386}} An Intel 386 or higher running Linux
+
+\item{\it{Linux-i686}} An Intel 686 or higher running Linux
+
+\item{\it{Linux-ppc}} A PowerPC running Linux
+
+\item{\it{Linux-sparc}} A Sparc running Linux
+
+\end{description}
+
+\section{\anchor{ToolCore}{Tools That Dump Core}}
+
+The evaluator provides a little extra help if a tool's exit status
+indicates that it produced a core dump.  If this happens, the
+evaluator will search the filesystem used for the tool for any core
+dumps.  (It can't know necessarily where they will be, as the tool
+could change working directories.)  For any files with names matching
+the regular expression specified with the
+\tt{[Evaluator]core_dump_regexp} \link{#configuration}{configuration
+variable}, the evaluator will print a message like this:
+
+\begin{verbatim}
+3/Possible core file: /.WD/core.1234
+3/at /vesta-srv/sid/abc/def/12
+\end{verbatim}
+
+The path on the first line is the location where the core file was
+written during the tool execution.  (This is mostly for informational
+purposes, as the temporary filesystem for the tool invocation will be
+deleted shortly after this message is printed.)  The path after "at"
+is the location where the written core file can be accessed directly
+from the repository's storage area.
+
+\section{\anchor{EnvVars}{Environment Variables}}
+
+If set, the \tt{DEBUG_TOOL_DIR_SERVER} environment variable can be
+used for debugging purposes.  It causes the evalutor to display extra
+information that can be helpful in intercepting and understanding the
+traffic between the evaluator and the repository.  There are two kinds
+of information printed when this environment variable is set:
+
+\begin{itemize}
+
+\item Just before it begins listening for connections from the
+repository, the evaluator prints the port it is listening on and waits
+for the user to press enter:
+
+\begin{verbatim}
+Tool directory server listening on port 3341
+Hit enter to continue: 
+\end{verbatim}
+
+This makes it possible for a network capture tool (e.g. \tt{tcpdump})
+to be started to capture the traffic to and from the evaluator's tool
+directory server interface.
+
+\item When each tool invocation begins, it prints three pieces of
+information about its temporary root filesystem: the 64-bit handle
+that the repository uses to request information from the evaluator
+about the root for the tool, the LongId assigned to it by the
+repository, and the name of the directory below the volatile root.
+These are printed right after the command line of the tool and are
+prefixed with the same thread marker:
+
+\begin{verbatim}
+3/[tool dir server root handle = 122cad0000200002]
+3/[root LongId = 0002fca00b]
+3/[root directory name = 0002d07c]
+\end{verbatim}
+
+This information makes it possible to correspond NFS transactions and
+tool directory server transactions with a tool invocation.
+
+\end{itemize}
+
+\section{\anchor{see_also}{See Also}}
+
+\link{vmake.1.html}{vmake(1)},
+\link{repos-ui.1.html}{repos-ui(1)}, 
+\link{VCache.1.html}{VCache(1)},
+\link{repository.8.html}{repository(8)},
+\link{RunToolServer.1.html}{RunToolServer(1)},
+\link{vesta.cfg.5.html}{vesta.cfg(5)},
+\link{vrepl.1.html}{vrepl(1)}
+
+\section{\anchor{author}{Author}}
+
+Yuan Yu and Jim Horning

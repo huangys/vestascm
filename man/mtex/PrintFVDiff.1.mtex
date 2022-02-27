@@ -1,0 +1,277 @@
+% Copyright (C) 2008, Vesta free software project
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintFVDiff - compare free variables of two cache entries}{PrintFVDiff}{1}
+
+\section{\anchor{Name}{Name}}
+
+PrintFVDiff - compare free variables of two cache entries
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{PrintFVDiff} [\link{#--verbose}{--verbose | -v}] \it{primary-key} \it{cache-index-1} \it{cache-index-2}
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Examples}{Examples}
+\item \link{#Exit_Status}{Exit Status}
+\item \link{#Configuration}{Configuration Variables}
+\item \link{#Files}{Files}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+Most of the time, users trust Vesta's caching system to do the right
+thing.  However, sometimes they want to know why a particular
+evaluation had a cache miss rather than a cache hit.  This kind of
+investigation is common when looking for ways to improve build
+performance by reducing cache misses.
+
+In general, the Vesta cache is designed to efficiently determine
+whether a previous build result can be re-used.  It is not designed to
+efficiently answer user queries about past builds.  However in some
+specific cases, answers can be obtained by inspecting what's stored in
+the cache.
+
+Two different cache entries with the same \it{primary key} (aka "pk")
+can be compared to see which of their \it{free variables} had
+different values.  (Free variables are also often called \it{secondary
+dependencies}.)  \bf{PrintFVDiff} will compare the free variables of
+two cache entries and print those that had different values.  This
+helps answer the common question "Why was entry \bf{B} added instead
+of getting a cache hit on entry \bf{A}?"  The free variables with
+different values are those inputs which the function used but were
+different between the two calls.
+
+In order to perform the comparison you need to know the \it{primary
+key} and the \it{cache index} (aka "ci") for both of the entries to be
+compared.  The primary key should be given in hex and may have
+whitespace between the two 64-bit halves (as it often does in printed
+representations from other programs).  There are a variety of ways you
+can get these pieces of information:
+
+\begin{itemize} 
+\item \link{vesta.1.html#-trace}{The evaluator's -trace command-line option} will print the cache index of every cache hit and every new entry added to the cache
+\item \link{PrintCallGraph.1.html}{\bf{PrintCallGraph}} is a utility for searching for cache entries and showing their caller/callee relationships that prints primary keys and cache indices
+\item \link{VCacheStats.1.html}{\bf{VCacheStats}} gathers statistics about the  entries stored in Vesta cache.  It can be used to identify optimization opportunities in SDL functions.  It can print primary keys and cache indices, and may be particularly useful in identifying them when its \link{VCacheStats.1.html#-report}{-report command-line option} is used.
+\item \link{PrintGraphLog.1.html}{\bf{PrintGraphLog}} will print the primary key and cache index of every entry in the cache (though it doesn't provide much information to help humans understand what the cache entries represent).  If you don't already know it, the primary key of a cache index can be found by searching its output.
+\item \link{PrintCacheLog.1.html}{\bf{PrintCacheLog}} will print information about recently added cache entries, including the primary key and cache index of each.
+\item The evaluator will print both primary keys and cache indices when using \link{vesta.1.html#-cdebug}{the -cdebug command-line option} (though it produces a large amount of output including many other pieces of information).
+\end{itemize}
+
+\bf{PrintFVDiff} shows the dependency types and paths as the evaluator
+sent them to the cache.  It's up to the user to make sense of what
+each free variable means in the context of the corresponding function.
+
+By default, \bf{PrintFVDiff} shows only free variables which both
+cache entries depended upon.  Adding \link{#--verbose}{--verbose} to
+the command line will make it show dependencies that one entry
+depended upon but the other didn't.  (Usually the user is more
+interested in the free variables the two entries have in common but
+which have different values.)
+
+Note that it is possible to have multiple cache entries with no free
+variable differences at all.  Suppose two users simultaneous evaluate
+builds that are similar or even the same.  They could both get a cache
+miss on the same function call, both do the work of the function, and
+both add cache entries.  If the function calls had identical
+arguments, this would produce two identical cache entries.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+
+\item{\anchor{--verbose}{--verbose | -v}}
+
+In addition to free variables that the two cache entries have in
+common but had different values, show any free variables that one
+cache entry depends upon but the other doesn't.  Such free variables
+can be interesting when trying to understand the caching behavior of
+your builds.  Reducing or eliminating uncommon free variables can
+improve build efficiency.  They're not shown by default because such
+free variables usually don't help answer the question "Why was entry
+\bf{B} added instead of getting a cache hit on entry \bf{A}?"
+
+Also, print the text "sourceFunc" annotation in the PKFile, which
+indicates the function call that the cache entries correspond to.
+
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Suppose the user is interested in comparing two similar builds.  They
+might run \link{PrintCallGraph.1.html}{\bf{PrintCallGraph}} on the two
+top-level models and compare the output.  In this case, suppose the
+user selected this pair of cache entries (for the \tt{_run_tool}
+linking the \bf{PrintFVDiff} executable):
+
+\begin{verbatim}
+% diff -u /tmp/call_graph_1 /tmp/call_graph_2
+...
+- ci = 31581
++ ci = 31382
+  pk = 2b1f8372382297bc 7b16a71ef275c5a5
+  sourceFunc = _run_tool, command line: /usr/bin/g++-3.4 -L -L. -o PrintFVDiff ...
+...
+\end{verbatim}
+
+Here's the output of \bf{PrintFVDiff} called to compare these two
+cache entries:
+
+\begin{verbatim}
+% PrintFVDiff '2b1f8372382297bc 7b16a71ef275c5a5' 31581 31382
+N/./root/.WD/PrintFVDiff.o
+\end{verbatim}
+
+This shows us that the the file \tt{/.WD/PrintFVDiff.o} had different
+contents in the encapsulated filesystem (which is \tt{./root} in the
+SDL code) for these two different tool runs.
+
+If the user wants more information they can add the
+\link{#--verbose}{--verbose} flag:
+
+\begin{verbatim}
+% PrintFVDiff -v '2b1f8372382297bc 7b16a71ef275c5a5' 31581 31382
+sourceFunc = _run_tool, command line: /usr/bin/g++-3.4 -L -L. -o PrintFVDiff ...
+------------------------------
+~ : differs
+< : only in 31581
+> : only in 31382
+------------------------------
+~ N/./root/.WD/PrintFVDiff.o
+> !/./root/.WD/ccpYjO0q.ld
+> !/./root/.WD/ccnq4HAf.c
+> !/./root/.WD/cc8TK9cl.o
+< !/./root/.WD/ccOnYtVh.o
+< !/./root/.WD/ccTMrSVl.ld
+< !/./root/.WD/ccjDS15d.c
+\end{verbatim}
+
+Here we can see that there are some temporary files generated by the
+tool in \tt{/.WD} which had different names in each run.
+
+(Note that the sourceFunc annotation in both the \bf{PrintFVDiff}
+output and the comparison of the
+\link{PrintCallGraph.1.html}{\bf{PrintCallGraph}} output above has
+been truncated for brevity.)
+
+\section{\anchor{Exit_Status}{Exit Status}}
+
+The following exit values are returned:
+
+\begin{itemize}
+\item \bf{0} : Successful completion
+\item \bf{1} : Command line parsing error or configuration error (e.g. trouble reading configuration file or missing settings)
+\item \bf{2} : Error opening or reading the the MultiPKFile or other on-disk cache files
+\item \bf{3} : The PKFile or the cache entries couldn't be found after successfully opening the MultiPKFile
+\item \bf{4} : Any other errors
+\end{itemize}
+
+\section{\anchor{Configuration}{Configuration Variables}}
+
+\bf{PrintFVDiff} locates the MultiPKFile containing the cache entries
+by reading site-specific configuration information from a Vesta
+\it{configuration file}.  (See \link{vesta.cfg.5.html}{the
+vesta.cfg(5) man page} for an overview.)
+
+The variables used by the \bf{PrintFVDiff} are in the section
+denoted by \tt{[CacheServer]}.  Here are the variables it uses and
+their meanings; the types of the variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta cache's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{SCacheDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+function cache stores cache entries.
+\end{description}
+
+\section{\anchor{Files}{Files}}
+
+\begin{description}
+\item{\tt{$MetaDataRoot/$MetatDataDir/$SCacheDir/}}
+The root of the sub-tree in which stable cache entry files (also known
+as MultiPKFiles) are stored.  The files are stored under a pathname
+formed from their respective primary keys.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{PrintFVDiff} can't tell you what the values of the free variables
+were for the two calls.  It can only tell you that they were
+different.  The cache only records the \it{fingerprints} of the values
+(similar to a checksum or a cryptographic hash function like MD5 or
+SHA1).  It compares those fingerprints to determine whether the value
+was the same or different, which is the same way cache hits or misses
+are determined when building.
+
+\bf{PrintFVDiff} only accesses information that the
+\link{VCache.1.html}{\bf{VCache}} daemon has committed to disk.  You
+may need to use \link{FlushCache.1.html}{\bf{FlushCache}} to get new
+entries committed to disk before running \bf{PrintFVDiff}, especially
+if you're interested in cache entries added by recent builds.
+
+The user must supply the primary key.  It would be possible to make
+primary key optional and have \bf{PrintFVDiff} search the cache's
+graph log for the primary keys of the two specified CIs.  This could
+be slow, but might be useful.  (Of course it would need to detect the
+case where the CIs have two different PKs and report that to the
+user as an error.)
+
+In some cases there's no easy answer that can be obtained from the
+information stored in the Vesta cache.  If two cache entries are
+logically related but have different primary keys, the cache has no
+way to know which values incorporated into the primary key were
+different.  The construction of the primary key is done by the
+evaluator, and only it knows what values were incorporated into the
+primary key used for each function call.  (There is documentation
+about how the evaluator forms primary keys for different function
+calls, but the topic is beyond the scope of this man page.)
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta.1.html}{vesta(1)},
+\link{VCache.1.html}{VCache(1)},
+\link{PrintCallGraph.1.html}{PrintCallGraph(1)},
+\link{VCacheStats.1.html}{VCacheStats(1)},
+\link{FlushCache.1.html}{FlushCache(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{MultiPKFile.5.html}{MultiPKFile(5)},
+\link{PrintGraphLog.1.html}{PrintGraphLog(1)},
+\link{PrintCacheLog.1.html}{PrintCacheLog(1)},
+\link{vesta.cfg.5.html}{vesta.cfg(5)}
+
+\section{\anchor{Author}{Author}}
+
+Kenneth C. Schalk <\tt{ken AT xorian DOT net}>

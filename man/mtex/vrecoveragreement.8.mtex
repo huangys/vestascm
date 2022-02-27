@@ -1,0 +1,234 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vrecoveragreement - Attempt to restore the replication invariant after recovering from a reposiory backup}{vrecoveragreement}{8}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vrecoveragreement} - Attempt to restore the replication invariant after recovering from a reposiory backup
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vrecoveragreement}
+\link{#-p}{-p \it{peer repos}} [\link{#-p}{-p \it{peer repos}} ...]
+[\link{#-v}{-v}]
+[\link{#-m}{-m}]
+[\link{#-n}{-n}]
+[\link{#-c}{-c}]
+[\link{#-i}{-i \it{replicator instruction filename}}]
+[\link{#-R}{-R \it{repos}}] 
+[\it{directory...}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Configuration}{Configuration}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section for
+definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.  See the
+\link{vrepl.1.html}{vrepl} man page's
+\link{vesta-intro.1.html#Vesta_Replication}{Vesta Replication Design}
+section for an introduction to the concepts of replication and
+mastership.
+
+In the unfortunate event that your repository is destroyed, you may
+find yourself recovering from a backup.  If your repository interacts
+with other peer repositories, this can cause violations of the
+\it{replication agreement invariant}.  While this tool cannot fix all
+possible problems, there are three possible problems that it can
+correct:
+
+\begin{itemize}
+
+\item Your repository may have the master flag of an appendable
+directory set, but that directory may not have the full set of names
+that have ever been created in that directory.  This could allow a new
+object to be created with the same name as an object that was
+previously created and replicated to a peer repository.
+
+\item Your repository may have the master flag of an object set that
+has had its mastership transferred to another repository.  This could
+allow two different repositories to make independent changes to an
+object (e.g. create two new versions that are different but have the
+same name).
+
+\item Your repository might have a master stub (an active local
+version reservation) for a version that has since been checked in and
+replicated to other repositories.  It's only possible to replace a
+master stub with an immutable directory by checking in (not by
+replication).
+
+\end{itemize}
+
+This tool consults one or more \it{peer repositories} looking for and
+correcting these violations of the replication invariant.  Ideally,
+all repositories that ever interact with the repository in question
+should be consulted.  It is assumed that the local repository being
+modified represents state from a point in time earlier than the peer
+repositories.  In other words, the peer repositories are considered
+\it{more authoritative} than the local repository.
+
+For each master object in the local repository, all peer repositories
+are checked to see if they also have the master flag set.  If any peer
+\bf{does} have the master flag set, the master flag is turned \bf{off}
+in the local repository.
+
+For each master appendable directory in the local repository, all peer
+repositories are checked for names which exist in the same directory
+but are not present locally.  For any such names found, a non-master
+stub is inserted in the local repository.  This allows the object in
+question to be replicated in from the peer repository.  The stubs will
+be given a "found-in" attribute with the peer repository where the
+name was found as the value of the attribute.  Also, a file of
+replicator directives for replicating in the missing objects can
+optionally be generated.  (The tool does not, however, invoke the
+replicator.)
+
+For each master stub in the local repository, all peer repositories
+are checked to see if they have a non-stub, non-ghost with the same
+name.  If any such object is found, the master flag for the stub is
+turned \bf{off} in the local repository, making possible to replicate
+the object from a peer repository.  A replicator directive will be
+added to the optional file for any such stubs.
+
+Note that because this tool performs agreement operations, it must be
+run as the special \it{wizard user} (usually named \tt{vwizard}).
+
+By default, a depth-first search of the entire repository is performed
+to search for problems.  If one or more directories are specified on
+the command line, they will be used as the starting point of the
+depth-first search.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-p}{-p \it{host:port}}}
+Specifies a peer repository to consult.  Must be given at least once.
+May be specified multiple times, causing multiple peers to be
+consulted.  The \tt{:}\it{port} portion may be omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\item{\anchor{-v}{-v}}
+Verbose mode.  Causes the tool to print a message to standard output
+for each change it makes to the local repository.
+
+\item{\anchor{-m}{-m}}
+Disables turning off the master flag on objects found to be mastered
+in peer repositories.
+
+\item{\anchor{-n}{-n}}
+Disables adding non-master stubs in master appendable directories for
+missing names found in peer repositories.
+
+\item{\anchor{-c}{-c}}
+Disables turning off the master flag on stubs which are found to be
+non-stubs in peer repositories.
+
+\item{\anchor{-i}{-i \it{filename}}}
+Causes the specified filename to be filled with replicator
+instructions for any non-master stubs created or master stubs turned
+into non-master stubs.
+
+\item{\anchor{-R}{-R \it{repos}}}
+Make changes to \it{repos} instead of the default local repository.
+The repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+This tool does not perform extensive agreement checks, and it can
+overlook some problems.  It is intended solely for correcting
+agreement problems caused by recovering from a backup of a repository.
+
+Any object that had its mastership transferred to the recovered
+repository after the point of the backup may now have no master copy
+in any repository.  This includes:
+
+\begin{itemize}
+
+\item Remote checkouts to the recovered repository.
+
+\item New packages/branches/directories created in remote masters with
+the local repository acquiring mastership (i.e. with
+vcreate/vbranch/vmkdir).
+
+\end{itemize}
+
+This is not a violation of the replication invariant, but prevents
+future changes from being made to the object in question.  The
+\link{vsmashmaster.1.html}{\bf{vsmashmaster}} tool can be used to turn
+on the master flag on one of the copies, although doing so can create
+new violations of the replciation agreement invariant.
+
+After recovery, some locally mastered packages may have gaps in their
+version history.  The \link{vaddghosts.8.html}{\bf{vaddghosts}} tool
+can be used to fill in ghosts for missing version numbers.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)},
+\link{vaddghosts.8.html}{\bf{vaddghosts}(8)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk \tt{<\link{mailto&#58;ken&#64;xorian&#46;net}{ken@xorian.net}>}
+
+\begin{verbatim}
+Last modified on Thu May 20 14:29:01 EDT 2004 by ken@xorian.net
+\end{verbatim}

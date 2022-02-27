@@ -1,0 +1,16 @@
+(* inout parameters *)
+
+PROC Main() IS
+    VAR n := 10, m := 11 IN
+      (n, m): P();
+      { n = 2 AND m = 3 -> Wr("hello world\n")
+      | Wr("Oops\n")
+      }
+    END
+END;
+
+PROC (n, m): P() IS
+    m = 11 AND n = 10 -> n := 2; m := 3
+  | Wr("Oops\n")
+END;
+

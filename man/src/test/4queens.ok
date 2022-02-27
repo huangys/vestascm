@@ -1,0 +1,53 @@
+VAR r0 := 0, r1 := 0, r2 := 0, r3 := 0;
+
+PROC Main() IS
+    r0 := 0; P1() | 
+    r0 := 1; P1() |
+    r0 := 2; P1() | 
+    r0 := 3; P1() END;
+
+PROC P1() IS
+    r1 := 0; P2() |
+    r1 := 1; P2() |
+    r1 := 2; P2() |
+    r1 := 3; P2() END;
+
+PROC P2() IS
+    r2 := 0; P3() |
+    r2 := 1; P3() |
+    r2 := 2; P3() |
+    r2 := 3; P3() END;
+
+PROC P3() IS
+    r3 := 0; P4() |
+    r3 := 1; P4() |
+    r3 := 2; P4() |
+    r3 := 3; P4() END;
+
+PROC P4() IS
+  OK(r0, r1, 1) AND
+  OK(r0, r2, 2) AND
+  OK(r0, r3, 3) AND
+  OK(r1, r2, 1) AND
+  OK(r1, r3, 2) AND
+  OK(r2, r3, 1) ->
+  Wr("Four queens: ");
+  Onum(r0+1);
+  Onum(r1+1);
+  Onum(r2+1);
+  Onum(r3+1);
+  Wr("\n")
+END;
+
+PROC Onum(n) IS
+  n = 0 -> SKIP
+| Onum(n DIV 10); 
+  Wr('0' + n MOD 10)
+END;
+
+PROC res := OK(a, b, c) IS
+  res := (a # b) AND
+    (a - b) # c AND
+    (b - a) # c
+END;
+

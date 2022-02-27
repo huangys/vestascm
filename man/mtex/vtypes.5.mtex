@@ -1,0 +1,616 @@
+% Copyright (C) 1997, Digital Equipment Corporation.
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vtypes(5) man page}{vtypes}{5}
+
+\section{Name}
+
+vtypes - a guide to Vesta-2 types used in the standard models
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#IntroSect}{Introduction}
+\item \link{#IndexSect}{Index}
+\item \link{#FilesSect}{Files and Packages}
+\item \link{#PkgResultsSect}{Package Results}
+\item \link{#LibDescSect}{Library Descriptions}
+\item \link{#OverridesSect}{Overrides}
+\item \link{#BridgesSect}{Bridges}
+\item \link{#BridgeGenericSect}{Generic Bridge Functions}
+\item \link{#EnvironmentsSect}{Environments}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{IntroSect}{Introduction}}
+
+This man page documents the Vesta-2 types used in the standard
+environment and bridge models included with the Vesta-2 system. In
+particular, it documents the \tt{common/std_env/18} and
+\tt{common/cxx/14} packages (presumably, later versions of these
+packages will conform to this man page as well).
+
+\section{\anchor{IndexSect}{Index}}
+
+Here are the types documented in this man page:
+
+\begin{description}
+\item{\bf{B}}
+\link{#Bridge}{\tt{Bridge}},
+\link{#BridgeExpert}{\tt{BridgeExpert}},
+\link{#BridgeGenerics}{\tt{BridgeGenerics}},
+\link{#BridgeOptions}{\tt{BridgeOptions}},
+\link{#BridgeOvs}{\tt{BridgeOvs}},
+\link{#BridgeSwitches}{\tt{BridgeSwitches}}
+\link{#BuiltLibs}{\tt{BuiltLibs}}
+\item{\bf{C}}
+\link{#CompileOvs}{\tt{CompileOvs}}
+\item{\bf{D}}
+\link{#DerivedFiles}{\tt{DerivedFiles}}
+\item{\bf{E}}
+\link{#Env}{\tt{Env}},
+\link{#EnvOvs}{\tt{EnvOvs}}
+\item{\bf{L}}
+\link{#LeafLibDesc}{\tt{LeafLibDesc}},
+\link{#LibDesc}{\tt{LibDesc}},
+\link{#LibFunc}{\tt{LibFunc}},
+\link{#LibFuncs}{\tt{LibFuncs}},
+\link{#LibPkgResult}{\tt{LibPkgResult}},
+\link{#LibPkgResults}{\tt{LibPkgResults}}
+\item{\bf{N}}
+\link{#NamedCompileOvs}{\tt{NamedCompileOvs}},
+\link{#NamedFile}{\tt{NamedFile}},
+\link{#NamedFiles}{\tt{NamedFiles}},
+\link{#NamedLibDesc}{\tt{NamedLibDesc}},
+\link{#NamedLibDescs}{\tt{NamedLibDescs}},
+\link{#NamedLibOvs}{\tt{NamedLibOvs}},
+\link{#NamedLibPkgResults}{\tt{NamedLibPkgResults}},
+\link{#NamedPkgOvs}{\tt{NamedPkgOvs}},
+\link{#NamedPkgs}{\tt{NamedPkgs}}
+\item{\bf{P}}
+\link{#PkgFunc}{\tt{PkgFunc}},
+\link{#PkgModel}{\tt{PkgModel}},
+\link{#PkgResult}{\tt{PkgResult}},
+\link{#PrebuiltLibDesc}{\tt{PrebuiltLibDesc}}
+\item{\bf{Q}}
+\link{#QNamedLibPkgResults}{\tt{QNamedLibPkgResults}},
+\link{#QNamedPkgOvs}{\tt{QNamedPkgOvs}},
+\link{#QNamedPkgs}{\tt{QNamedPkgs}},
+\item{\bf{T}}
+\link{#ToolSwitches}{\tt{ToolSwitches}}
+\item{\bf{U}}
+\link{#UmbrellaLibDesc}{\tt{UmbrellaLibDesc}}
+\end{description}
+
+\section{\anchor{FilesSect}{Files and Packages}}
+
+\anchor{NamedFile}{}\anchor{NamedFiles}{}
+\begin{verbatim}
+type NamedFile = binding(:text);
+type NamedFiles = binding(:text);
+\end{verbatim}
+
+A value of type "\bf{\tt{NamesFiles}}" is a binding containing pairs
+of the form "\tt{[ name = <File> ]}", where "<File>" denotes to the
+contents of a file in the file system. A value of type
+"\bf{\tt{NamedFile}}" is always a singleton binding.
+
+\anchor{DerivedFiles}{}
+\begin{verbatim}
+type DerivedFiles = binding(
+  objects: \link{#NamedFiles}{NamedFiles}, // derived object files (required)
+  others: \link{#NamedFiles}{NamedFiles}   // other derived files (optional)
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{DerivedFiles}}" contains derived object files
+(to be linked against) and other derived files to be installed in the
+working directory at link time. For example, the Modula-3 compiler
+produces ``link info'' (.ix, .mx) files in addition to object files.
+Only the object files must be named on the link line, but the link
+info files must be in the current directory for the link to succeed.
+
+\anchor{PkgModel}{}
+\begin{verbatim}
+type PkgModel = function();
+\end{verbatim}
+
+The type "\bf{\tt{PkgModel}}" corresponds to the top-level
+"\tt{build.ves}" model of a package. It is a function of no arguments
+(not counting the implicit argument ".").
+
+\anchor{NamedPkgs}{}
+\begin{verbatim}
+type NamedPkgs = binding(:PkgModel);
+\end{verbatim}
+
+The type "\bf{\tt{NamedPkgs}}" is a binding mapping package names to
+their corresponding top-level models (of type
+"\link{#PkgModel}{\tt{PkgModel}}"). These are \it{unqualified} package
+names, as opposed to the \it{qualified} package names of the
+"\link{#QNamedPkgs}{\tt{QNamedPkgs}}" type below.
+
+\anchor{QNamedPkgs}{}
+\begin{verbatim}
+type QNamedPkgs = binding(:NamedPkgs);
+\end{verbatim}
+
+The Vesta repository uses a 2-level name space for package names.
+The base package name is \it{qualified} by the name of the repository
+directory in which it appears. Examples of qualified package names are
+"\tt{vesta/basics}" and "\tt{common/std_env}". A value of type
+"\bf{\tt{QNamedPkgs}}" corresponds to a set of qualified named package
+models.
+
+\section{\anchor{PkgResultsSect}{Package Results}}
+
+\anchor{PkgFunc}{}
+\begin{verbatim}
+type PkgFunc = function(env: binding);
+\end{verbatim}
+
+A "\bf{\tt{PkgFunc}}" is a closure for building part of a package.
+Examples are closures for building the \tt{lib}, \tt{progs}, and
+\tt{tests} of a package.
+
+\anchor{PkgResult}{}
+\begin{verbatim}
+type PkgResult = binding;
+\end{verbatim}
+
+A general package's "build.ves" model evaluates to a value of type
+"\bf{\tt{PkgResult}}". Most of the names in a \tt{PkgResult} are
+mapped to functions of type "\link{#PkgFunc}{\tt{PkgFunc}}", but there
+is no requirement that all names in a \tt{PkgResult} are mapped to
+such values.
+
+\anchor{LibPkgResult}{}
+\begin{verbatim}
+type LibPkgResult = /* \link{#PkgResult}{PkgResult} */ binding(
+  lib: \link{#LibFunc}{LibFunc} // a specialization of \link{#PkgFunc}{PkgFunc}; defined below
+  // other fields may be defined as well, such as "progs" and "tests"
+);
+\end{verbatim}
+
+A library package's "build.ves" model evaluates to a value of type
+"\bf{\tt{LibPkgResult}}". The "\tt{lib}" field is a value of type
+"\link{#LibFunc}{\tt{LibFunc}}", which is a function for building a
+\link{#NamedLibDesc}{named leaf or umbrella library description}.
+
+\anchor{UmbrellaPkgResult}{}
+\begin{verbatim}
+type UmbrellaPkgResult = /* \link{#LibPkgResult}{LibPkgResult} */ binding(
+  children: \link{#QNamedPkgs}{QNamedPkgs}
+);
+\end{verbatim}
+
+The model of a library package that builds an umbrella library
+evaluates to a value of type "\bf{\tt{UmbrellaPkgResult}}"; the
+"\tt{children}" field evaluates to a value of type
+"\link{#QNamedPkgs}{\tt{QNamedPkgs}}", which are the packages
+that build the umbrella's child libraries.
+
+\anchor{LibPkgResults}{}
+\begin{verbatim}
+type LibPkgResults = list(\link{#LibPkgResult}{LibPkgResult});
+\end{verbatim}
+
+Collections of libraries are represented by values of type
+"\bf{\tt{LibPkgResults}}". For example, the "libs" field of an
+"\link{#UmbrellaLibDesc}{\tt{UmbrellaLibDesc}}" is of this type.
+
+\anchor{NamedLibPkgResults}{}
+\anchor{QNamedLibPkgResults}{}
+\begin{verbatim}
+type NamedLibPkgResults = binding(:\link{#LibPkgResult}{LibPkgResult});
+type QNamedLibPkgResults = binding(:NamedLibPkgResults);
+\end{verbatim}
+
+Collections of named library packages are represented by values of type
+"\bf{\tt{QNamedLibPkgResults}}". For example, the "libs" field of a
+"\link{#Bridge}{\tt{Bridge}}" is of this type. Like the
+"\link{#QNamedPkgs}{\tt{QNamedPkgs}}" type described above, a
+"\tt{QNamedLibPkgResults}" is a two-level tree whose domain parallels the
+names of packages in the Vesta repository.
+
+\section{\anchor{LibDescSect}{Library Descriptions}}
+
+\anchor{LibDesc}{}
+\begin{verbatim}
+type LibDesc = binding(lib_type_: text);
+\end{verbatim}
+
+Libraries are described by a binding structure of type
+"\bf{\tt{LibDesc}}" that contains at least the text field
+"\tt{lib_type_}", which is one of the three values "leaf", "umbrella",
+or "prebuilt". The first corresponds to a leaf library, the second to
+a library composed of other libraries, and the third to a library that
+is treated as a source file. Depending on the type of the library, the
+binding contains other fields describing how it is built. See the
+types "\link{#LeafLibDesc}{\tt{LeafLibDesc}}",
+"\link{#UmbrellaLibDesc}{\tt{UmbrellaLibDesc}}", and
+"\link{#PrebuiltLibDesc}{\tt{PrebuiltLibDesc}}". The field name
+"\tt{lib_type_}" ends with an underscore because it
+is meant to be neither read nor written by clients.
+
+\anchor{LeafLibDesc}{}
+\begin{verbatim}
+type LeafLibDesc = /* \link{#LibDesc}{LibDesc} */ binding(
+  lib_type_: text,              // == "leaf"
+  headers: \link{#NamedFiles}{NamedFiles},
+  priv_headers: \link{#NamedFiles}{NamedFiles},
+  code: \link{#NamedFiles}{NamedFiles},
+  ovs: \link{#EnvOvs}{EnvOvs},                  // general override for "code" files
+  per_file_ovs: \link{#NamedCompileOvs}{NamedCompileOvs} // named override for "code" files
+);
+\end{verbatim}
+
+A "\bf{\tt{LeafLibDesc}}" is a logical subtype of a
+"\link{#LibDesc}{\tt{LibDesc}}". It describes a leaf library, and is
+produced by the bridge's "\link{#Bridge}{\tt{leaf}}" function. The
+"\tt{ovs}" and "\tt{per_file_ovs}" fields are optional. The "\tt{ovs}"
+field is a \link{voverrides.5.html#GeneralOverride}{general override}
+that is recursively overlaid on the \link{#Env}{environment} "." before
+the "\tt{code}" files are compiled. The "\tt{per_file_ovs}" is a
+\link{voverrides.5.html#NamedOverride}{named override} that is
+consulted as each of the files named in the "\tt{code}" field is
+compiled.
+
+\anchor{UmbrellaLibDesc}{}
+\begin{verbatim}
+type UmbrellaLibDesc = /* \link{#LibDesc}{LibDesc} */ binding(
+  lib_type_: text,     // == "umbrella"
+  libs: \link{#LibPkgResults}{LibPkgResults}, // nested libraries (umbrellas or leaves)
+  flatten: bool,       // flatten archive?
+  ovs: \link{#EnvOvs}{EnvOvs}          // general override for building nested libs
+);
+\end{verbatim}
+
+An "\bf{\tt{UmbrellaLibDesc}}" is a logical subtype of a
+"\link{#LibDesc}{\tt{LibDesc}}". It describes an umbrella library,
+that is, a library comprised (and containing) other libraries.
+The "\tt{libs}" field contains a list of
+"\link{#LibPkgResult}{\tt{LibPkgResult}}" values, one for each library
+in the umbrella, in the order in which the libraries should be listed
+on the link line.
+
+The "\tt{flatten}" field controls how the archive for the umbrella is
+formed. If "\tt{flatten}" is true, then the umbrella's libraries are
+exploded into object files, and the objects are then combined into a
+single archive. If "\tt{flatten}" is false, the libraries remain
+separate; the names given to the libraries will be hierarchical iff
+the bridge's \link{#BridgeOptions}{\tt{flat_lib_names}} option is
+false.
+
+The "\tt{ovs}" field is a
+\link{voverrides.5.html#GeneralOverride}{general override} that is
+recursively overlaid on the \link{#Env}{environment} "." before the
+nested libraries are compiled.
+
+\anchor{PrebuiltLibDesc}{}
+\begin{verbatim}
+type PrebuiltLibDesc = /* \link{#LibDesc}{LibDesc} */ binding(
+    lib_type_: text,          // == "prebuilt"
+    headers: \link{#NamedFiles}{NamedFiles},      // exported header files
+    libs: \link{#NamedFiles}{NamedFiles}          // the library archives
+);
+\end{verbatim}
+
+A "\bf{\tt{PrebuiltLibDesc}}" is a logical subtype of a
+"\link{#LibDesc}{\tt{LibDesc}}". It describes a prebuilt library,
+i.e., one in which the library archive is treated as source. The
+"\tt{headers}" field contains exported header files, and the
+"\tt{libs}" field contains the library archives themselves.
+
+\anchor{NamedLibDesc}{}
+\anchor{NamedLibDescs}{}
+\begin{verbatim}
+type NamedLibDesc = binding(:\link{#LibDesc}{LibDesc});
+type NamedLibDescs = binding(:\link{#LibDesc}{LibDesc});
+\end{verbatim}
+
+A value of type "\bf{\tt{NamedLibDescs}}" is a binding containing
+pairs of the form "\tt{[ name = \link{#LibDesc}{LibDesc} ]}". It is a
+collection of named library descriptions. A value of type
+"\bf{\tt{NamedLibDesc}}" is always a singleton binding.
+
+\anchor{LibFunc}{}
+\begin{verbatim}
+type LibFunc = function(env: binding): \link{#NamedLibDesc}{NamedLibDesc};
+\end{verbatim}
+
+A value of type "\bf{\tt{LibFunc}}" builds a library; it evaluates to
+a value of type "\link{#NamedLibDesc}{\tt{NamedLibDesc}}".
+
+\anchor{LibFuncs}{}
+\begin{verbatim}
+type LibFuncs = list[LibFunc];
+\end{verbatim}
+
+A list of "\bf{\tt{LibFunc}}" values obtained by selecting the
+"\tt{lib}" fields from a value of type "\bf{\tt{LibPkgResults}}".
+
+\anchor{BuiltLibs}{}
+\begin{verbatim}
+type BuiltLibs = binding[
+    libs: NamedFiles,
+    pub_code: binding,   // exported source code
+    sources: binding,    // optional
+    objects: binding     // optional
+];
+\end{verbatim}
+
+The result of building a value of type "\bf{\tt{LibPkgResults}}" is a
+binding that stores all libraries built so far and the public code
+they export (e.g., header files). The result may optionally contain
+fields named "\tt{sources}" and "\tt{objects}", depending on whether
+the bridge's options are set to return the sources contributing to a
+build and their corresponding intermediate object files.
+
+\section{\anchor{OverridesSect}{Overrides}}
+
+\anchor{NamedPkgOvs}{}
+\begin{verbatim}
+type NamedPkgOvs = binding(:PkgModel);
+\end{verbatim}
+
+A value of type "\bf{\tt{NamedPkgOvs}}" is a binding mapping package
+names to their corresponding package models (which are typically
+imported via an "\tt{include}" clause in a top-level model).
+
+\anchor{QNamedPkgOvs}{}
+\begin{verbatim}
+type QNamedPkgOvs = binding(:NamedPkgOvs);
+\end{verbatim}
+
+Package overrides are specified using \it{qualified} package names,
+similar to the "\link{#QNamedPkgs}{\tt{QNamedPkgs}}" type described
+above. A value of this type is used to specify how various packages
+are overridden when the standard environment is constructed.
+
+\anchor{BridgeOvs}{}
+\begin{verbatim}
+type BridgeOvs = binding;
+\end{verbatim}
+
+A value of type "\bf{\tt{BridgeOvs}}" is a binding that is recursively
+overlaid on some bridge of the current environment. It is generally of
+type "\link{#Bridge}{\tt{Bridge}}", except that it is not required to
+have all the fields of that type.
+
+\anchor{CompileOvs}{}
+\begin{verbatim}
+type CompileOvs = binding(
+  lang: text,     // optional bridge name
+  ovs: \link{#BridgeOvs}{BridgeOvs}  // bridge-specific overrides
+);
+\end{verbatim}
+
+The type "\bf{\tt{CompileOvs}}" specifies compiler overrides for a
+specific bridge. It is associated with named files (see
+"\link{#NamedCompileOvs}{\tt{NamedCompileOvs}}" below). If the
+"\tt{lang}" field is present, it specifies which bridge the file
+should be compiled with; it defaults to the bridge associated with the
+file's extension. The "\tt{ovs}" field is a binding that is
+recursively overlayed on the selected bridge of the current
+environment before the compiler is invoked.
+
+\anchor{NamedCompileOvs}{}
+\begin{verbatim}
+type NamedCompileOvs = binding(:\link{#CompileOvs}{CompileOvs});
+\end{verbatim}
+
+A value of type "\bf{\tt{NamedCompileOvs}}" is a binding containing
+pairs of the form "\tt{[ filename = compile_ovs ]}", where the
+"compile_ovs" value is of type \link{#CompileOvs}{CompileOvs} and
+specifies overrides to be used when compiling the file named
+"\tt{filename}" as described above.
+
+\anchor{NamedLibOvs}{}
+\begin{verbatim}
+type NamedLibOvs = binding;
+\end{verbatim}
+
+A value of type "\bf{\tt{NamedLibOvs}}" represents a value used to
+override which libraries a program is linked against. There are two
+kinds of "\tt{NamedLibOvs}" values, depending on whether flat or
+hierarchical library names are being used for this bridge (as
+determined by the bridge's \link{#BridgeOptions}{\tt{flat_lib_names}}
+option).
+
+If flat library names are being used, the value will be of type
+"\link{#NamedLibDescs}{\tt{NamedLibDescs}}", that is, it will be a
+binding that maps library names to "\link{#LibDesc}{\tt{LibDesc}}"
+bindings. This "\tt{LibDesc}" is overlayed (but not recursively so)
+over the "\tt{LibDesc}" of the corresponding library in the libraries
+being linked against. Which fields the overriding binding contains
+depends on whether the library being overridden is a leaf
+(\link{#LeafLibDesc}{\tt{LeafLibDesc}}), umbrella
+(\link{#UmbrellaLibDesc}{\tt{UmbrellaLibDesc}}), or prebuilt
+(\link{#PrebuiltLibDesc}{\tt{PrebuiltLibDesc}}) library.
+
+If hierarchical names are being used, the value will be a binding
+whose ``leaves'' are "\link{#NamedLibDescs}{\tt{NamedLibDescs}}"
+values and some of whose internal nodes may contain a
+"\link{#NamedLibDesc}{\tt{NamedLibDesc}}" value as well. A
+"\tt{NamedLibDesc}" is recognized at an internal node by the
+appearence of the "\tt{lib_type_}" or "\tt{ovs}" field in all cases,
+or by the appearence of the "\tt{per_file_ovs}" field in the case of a
+leaf library. As above, when a "\tt{NamedLibDesc}" is recognized, it is
+overlayed (again, not recursively so) on the "\tt{LibDesc}" of the
+corresponding library in the list of libraries being linked against.
+
+\anchor{EnvOvs}{}
+\begin{verbatim}
+type EnvOvs = binding;
+\end{verbatim}
+
+A value of type "\bf{\tt{EnvOvs}}" is a binding overlayed over some
+top-level environment of type "\link{#Env}{\tt{Env}}".
+
+\section{\anchor{BridgesSect}{Bridges}}
+
+\anchor{BridgeExpert}{}
+\begin{verbatim}
+type BridgeExpert = binding(
+  compile: function,         // compile a single module
+  link_leaf: function,       // link a leaf library
+  link_umbrella: function,   // link an umbrella library
+  link_program: function     // link an executable program
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{BridgeExpert}}" defines the four low-level
+bridge functions for compiling and linking.
+
+\anchor{ToolSwitches}{}
+\begin{verbatim}
+type ToolSwitches = binding(:text);
+\end{verbatim}
+
+A value of type "\bf{\tt{ToolSwitches}}" defines command-line switches
+for one of the low-level "\link{#BridgeExpert}{\tt{BridgeExpert}}"
+functions. It maps abstract switch names (like "debug" and "optimize")
+to the text of an actual switch as it should appear in the tool's
+command-line. Only the values of a "\tt{ToolSwitches}" binding are
+significant; the names are just used for overrides purposes.
+
+\anchor{BridgeSwitches}{}
+\begin{verbatim}
+type BridgeSwitches = binding(
+  compile: \link{#ToolSwitches}{ToolSwitches},  // defaults for 'compile' tool
+  leaf: \link{#ToolSwitches}{ToolSwitches},     // defaults for 'link_leaf' tool
+  umbrella: \link{#ToolSwitches}{ToolSwitches}, // defaults for 'link_umbrella' tool
+  program: \link{#ToolSwitches}{ToolSwitches}   // defaults for 'link_program' tool
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{BridgeSwitches}}" defines the default
+command-line switches for the low-level
+"\link{#BridgeExpert}{\tt{BridgeExpert}}" functions used by a
+particular "\link{#Bridge}{\tt{Bridge}}". It may be overridden to
+invoke each tool with different command-line switches.
+
+\anchor{BridgeOptions}{}
+\begin{verbatim}
+type BridgeOptions = binding(
+  flat_lib_names: bool,   // use hierachical library naming iff false
+  useGClib: text          // name of gc library (or "no" for none)
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{BridgeOptions}}" defines a set of general
+options that pertain to a particular bridge. The values of these
+options are used by user models and by the low-level
+"\link{#BridgeExpert}{\tt{BridgeExpert}}" functions.
+
+\anchor{Bridge}{}
+\begin{verbatim}
+type Bridge = binding(
+  libs: \link{#QNamedLibPkgResults}{QNamedLibPkgResults}, // named per-bridge library models
+  program: function,         // builds an executable
+  leaf: function,            // defines a leaf library
+  umbrella: function,        // defines a non-leaf library
+  prebuilt: function,        // defines a pre-built library
+  expert: \link{#BridgeExpert}{BridgeExpert},      // low-level functions; can be overridden
+  switches: \link{#BridgeSwitches}{BridgeSwitches},  // default switches for "expert" functions
+  options: \link{#BridgeOptions}{BridgeOptions}     // default options for "expert" functions
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{Bridge}}" provides an interface to a
+collection of language-specific tools, called a \it{bridge}.
+The "\tt{libs}" field contains a binding of libraries built for this
+bridge; the binding is typically installed by the function that
+constructs the standard environment.
+
+Each bridge exports the "\tt{program}", "\tt{leaf}", "\tt{umbrella}",
+and "\tt{prebuilt}" functions for building programs and the three
+kinds of libraries. The "\tt{expert}" field hides a binding of
+\link{#BridgeExpert}{expert functions} used to implement the bridge.
+
+The "\tt{switches}" field is a binding of
+\link{#BridgeSwitches}{command-line switches} for the bridge's tools.
+The "\tt{options}" field is a binding of
+\link{#BridgeOptions}{options} that control how programs are built
+with this bridge.
+
+\section{\anchor{BridgeGenericSect}{Generic Bridge Functions}}
+
+\anchor{BridgeGenerics}{}
+\begin{verbatim}
+type BridgeGenerics = binding(
+  base_name: function,         // base name of a file name
+  extension: function,         // extension of a file name
+  binding_names: function,     // return list of names in a binding
+  binding_values: function,    // return list of values in a binding
+  reverse_list: function,      // reverse a list value
+  reverse_binding: function,   // reverse a binding value
+  eval_binding_vals: function, // evaluate values of a binding
+  compile: function,           // compile list of sources, various langs
+  bridge_map: binding          // maps file extensions -> bridge names
+    // for example [ c = "C", C = "Cxx", i3 = "M3", m3 = "M3" ]
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{BridgeGenerics}}" defines various generic
+functions for use by bridge implementations. See the
+"\tt{common/bridge_generic}" package for details. This type should not
+be of interest to most general users.
+
+\section{\anchor{EnvironmentsSect}{Environments}}
+
+\anchor{Env}{}
+\begin{verbatim}
+type Env = binding(
+  target_platform: text,   // name of target platform (a platform name)
+  root: binding,           // file system for bridge tools
+  envVars: binding,        // environment variables
+  generic: \link{#BridgeGenerics}{BridgeGenerics}, // generic functions
+  C: \link{#Bridge}{Bridge},               // C bridge
+  Cxx: \link{#Bridge}{Bridge},             // C++ bridge
+  M3: \link{#Bridge}{Bridge},              // Modula-3 bridge
+  lib_ovs: \link{#NamedLibOvs}{NamedLibOvs},    // library override definitions
+  env_ovs: \link{#EnvOvs}{EnvOvs},         // environment override definitions
+  env_for_bridges: \link{#Env}{Env},    // environment used to build bridges
+  temp: binding(           // temporary files
+    includes: \link{#NamedFiles}{NamedFiles},  // header files during C compilations
+    libs: \link{#NamedFiles}{NamedFiles}       // library archives
+  )
+);
+\end{verbatim}
+
+A value of type "\bf{\tt{Env}}" corresponds to an environment,
+typically bound to the name "." (dot). A value of this type is usually
+constructed using the standard environment model, and then augmented.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{vlibraries.5.html}{vlibraries(5)},
+\link{vmodels.5.html}{vmodels(5)},
+\link{voverrides.5.html}{voverrides(5)}.
+
+\section{Author}
+
+Allan Heydon
+
+\begin{verbatim}
+Last modified on Fri Nov  9 12:14:21 EST 2001 by ken@xorian.net
+     modified on Mon Feb 22 16:43:04 PST 1999 by heydon
+\end{verbatim}

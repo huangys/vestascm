@@ -1,0 +1,4 @@
+PROC Main() IS
+    Wr("Oops"); { 0 -> VAR n := 0 IN n := n END }
+  | Wr("hello world\n")
+END;

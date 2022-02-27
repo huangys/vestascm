@@ -1,0 +1,10 @@
+#!/bin/sh
+
+lim=../`machine`-debug/lim.3rd
+
+for x in *.hw
+do
+  echo $x
+  echo hello world | ${lim} ${x}
+  /bin/mv -f lim.3log `basename $x .hw`.log
+done

@@ -1,0 +1,538 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vrepl - Update a Vesta repository replica}{vrepl}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vrepl} - Update a Vesta repository replica
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vrepl} [\it{\link{#Flags}{flags}}]
+    [\link{#-s}{-s} \it{srchost}[:[\it{srcport}][:\it{srcuser}]]]
+    [\link{#-d}{-d} \it{dsthost}[:[\it{dstport}][:\it{dstuser}]]]
+    [\link{#-e}{-e} \it{directive}] [[\link{#-f}{-f}] \it{directives-file}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Directives}{Directives}
+\item \link{#Vesta_Replication}{Vesta Replication Design}
+\item \link{#Environment}{Environment}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vrepl} command invokes the Vesta replicator to copy sources
+from one Vesta repository to another.  See the
+\link{vesta-intro.1.html#Terminology}{Terminology} section of the
+\link{vesta-intro.1.html}{vesta-intro} man page for definitions of
+terms.
+
+The source (-s) and destination (-d) repositories are specified by
+Internet host name and (optionally) TCP port.  If omitted, both host
+names and ports default to the values specified for the local
+repository in the active Vesta configuration file (see the
+\link{#Configuration}{Configuration} section below).  Alternatively, the string
+"local" can be given for either option to explicitly specify the local
+repository.
+
+The sources to copy are specified by \it{directives}, whose syntax is
+defined in the \link{#Directives}{Directives} section below.
+Directives can be given on the command line using one or more -e
+flags, and/or in files using one or more -f flags.  The copying
+obeys Vesta's replication design, which is summarized in the
+\link{#Vesta_Replication}{Vesta Replication} section below.
+
+Wherever possible, the copying process avoids redundant data transfer
+and preserves sharing.  If a file or directory is already present in
+the destination under another name, the data is not transferred again.
+If a directory is compressed in the source by being represented as a
+delta with respect to a previous version, the compression is preserved
+in the destination.  The presence or absence of this sharing is not
+directly visible to users; it affects only the amount of disk and
+memory space the repository consumes and the time and network
+bandwidth required to run the replicator.
+
+For replication to be allowed, the user must have read permission in
+the source repository and search permission in the destination
+repository, and the destination repository must grant the source
+repository permission to supply the value and attributes of each
+object being copied.  The latter permission is granted if, searching
+upward in the destination repository's directory tree from the object
+in question, the first object found that has a \tt{#replicate-from}
+attribute includes the source host:port pair (or '\tt{*}') in its
+value.  In addition, permission to replicate everything except access
+control attributes (attributes whose names begin with '\tt{#}'; see
+the \link{#-a}{-a} flag below) is granted if when searching upward,
+the first object found that has a \tt{#replicate-from-noac} attribute
+includes the source host:port pair in its value.  If no objects with
+these attributes are found, permission is denied.
+
+\section{\anchor{Flags}{Flags}}
+
+Each boolean flag can be turned on by giving the corresponding letter
+in lowercase or off by giving it in uppercase.  The 
+flags -n, -o, -g, -b, and -l default to on; all others default to off.  
+The flags -e and -f must appear after all other flags.
+
+\begin{description}
+\item{\anchor{-s}{-s} srchost[:[srcport][:srcuser]]}
+Specifies the source repository by host name and TCP port number.
+Both srchost and srcport default to the values specified for the local
+repository in the active Vesta configuration file (see the
+\link{#Configuration}{Configuration} section below).  Alternatively, the string
+"local" can be given to explicitly specify the local repository.
+
+You can also specify the global user name under which you will access
+the source repository.  The default is $USER@\it{realm}, where
+$USER is your local user name and \it{realm} is the value of
+[UserInterface]realm in the active Vesta configuration file.
+If vrepl cannot authenticate you to the source repository as 
+being the specified user, nothing will be replicated.
+
+\item{\anchor{-d}{-d} dsthost[:[dstport][:dstuser]]}
+Specifies the destination repository by host name and TCP port number.
+Both dsthost and dstport default to the values specified for the local
+repository in the active Vesta configuration file (see the 
+\link{#Configuration}{Configuration} section below).  Alternatively, the string
+"local" can be given to explicitly specify the local repository.
+
+You can also specify the global user name under which you will access
+the destination repository.  The default is $USER@\it{realm}, where
+$USER is your local user name and \it{realm} is the value of
+[UserInterface]realm in the active Vesta configuration file.
+If vrepl cannot authenticate you to the destination repository as 
+being the specified user, nothing will be replicated.
+
+\item{\anchor{-e}{-e} directive} Gives one replication directive.
+Multiple -e and -f flags accumulate.  A space may
+appear after the operator character in the directive;
+for example, \tt{-e+ /vesta/foo} is acceptable.
+
+\item{\anchor{-f}{[-f]} directive-file}
+Gives a file of repliction directives.  The "-f" can be omitted.
+Multiple -e and -f flags accumulate.  
+The directive-file name "-" specifies standard input.
+
+\item{\anchor{-n}{-n or -N}}
+Copy (or do not copy) attributes on newly-created objects, 
+including cases where a ghost or stub is replaced by a real object.
+Default: on. 
+
+\item{\anchor{-o}{-o or -O}}
+Update (or do not update) attributes on old objects; that is, 
+objects that are included in the set to
+be copied but already exist at the destination.  Default: on.
+
+\item{\anchor{-i}{-i or -I}}
+Update (or do not update) attributes on existing directories that
+are not themselves
+included in the set to be copied, but which appear internally in the
+pathnames of objects that are included.  For example, if
+/vesta/foo/bar is included but /vesta/foo is neither specifically
+included nor excluded, and /vesta/foo already exists at the
+destination, the attributes of /vesta/foo will be copied if and
+only if this flag is on.  Default: off.
+
+\item{\anchor{-a}{-a or -A}}
+Update (or do not update) access control attributes.
+When copying or updating attributes, those whose names begin with '\tt{#}'
+are included only if this flag is on.  Default: on.
+
+\item{\anchor{-r}{-r or -R}}
+Revive (or do not revive) ghosts in the destination, by replacing
+them with real objects
+where the source has them. Exception: a master ghost of an appendable
+directory is not replaced.
+The new destination object is given the same master or nonmaster status 
+as the old ghost.
+Default: off.
+
+\item{\anchor{-m}{-m or -M}} 
+Revive (or do not revive) 
+master ghosts of appendable directories in the destination by
+replacing them with real objects where the source has them.  A new
+directory created by this flag does \it{not} have master status;
+that would be unsafe since the source copy is not known to have a
+full set of children.  Hence the object no longer has a master copy.
+This flag is for expert use only.  Default: off.
+
+\item{\anchor{-b}{-b or -B}}
+Allow (or do not allow) stubs to be copied.  Default: on.  
+Even when this flag is on, a stub
+will not be copied if it would replace an object already present at
+the destination.
+
+\item{\anchor{-g}{-g or -G}}
+Allow (or do not allow) ghosts to be copied.  Default: on.  
+Even when this flag is on, a ghost
+will not be copied if it would replace an object already present at
+the destination.
+
+\item{\anchor{-l}{-l or -L}}
+Copy (or do not copy) "latest" symbolic links into the destination
+where needed.  Default: on.  In detail, if an appendable directory
+\it{A} has its \tt{type} attribute set to \tt{package}, \tt{checkout},
+or \tt{session}, and \it{A} is or has a descendant in the set to be
+copied, and \it{A}\tt{/latest} is a stub or ghost, then
+\it{A}\tt{/latest} and its attributes are copied too.
+
+\item{\anchor{-v}{-v or -V}}
+Verbose: print (or do not print)
+lines describing what the replicator is doing. Default: off.
+Each line consists of a tag, a tab character, and a pathname.
+The tags have the following meanings:
+
+\begin{description}
+\item{attribs} The object's attributes are being copied.
+\item{copy} The object is being copied in full.  If possible, the copying 
+process is optimized by using data already present at the destination.
+\item{create} An appendable directory is being created.  Its
+children may or may not all be copied.
+\item{exists} The object is not being copied because it already 
+exists in the destination.  This includes the cases where a ghost
+or stub is not copied because it would replace a 
+real object in the destination.
+\item{ghost} The object is not being copied because a ghost with
+the same name exists in the destination and the \link{#-r}{-r}
+or \link{#-m}{-m} flag was not given.
+\item{latest} The object is a "latest" stub being created because
+the \link{#-l}{-l} flag was on.
+\end{description}
+
+\item{\anchor{-t}{-t or -T}}
+Test mode: skip (or do not skip) 
+modifying the destination repository.  Default: off.
+This flag is most useful in conjunction with \link{#-v}{-v}.
+
+\item{\anchor{-w}{-w or -W}} Warnings about bad imports: print a
+warning message and continue (or print an error message and stop)
+when an import from an '\tt{@}' directive isn't present in the source
+repository.  Default: off (terminate with an error).  This flag can be
+useful with automatically generated replicator instructions where the
+source repository contains incomplete replicas of the imports of some
+models.
+
+\item{\anchor{-c}{-c or -C}}
+Copy (or do not copy) new objects from the source repository to the
+destination.  Default: on. Using the -C option will update the
+attributes of objects which already exist in the destination
+repository, but will not copy any new objects and will not replace
+ghosts and stubs with real objects (even if the \link{#-r}{-r (revive
+ghosts) flag} is given).
+
+\end{description}
+
+\section{\anchor{Directives}{Directives}}
+
+A directive is the operator character '\tt{+}', '\tt{-}', '\tt{@}', 
+or '\tt{.}' followed
+by a pathname or pathname pattern.  Zero or more spaces or tabs may
+appear after the operator character.  A \bf{vrepl} directives file is
+a series of directives, one per line.  Blank lines and comment lines
+(with the '\tt{#}' character in the first column) are also allowed.  For
+compatibility with old versions of vrepl, the operator character '\tt{>}'
+is accepted as a synonym for '\tt{@}'.
+
+The pattern language uses a syntax similar to Unix shell
+filename wildcards with some extensions; it is described further
+below.  Both the pattern language and the overall syntax and semantics
+of the directives file are similar to those of the weeder instruction
+files used by \link{VestaWeed.1.html}{\bf{VestaWeed}(1)}, again with
+some extensions.
+
+Initially, the set of pathnames to be replicated is empty.  Each
+directive adds or removes some pathnames from the set.  After the
+directives file has been processed in full, the replicator copies
+those pathnames that remain in the set.
+
+The '\tt{+}' directive requests that pathnames matching the given pattern
+be copied to the destination repository.  The pathname pattern in a '\tt{+}'
+directive must start with "/vesta".  If the pattern matches a
+directory, it means that that directory is to be copied in full.  So
+for example, "+/vesta" will copy the entire repository.
+
+The '\tt{-}' directive requests that pathnames matching the specified 
+pattern \it{not} be copied.  The pathname pattern in a '\tt{-}' directive may start
+with "/vesta", or it may be given relative to the most recent '\tt{+}'
+pattern.  In the latter case the pattern must not start with '\tt{/}'.
+Names that match the pattern are subtracted (set difference) from the
+set of names to be copied.  For example, "+/vesta" followed by
+"-foo" will copy the entire repository except for /vesta/foo.
+
+The '\tt{@}' directive requests that models matching the specified
+pattern and all their imports, both direct and indirect, be copied to
+the destination repository.  It is an error for the pattern to match
+something that is not a model.  The '\tt{@}' directive works by first
+expanding any metacharacters in the directive to produce a set of root
+models to start from, then recursively processing the imports of each
+root model to yield a '\tt{+}' directive for each model in their
+import trees.  These directives are then processed by the replicator
+in place of the original '\tt{@}' directive.  Subsequent '\tt{-}'
+directives can be used to prevent parts of the expansion of a '\tt{@}'
+directive from being replicated, but they have no effect on the
+metacharacter expansion or the import tree traversal.  For example,
+"@/vesta/example.com/*/main.ves" followed by
+"-/vesta/example.com/foo/main.ves" will not copy foo/main.ves itself,
+but it will still copy all of foo/main.ves's imports.
+
+The '\tt{.}' directive must be followed by a plain pathname with no
+metacharacters.  It causes vrepl to recursively read and process
+additional directives from the named file before continuing with the
+next directive in the current file.
+
+Immutable directories are always copied in full.  This has several
+consequences.  When the '\tt{+}' directive specifies a pathname whose
+parent directory is immutable, the parent is also copied in full (and
+so on recursively, up until the first appendable ancestor).  When the
+'\tt{@}' directive copies a model, it also copies the rest of the package
+version that contains the model.  If a '\tt{-}' directive specifies a
+pathname whose parent is immutable and is selected for copying, it has
+no effect; the child pathname is still copied.
+
+A pathname pattern is a sequence of arcs separated by '\tt{/}'
+characters.  Metacharacters can appear within an arc, but a
+metacharacter cannot match a '\tt{/}' except as specifically noted
+below.  The following metacharacters are recognized.
+
+\begin{description}
+\item{\tt{*}} Matches zero or more characters.
+
+\item{\tt{#}} Matches zero or more decimal digits.
+
+\item{\tt{?}} Matches a single character.
+
+\item{\tt{[}\it{chars}\tt{]}} Matches one of the characters listed in
+\it{chars}.  The notation \it{b-e} may be used to mean the range of
+ASCII characters from \it{b} through \it{e} inclusive.  Most
+metacharacters lose their special meanings within brackets, but '\tt{/}'
+may not appear, '\tt{]}' may appear only if it is the first character in
+the list, '\tt{^}' may appear only if it is not the first character in the
+list, and '\tt{-}' or '\tt{,}' may appear only if it is the first or last
+character in the list.
+
+\item{\tt{[^}\it{chars}\tt{]}} As above, but matches one of the characters not
+in \it{chars}.
+
+\item{\tt{\{}\it{p1}\tt{,}\it{p2}\tt{,}...\tt{,}\it{pn}\tt{\}}}
+Matches any one of the patterns
+\it{p1} through \it{pn}.  The patterns can contain arbitrary
+metacharacters including nested \tt{\{ \}}'s, but they cannot contain '\tt{/}'
+characters.
+
+\item{\tt{FIRST}} Matches an arc in the current directory (as specified by
+the previous arcs in the pattern) that consists entirely of decimal
+digits, has no extra leading zeroes, is not bound to a ghost or stub, and
+has the smallest numeric value of all such arcs.
+
+\item{\tt{LAST}} Same as \tt{FIRST}, except that the arc with the largest
+numeric value is matched.
+
+\item{\tt{DFIRST}} Same as \tt{FIRST}, except that the arc with the
+lowest interger-numbered directory entry in the \it{destination}
+repository is matched.  If the current directory contains no
+interger-numbered entries or doesn't exist in the destination
+repository, expands to -1.
+
+\item{\tt{DLAST}} Same as \tt{LAST}, except that the arc with the
+highest interger-numbered directory entry in the \it{destination}
+repository is matched.  If the current directory contains no
+interger-numbered entries or doesn't exist in the destination
+repository, expands to -1.
+
+\item{\tt{[}exprLow\tt{,}exprHigh\tt{]}} Matches a nonempty sequence of decimal
+digits whose numeric value is in the closed interval [exprLow,
+exprHigh].  Here \it{exprLow} and \it{exprHigh} are integer-valued
+expressions <expr> of the form <value> or <expr><op><value>, where
+<value> is either a decimal number, \tt{FIRST}, \tt{LAST}, \tt{DFIRST} 
+or \tt{DLAST} and <op> is either '\tt{+}' or '\tt{-}'.  The 
+tokens \tt{FIRST}, \tt{LAST}, \tt{DFIRST} and \tt{DLAST} have the same meaning 
+as when they appear alone.  For example, "/vesta/foo/bar/[LAST-2,LAST]" would
+match any of the three most recent versions of the foo/bar package and
+"/vesta/foo/bar/[DLAST+1,LAST]" would match any versions of foo/bar package 
+that are newer then the latest at the destination.
+
+\item{\tt{%}} If the first character of a pattern arc is '\tt{%}', 
+the remainder 
+of the pattern arc matches zero or more complete arcs in the repository.
+For example, the pattern "/vesta/%*/checkout" matches every checkout
+directory in the repository, no matter how many levels below the root
+it is.  This is the only case where a metacharacter can match a string
+containing '\tt{/}'.
+
+\end{description}
+
+\section{\anchor{Vesta_Replication}{Vesta Replication Design}}
+
+Here is a summary of Vesta's replication design; for background and
+further details, see \it{Vesta: A System for Software Configuration
+Management}.
+
+Conceptually, all sources stored in all Vesta repositories are named
+in one single, global name space.  Each repository stores some subtree
+of the complete name space.  Replication is present when the subtrees
+stored by two different repositories overlap; that is, some of the
+same names occur in both.  Repositories \it{agree} (are consistent) if
+(1) there are no cases where the same name means something different
+in two different repositories, and (2) each name is designated 
+as \it{master} in at most one repository.  A new, empty repository
+initially agrees with every other repository, and it will continue to
+do so as long as it follows Vesta's rules for choosing new source
+names locally and for replicating existing sources from other
+repositories.
+
+It is perfectly acceptable (and in fact common) for a name to be bound
+in some repositories and unbound in others.  It is also acceptable for
+a name to be bound to either of the special object types \it{ghost}
+or \it{nonmaster stub} in some repositories and to something else in
+others; these types are placeholders for objects that are not
+replicated in the current repository but may exist elsewhere.  We
+sometimes use the term \it{real object} for an object that is neither
+a ghost nor a stub.
+
+Mastership is important chiefly for appendable directories.  The master
+copy of an appendable directory is the synchronization point for
+adding new names to the directory.  Arbitrary new names can be freely
+added to a master appendable directory, but new names can be added to
+a nonmaster appendable directory only by copying them from another
+repository.  The master copy of an appendable directory must contain
+an entry for every name that is bound in any other replica of the
+directory, and names can never be deleted from it.  (Names of objects
+that are not wanted in the master copy's repository can be bound to
+stubs or ghosts there.)  These rules ensure that users do not
+inadvertently create different objects with the same name at different
+repositories, or inadvertently create a new object with a name that
+was formerly used for a different, deleted object.
+
+Mastership is also important for stubs.  A master stub can be
+freely replaced with a newly created source of any type, while a
+nonmaster stub can be replaced only by copying from another
+repository.  (In either case, the new source has the same mastership
+status as the old stub.)  Master stubs are used by \bf{vcheckout} to
+reserve new version numbers for checked-out packages.  Nonmaster stubs
+are used only as placeholders.
+
+There is a small difference between master and nonmaster ghosts as
+well.  Both types of ghosts indicate that a previously existing source
+has been deleted.  Either type can be replaced by a copy of the source
+taken from another replica, with the new source retaining the
+mastership status of the old ghost, \it{except} that a master ghost
+cannot be changed to a master appendable directory or master stub.  It
+is unsafe to change a master ghost to a master appendable directory
+unless you can guarantee to restore all the names that were bound in
+the directory at the time it was deleted.  It is impermissible to
+change a master ghost to a master stub, because the master stub could
+in turn be replaced by an arbitrary object different from the name's
+original, pre-ghost value, thus violating Vesta's immutability
+guarantee.
+
+For other types of objects, the rule that a name has at most one
+master remains, but mastership has no other enforced meaning.  By
+convention, however, the master copy of an object can be thought of as the
+"main" copy, which should not be deleted (or replaced with a ghost)
+without thinking twice.
+
+The \bf{vrepl} command observes an additional convention regarding
+ghosts.  Because a ghost is a record that a name has been deleted,
+\bf{vrepl} considers a ghost to be evidence that the destination
+repository does not want a copy of the source bound to that name.
+Thus a source will not be copied to replace a ghost unless the
+revive (\link{#-r}{-r}) flag is specified.
+
+Vesta's mutable attribute feature is designed to work well with
+replication.  An object's attributes are represented internally as a
+timestamped history of changes.  Changes made at two different sites
+can thus be merged with well-defined, meaningful results; we omit the
+details here.
+
+Even access control attributes can be replicated.  Access control
+attributes use global group and user names that include a name for the
+site of origin, or \it{realm}; for example, user mann@pa.dec.com or 
+group ^staff@pa.dec.com.
+Replication of access
+control attributes is useful only
+when sites are closely cooperating and have a fairly high degree of
+mutual trust.  If you do not want another site to be able to influence
+the access permissions on objects you copy from it, you should not
+replicate their access control attributes.
+
+By default, attributes on the objects you are actually copying will be
+replicated, but attributes on existing parent directories will not be
+updated.  You can turn on replication of attributes on enclosing
+directories with the \link{#-i}{-i} flag.  However, if you do this,
+beware of updating access control attributes on upper-level
+directories (e.g. those on the repository root, \tt{/vesta}, itself).
+
+\section{\anchor{Environment}{Environment}}
+
+As with all Vesta tools, $VESTACONFIG can be used to override the
+default location for the Vesta configuration file.  No other
+environment variables are used.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the Vesta configuration file
+(vesta.cfg).
+
+From the \tt{[Repository]} section:
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+Host name of the default local repository.
+\item{\it{VestaSourceSRPC_port}}
+TCP port number of the default local repository.
+\end{description}
+
+From the \tt{[UserInterface]} section:
+\begin{description}
+\item{\it{realm}}
+Name of the local realm.  \tt{@}\it{realm} is appended to local user names
+to obtain global user names.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+It might be nice to have a way to make the destination just like the
+source by deleting (ghosting) things in the destination that are not
+in the source.  This is dangerous, and it probably needs to be broken
+up into multiple flags that carefully consider the cases where the
+source/destination is/isn't the master for the object/parent.
+
+\section{\anchor{See_Also}{See Also}}
+
+\begin{flushleft}
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)},
+\link{repository.8.html}{\bf{repository}(8)},
+\link{vglob.1.html}{\bf{vglob}(1)}\newline
+\it{Vesta: A System for Software Configuration Management}
+\end{flushleft}
+
+\section{\anchor{Author}{Author}}
+
+\begin{flushleft}
+\link{http://www.tim-mann.org/}{Tim Mann}\newline
+An early prototype was coded by Neil Stratford.
+\end{flushleft}

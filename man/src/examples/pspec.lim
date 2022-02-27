@@ -1,0 +1,329 @@
+PROC Main() IS
+  Rd(null);
+  WhiteSpace();
+  R(perfspec);
+  Wr(' ');
+  R(id);
+  U(0);
+  U(0);
+  Stmt();
+  DO T(';'); U(0); U(0); Stmt() OD;
+  U(0);
+  U(0);
+  R(end);
+  R(id)
+END;
+
+PROC WhiteSpace() IS
+    DO VAR c := Rd() IN
+          c # null -> SKIP
+       END
+    OD;
+    Rd(null)
+END;
+
+VAR error := 0;
+
+PROC SyntaxError() IS
+  FAIL
+END;
+
+PROC CopyToNull() IS
+    DO VAR d := Rd() IN d # null -> Wr(d) END OD
+  ; Rd(null)
+END;
+
+PROC T(c) IS
+    error = 1 -> SKIP
+  | Rd(c);
+    CopyToNull();
+    WhiteSpace()
+END;
+
+PROC R(c) IS T(c) | SyntaxError() END;
+
+VAR 
+  setb := 1,
+  endb := 2,
+  united := 3,
+  lazy := 4;
+
+PROC S(n) IS Wr(setb); Wr(n + 128) END;
+
+PROC U(n) IS Wr(united); Wr(n + 128) END;
+
+PROC L(n) IS Wr(lazy); Wr(n + 128) END;
+
+PROC E() IS Wr(endb) END;
+
+PROC Stmt() IS
+    error = 1 -> SKIP
+  | S(0); T(def);
+    U(2); ConstDef(); DO T(';'); U(2); ConstDef() OD; E()
+  | S(0); T(solve);
+    U(2); SolveDecl(); DO T(';'); U(2); SolveDecl() OD; E()
+  | S(0); { T(timed); Wr(' ')| SKIP }; T(event);
+    U(2); EventDef(); DO T(';'); U(2); EventDef() OD; E()
+  | S(0); T(import);
+    U(2); QId(); DO T(','); U(2); QId() OD; E()
+  | S(0); 
+    { T(nested); Wr(' ') | SKIP }; 
+    T(interval);
+    Wr(' '); 
+    IntervalDef(); 
+    DO T(';'); U(0); IntervalDef() OD; 
+    E()
+  | S(0); T(assert);
+    U(2); Expr(); DO T(';'); U(2); Expr() OD; E()
+END;
+
+PROC ConstDef() IS
+    error = 1 -> SKIP
+  | S(0);
+    R(id);
+    Wr(' ');
+    R(equals);
+    L(2);
+    { R(query) | Expr() };
+    E()
+END;
+
+PROC SolveDecl() IS
+    error = 1 -> SKIP
+  |   S(0);
+   {T(data); Wr(' '); Varrange(); Wr(' '); R(':'); Wr(' ') | SKIP };
+   U(0);
+   Expr();
+   { T(comma);
+     U(0);
+     R(var);
+     Wr(' ');
+     R(id); 
+     { T(comma); L(0); R(cor); Wr(' '); R(id) | SKIP } 
+   | SKIP
+   };
+   E()
+END;
+
+PROC EventDef() IS
+    error = 1 -> SKIP
+  |    R(id);
+    R('(');
+    S(0);
+    { T(id); DO T(comma); L(0); R(id) OD | SKIP };
+    R(')');
+    E()
+END;
+
+PROC IntervalDef() IS
+    error = 1 -> SKIP
+  | R(id);
+    Wr(' ');
+    R(equals);
+    U(4);
+    { IntervalHead() | SyntaxError() };
+    { U(2); 
+      T(metrics); 
+      { U(4); MetricDef(); 
+        DO T(comma); U(4); MetricDef() OD 
+      | SKIP
+      }
+    | SKIP 
+    };
+    U(2);
+    R(end);
+    Wr(' ');
+    R(id)
+END;
+
+(* An Expr1 is an Expr whose root operator is not -> .
+
+   An Expr2 is an Expr1 whose root operator is not =>. *)
+
+PROC Expr() IS
+    error = 1 -> SKIP
+  |   S(0); Expr1(); DO L(2); T(arrow); Wr(' '); Expr1() OD; E()
+END;
+
+PROC Expr1() IS
+    error = 1 -> SKIP
+  |    S(0); Expr2(); DO L(2); T(implies); Wr(' '); Expr2() OD; E()
+END;
+
+PROC Expr2() IS
+    error = 1 -> SKIP
+  |    S(0); Expr3(); DO L(2); T(or); Wr(' '); Expr3() OD; E()
+END;
+
+PROC Expr3() IS
+    error = 1 -> SKIP
+  |    S(0); Expr4(); DO L(2); T(and); Wr(' '); Expr4() OD; E()
+END;
+
+PROC Expr4() IS
+    error = 1 -> SKIP
+  |    S(0); DO T(not); L(2) OD; Expr5(); E()
+END;
+
+PROC Expr5() IS
+    error = 1 -> SKIP
+  |    S(0); Expr6(); 
+    DO L(2); 
+       { T(lt) 
+       | T(le) 
+       | T(gt) 
+       | T(ge) 
+       | T(equals)
+       | T(differs) }; 
+       Wr(' ');
+       Expr6() 
+    OD; E()
+END;
+
+PROC Expr6() IS
+    error = 1 -> SKIP
+  |    S(0); Expr7(); DO L(2); { T(plus) | T(minus) };  Wr(' '); Expr7() OD; E()
+END;
+
+PROC Expr7() IS
+    error = 1 -> SKIP
+  |    S(0); Expr8(); DO L(2); { T(times) | T(slash) | T(div) | T(mod) }; Wr(' '); Expr8() OD; E()
+END;
+
+PROC Expr8() IS
+    error = 1 -> SKIP
+  |    S(0); DO T(minus); Wr(' ') OD; Expr9(); E()
+END;
+
+PROC Expr9() IS
+    error = 1 -> SKIP
+  |    S(0); Expr10(); DO T(dot); R(id) OD; E()
+END;
+
+PROC Expr10() IS
+    error = 1 -> SKIP
+  | T(id); 
+    T(lpren); 
+    { S(0); Expr(); DO T(comma); U(0); Expr() OD ; E() | SKIP }; 
+    R(rpren)
+  | T(id)
+  | T(number); { Wr(' '); T(id) | SKIP }
+  | S(0);
+    T(lpren); 
+    Expr();
+    T(rpren); 
+    L(2);
+    T(lpren); 
+    { S(0); Expr(); DO T(comma); U(0); Expr() OD; E() | SKIP };
+    T(rpren);
+    E()
+  | T(lpren); Expr(); R(rpren)
+  | T(lbrack); 
+    S(0); 
+    Expr(); 
+    R(comma); 
+    U(0); 
+    Expr(); 
+    R(comma); 
+    U(0); 
+    Expr();
+    R(rbrack);
+    E()
+  | T(lbrace); AgExpr(); R(rbrace)
+END;
+
+PROC AgExpr() IS
+    error = 1 -> SKIP
+  | S(0); 
+    { T(plus) | T(times) | T(and) | T(or) | T(id) };
+    Wr(' ');
+    Varrange();
+    { U(3); T(':'); Wr(' '); Expr() | SKIP };
+    E()
+END;
+
+PROC QId() IS
+    R(id); R(dot); R(id)
+END;
+
+PROC Varrange() IS
+    error = 1 -> SKIP
+  |    T(id);
+    { U(3); T(colon); Wr(' '); T(id)
+    | Wr(' '); T(in); Wr(' '); R(domain); R(lpren); Expr(); R(rpren)
+    };
+    { U(5); T(where); Wr(' '); { Expr() | SyntaxError() } | SKIP }
+END;
+
+PROC IntVarrange() IS
+    error = 1 -> SKIP
+  | S(0);
+    T(id);
+    T(colon); 
+    Wr(' '); 
+    T(id);
+    { L(6); T(where); Wr(' '); { Expr() | SyntaxError() } | SKIP };
+    E()
+END;
+
+PROC IntervalHead() IS
+    error = 1 -> SKIP
+  |    IntVarrange(); T(comma); L(4); IntVarrange()
+END;
+
+PROC MetricDef() IS
+    T(id); Wr(' '); T(equals); L(6); Expr()
+END;
+
+VAR
+    null := 0,
+    id := 9,
+    number := 14,
+    lexError := 5,
+    lbrace := '{',
+    rbrace := '}',
+    lbrack := '[',
+    rbrack := ']',
+    lpren := '(',
+    rpren := ')',
+    semi := ';',
+    comma := ',',
+    arrow := 'A',
+    bar := '|',
+    colon := ':',
+    lt := '<',
+    gt := '>',
+    le := 'L',
+    ge := 'g',
+    equals := '=',
+    differs := '#',
+    or := '|',
+    and := '&',
+    not := '!',
+    minus := '-',
+    plus := '+',
+    times := '*',
+    div := 'D',
+    var := 'V',
+    implies := 'I',
+    in := 'i',
+    end := 'E',
+    dot := '.',
+    query := '?',
+    slash := '/',
+    perfspec := 'P',
+    def := 'd',
+    solve := 'S',
+    timed := 'T',
+    event := 'e',
+    nested := 'N',
+    interval := 'n',
+    assert := 'a',
+    data := 't',
+    cor := 'C',
+    metrics := 'M',
+    where := 'W',
+    import := 'm',
+    domain := 'O',
+    mod := 'o';
+

@@ -1,0 +1,175 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vsmashmaster - Set or clear the master flag}{vsmashmaster}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vsmashmaster} - Set or clear the master flag
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vsmashmaster} {\link{#-tf}{-t | -f}} [\link{#-r}{-r}] [\link{#-v}{-v}] [\it{target}...]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vsmashmaster} command sets or clears the
+\it{\link{vesta-intro.1.html#master}{master}} flag on objects in the
+Vesta repository.  Ordinarily, the master flag is set on creation,
+cleared in all replicas.  It is normally only manipulated by
+mastership transfer operations, either explicitly with
+\link{vmaster.1.html}{\bf{vmaster}(1)}, or implicitly by
+\link{vcheckout.1.html}{\bf{vcheckout}(1)} or other tools that
+automatically contact a remote master repository.
+
+Using \bf{vsmashmaster} is dangerous.  It can violate the replication
+\it{\link{vesta-intro.1.html#agreement}{agreement}} invariant.  See
+the \link{vrepl.1.html#Vesta_Replication}{Vesta Replication} section
+of the \link{vrepl.1.html}{\bf{vrepl}(1)} man page for a description
+of the replication design, including the meaning of the master flag.
+
+Turning off the master bit is always safe, but it will make it
+impossible to make further changes (e.g. check packages out and in,
+\link{vadvance.1.html}{\bf{vadvance}}, etc.).
+
+Turning on the master bit is dangerous because it can allow two
+repositories to believe that they both have the right to independently
+add new names in a directory.  (In other words, two different version
+3s with different contents could be checked into the same package at
+two different repositories.)  If at all possible, you should use
+\it{\link{vmastercoup.8.html}{vmastercoup}} instead, as it is much
+safer.
+
+Recursively turning on the master bit is particularly dangerous.  Even
+if you're certain your repository should have mastership of one
+directory, if you interact with other repositories it's possible that
+mastership of a subdirectory has been transferred to another
+repository.  (See the vmaster(1) man page.)
+
+Because of these dangers, \bf{vsmashmaster} always prints a warning
+and asks for confirmation.
+
+If no \it{targets} are given, the master flag of the current working
+directory is manipulated.
+
+\bf{vsmashmaster} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-tf}{-t \it{or} -f}}
+Exactly one of these flags must be given.  When used with -t,
+\bf{vsmashmaster} sets the master flag.  When used with -f,
+\bf{vsmashmaster} clears the master flag.
+\item{\anchor{-r}{-r}}
+Recursively set/clear the master flag.  Causes the same operation to
+be carried out on subdirectories.
+\item{\anchor{-v}{-v}}
+Verbose mode.  Causes the path of each object whos master flag is
+being set/cleared to be printed as the operation is performed.  Most
+useful inc onjuction with -r.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  (Thie setting is optional.  \it{[Repository]realm} is
+used if it's not set.)
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.
+\item{\it{vwizard_user}}
+The global name of a user with the ability to perform agreement
+operations.  (Changing the master flag is an agreement operation.)
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+Because it is an operation that can violate inter-repository
+agreement, only the special "wizard" user can use \bf{vsmashmaster}.
+
+This tool does not support the -R flag used as a convention by other
+repository tools for performing an operation in a remote repository.
+This mens that \bf{vsmashmaster} can only be used in the local
+repository.
+
+No repository is allowed to have the master flag set on the repository
+root (\tt{/vesta}).  This tool will refuse to set the master flag on
+it if asked.
+
+This tool is so rarely needed, that it has had only minimal testing.
+It may not operate correctly in all cases.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)}
+
+\section{\anchor{Author}{Author}}
+
+Tim Mann
+<\tt{tim at tim dash mann dot org}>,
+
+modifications by Kenneth C. Schalk
+<\tt{ken at xorian dot net}>
+
+\begin{verbatim}
+Last modified on Sat Nov 13 23:02:11 EST 2004 by ken@xorian.net  
+     modified on Wed Jul 11 22:24:53 PDT 2001 by mann  
+     modified on Wed Feb 19 15:23:50 PST 1997 by heydon
+\end{verbatim}

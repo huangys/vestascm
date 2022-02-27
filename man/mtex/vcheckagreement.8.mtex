@@ -1,0 +1,182 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vcheckagreement - Check agreement}{vcheckagreement}{8}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vcheckagreement} - Check that two Vesta repositories 
+are in agreement (consistent).
+
+\section{\anchor{Synopsis}{Synopsis}}
+\bf{vcheckagreement} [\link{#-l}{-l \it{level}}] 
+\it{repos1} [\it{repos2}] [\it{path...}] 
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#agree}{Replica Agreement Definition}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vcheckagreement} command checks that the contents of two
+repositories \it{repos1} and \it{repos2} \link{#agree}{\it{agree}}.
+Because this checking can be expensive (as it requires reading the
+contents of both repositories over the network), there are several
+\link{#-l}{\it{levels of agreement checking}}.  If desired, you can
+limit the checking to one or more source \it{paths} within the
+repository.  (If you don't specify any \it{paths}, the entire
+repository will be checked for agreement.)  If \it{repos2} is not
+specified it defaults to local repository.
+
+If the two repositories are in agreement, \bf{vcheckagreement} prints
+"\tt{true}" and exits with status 0.  Otherwise it prints information
+about the agreement violations which were found followed by
+"\tt{false}" on a line by itself and and exits with status 1. It exits
+with status 2 in a case of wrong usage or another error.
+
+Note that there is some ambiguity in the command-line arguments: the
+argument after \it{repos1} might be \it{repos2} or it might be the
+first source \it{path} to which the checking should be limited.  If
+the second argument contains "\tt{/}" is will be treated as the first
+\it{path}, otherwise it will be treated as \it{repos2}.  The easiest
+way to make sure \bf{vcheckagreement} doesn't treat the first
+\it{path} as \it{repos2} is to always use absolute \it{paths} starting
+with "\tt{/vesta/}".
+
+\section{\anchor{agree}{Replica Agreement Definition}}
+
+Two repositories \it{agree} (are consistent) if (1) there are no cases where the 
+same name means something different in two different repositories, 
+and (2) each name is designated as master in at most one repository.
+
+To define \it{agreement} more precisely:
+
+\begin{flushleft}
+\it{A.master} denotes the master flag of \it{A}.\newline
+\it{A.repos} denotes the repository where \it{A} is stored.\newline
+\it{A.names} denotes the list of names that are bound to \it{A} if \it{A} 
+is a directory. \newline
+\it{A ~ B} denotes agreement between two Vesta source objects \it{A} and \it{B}.
+\end{flushleft}
+
+\it{A ~ B} if the following recursively defined conditions hold:
+
+\begin{enumerate}
+\item \it{A.master} and \it{B.master} => \it{A.repos} = \it{B.repos} and
+\item At least one of the following holds:
+\begin{description} 
+\item{(a) \it{A} and \it{B} are files with identical contents.}
+\item{(b) \it{A} and \it{B} are immutable directories where }
+\begin{description}
+\item{i.   \it{A.names} = \it{B.names}, and }
+\item{ii.  For every \it{n} in \it{A.names}: \it{A/n ~ B/n},}
+\end{description}
+\item{(c) \it{A} and \it{B} are appendable directories where }
+\begin{description}
+\item{i.   For every \it{n} in both \it{A.names} and \it{B.names}: \it{A/n ~ B/n},}
+\item{ii.  \it{A.master} => \it{B.names} is a subset of \it{A.names},}
+\item{iii. \it{B.master} => \it{A.names} is a subset of \it{B.names}.}
+\end{description}
+\item{(d) \it{A} and \it{B} are both master stubs}
+\item{(e) \it{A} or \it{B} is a nonmaster stub}
+\item{(f) \it{A} or \it{B} is a ghost}
+\end{description}
+\end{enumerate}
+
+So, two repositories \it{agree} if their replicas of the root directory 
+(\tt{/vesta}) \it{agree}.
+
+Vesta's replication design and replica agreement are further described in
+\link{http://gatekeeper.research.compaq.com/pub/DEC/SRC/research-reports/abstracts/src-rr-172.html}{\bf{"Partial
+Replication in the Vesta Software Repository"}}.
+
+It's worth noting that \it{agreement is \bf{not} a transitive
+property}.  If \it{reposA} agrees with \it{reposB} and \it{reposB}
+agrees with \it{reposC}, that doesn't neccessarily mean that
+\it{reposA} agrees \it{reposC}.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-l}{-l} \it{level}}
+Specifies the level of detail of the agreement check.  \it{level}
+should be one of the following:
+
+\begin{description}
+\item{0}
+Stop checking at immutable directories assuming that their
+contents are the same.
+\item{1}
+Recursively compare immutable directories verifying that their
+directory structure is the same, including a comparison of immutable
+files attributes like size, executable status, fingerprint.
+\item{2}
+Verify that the contents of immutable files are identical.
+\end{description}
+
+Each higher level will take more time, more network bandwidth, and
+more resources on the repository servers.  \it{level} defaults to 0 if
+the -l flag is not given.
+
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+Host name of the default local repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+From the \tt{[UserInterface]} section:
+\begin{description} 
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings. 
+A common setting is "%a %b %e %T %Z %Y".
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\link{#agree}{Agreement} is defined to be reflexive (i.e. a repository
+agrees with itself).  However, \bf{vcheckagreement} cannot be used to
+check a repository against itself.
+
+\section{\anchor{See_Also}{See Also}}
+\begin{flushleft}
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)},
+\link{http://gatekeeper.research.compaq.com/pub/DEC/SRC/research-reports/abstracts/src-rr-172.html}{\bf{"Partial Replication in the Vesta Software Repository"} by Tim Mann}
+
+\end{flushleft}
+

@@ -1,0 +1,8 @@
+VAR glob := 1;
+
+PROC Main() IS
+    VAR loc := 1 IN
+      1 -> glob := 0; loc := 0; {0-> glob := glob}
+    | { (glob = 1) AND (loc = 1) -> Wr("hello world\n") }
+    END
+END;

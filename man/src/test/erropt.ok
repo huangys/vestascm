@@ -1,0 +1,6 @@
+PROC Main () IS
+  At ('a');
+  { Err ("hello world\n"); At ('a'); Rd ('b')
+  | SKIP
+  }
+END;

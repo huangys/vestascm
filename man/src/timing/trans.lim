@@ -1,0 +1,7 @@
+PROC Main() IS
+    DO Rd("burrows"); Wr("gnelson")
+     | Rd("gnelson"); Wr("burrows")
+     | Wr(Rd())
+    OD
+END;
+

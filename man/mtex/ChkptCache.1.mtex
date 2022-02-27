@@ -1,0 +1,82 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{ChkptCache(1) man page}{ChkptCache}{1}
+
+\section{Name}
+
+ChkptCache - checkpoint the Vesta-2 cache server
+
+\section{Synopsis}
+
+\bf{ChkptCache}
+[ \bf{-n} ]
+
+\section{Description}
+
+\it{ChkptCache} invokes the \it{Checkpoint} method of the Vesta-2
+cache server named in the user's Vesta-2 configuration file.
+
+By default, \it{ChkptCache} flushes the cache server's logs to disk,
+and writes a root node to the graph log with a \it{package version}
+fingerprint equal to the fingerprint of the empty string, a \it{model
+number} of zero, an empty list of \it{children}, and a \it{done} value
+of false.
+
+If \bf{-n} is specified, the name and port number of the cache that
+would be checkpointed is printed, but no action is taken.
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{ChkptCache} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The program first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{ChkptCache} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables and their meanings; the types of the variables are
+shown in parentheses.
+
+\begin{description}
+\item{\tt{Host} (string)}
+The hostname of the machine on which the cache server is running.
+
+\item{\tt{Port} (integer)}
+The port number on host named by \it{Host} to contact. This allows
+multiple cache servers to be running on the same machine; each one
+listens on a different port for connections.
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{FlushCache.1.html}{FlushCache(1)},
+\link{TestCache.1.html}{TestCache(1)}.
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:40:15 EST 2001 by ken@xorian.net
+     modified on Tue Jun  3 00:02:03 PDT 1997 by heydon
+\end{verbatim}

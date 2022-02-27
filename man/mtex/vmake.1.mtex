@@ -1,0 +1,109 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmake - Build next version in a Vesta session}{vmake}{1}
+
+\section{Name}
+
+\bf{vmake} - Advance and build the newly created version
+within a Vesta checkout session
+
+\section{Synopsis}
+
+\bf{vmake} [\it{arguments to} \link{vesta.1.html}{\bf{vesta}(1)}]
+
+In the most common usage, vmake is invoked from a checkout
+session's working directory, or from the root directory of a 
+checked-in version or session version, and no arguments are needed.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Environment}{Environment}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vmake} command is a small shell script that conveniently
+builds the next version in a Vesta checkout session, or rebuilds the
+latest version if nothing has changed.
+
+In more detail, \bf{vmake} does the following:
+\begin{itemize}
+\item Invoke \link{vadvance.1.html}{\bf{vadvance}(1)} to
+delete junk files and
+create a new version within the current checkout session
+if anything in the tree rooted at the working directory has changed.
+\item Invoke the Vesta evaluator \link{vesta.1.html}{\bf{vesta}(1)} to
+evaluate the default model in the latest
+version within the checkout session.
+\end{itemize}
+
+If \bf{vmake}'s current directory is not a Vesta working directory (or
+a subdirectory thereof), the initial steps are omitted and the
+evaluator is simply run in the current directory.
+
+\section{\anchor{Flags}{Flags}}
+
+All flags and other arguments are passed through to the Vesta evaluator.
+
+\section{\anchor{Environment}{Environment}}
+
+\begin{description}
+\item{$VESTAFLAGS}
+The value of this variable, if any, is placed on the 
+Vesta interpreter's command line just before the arguments
+copied from \bf{vmake}'s command line.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{Interpreter}}
+The filename of the Vesta interpreter to invoke.
+\item{\it{vestaflags}}
+Default value for $VESTAFLAGS.  Empty if not set.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vmake} doesn't really do much.  Perhaps
+\link{vupdate.1.html}{\bf{vupdate}(1)} should (optionally) be invoked
+too.
+
+Perhaps the name "vmake" should have been reserved for some kind of
+Makefile-compatibility tool, but as yet there is none.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vadvance.1.html}{\bf{vadvance}(1)}, 
+\link{vesta.1.html}{\bf{vesta}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

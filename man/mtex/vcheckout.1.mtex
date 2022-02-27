@@ -1,0 +1,702 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vcheckout - Check out a Vesta package}{vcheckout}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vcheckout} - Check out a package from the Vesta repository.
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vcheckout} [\link{#-q}{-q}] [\link{#-Q}{-Q}] [\link{#-v}{-v}]
+[\link{#-f}{-f}] [\link{#-F}{-F}]
+[\link{#-o}{-o \it{old-version}} | \link{#-O}{-O}]
+[\link{#-n}{-n \it{new-version}} | \link{#-N}{-N}]
+[\link{#-s}{-s \it{session-dir}} [\link{#-u}{-u}] | \link{#-S}{-S}]
+[\link{#-w}{-w \it{work-dir}} | \link{#-W}{-W}]
+[\link{#-m}{-m \it{message}} | \link{#-M}{-M}]
+[\link{#-h}{-h \it{hints}}]
+[\link{#-R}{-R \it{repos}}]
+[\it{package}]
+
+In the most common usage, only the \it{package} argument is given.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Message}{Message Entry}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#Env_Vars}{Environment Variables}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vcheckout} command checks out a package from the Vesta
+repository.  It reserves the next version number, creates a mutable
+working directory for editing the package, and creates a session
+directory to hold the immutable working versions that will be created
+during the checkout session.  It creates a new symbolic link
+\tt{latest} in the session directory to point to the latest working
+version.
+
+If omitted, \it{package} defaults to the current directory.
+If the name \it{package} is unqualified (does not have
+"\tt{/}", "\tt{.}", or "\tt{..}"
+as its first arc), it is interpreted relative to the
+site's default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.
+
+\begin{html}
+\<IMG SRC="vcheckout.gif" ALT="vcheckout figure"
+WIDTH=483 HEIGHT=437 BORDER=0\>
+\end{html}
+
+In more detail, \bf{vcheckout}:
+\begin{itemize}
+\item Prompts the user to enter a message about the intended change of
+the checkout.  (\link{#Message}{See the "Message Entry" section
+below.})
+\item Reserves the name \it{new-version} for a new public package version by
+creating a master stub by that name.
+\item Creates a checkout session directory named \it{session-dir}.  
+\item Binds the name \it{session-dir}\tt{/0} to the same
+immutable directory named by \it{old-version}.
+\item Creates a master stub named \it{session-dir}\tt{/latest}.
+\item Creates a mutable working directory named \it{work-dir}, 
+initializing its contents to the contents of \it{old-version}.  
+\item Sets the following attributes:
+\begin{description}
+\item{On \it{new-version}}
+\tt{old-version}, \tt{session-dir}, \tt{work-dir}, \tt{checkout-time},
+\tt{checkout-by}, possibly \tt{checkout-from} and \tt{checkout-to},
+and optionally \tt{message}.
+\item{On \it{old-version}}
+\tt{next-versions} and \tt{next-sessions}
+\item{On \it{session-dir}}
+\tt{old-version}, \tt{new-version}, \tt{work-dir}, \tt{checkout-time},
+\tt{checkout-by}, \tt{type} (= "session"), possibly \tt{checkout-from}
+and \tt{checkout-to}, and optionally \tt{message}.
+\item{On \it{session-dir}\tt{/latest}}
+\tt{symlink-to} (= "$LAST").
+\item{On \it{work-dir}}
+\tt{old-version}, \tt{new-version}, \tt{session-dir}, \tt{session-ver-arc},
+\tt{checkout-time}, and \tt{checkout-by}.
+\end{description}
+\end{itemize}
+
+Directory names used as attribute values are canonicalized to start with 
+"\tt{/}", and settings are omitted where they do not apply.
+The \tt{checkout-by} attribute is set to the invoking user's global name
+and the \tt{checkout-time} attribute to the current date and time.
+
+You must have read access to \it{old-version} and write access to the
+parent directories of the sources that \bf{vcheckout} is to create.
+All the newly created sources are owned by you.
+The \it{session-dir} and the \it{new-version} stub have their
+access permissions set to \tt{0777 & ~umask}.
+Thus if your umask is 022, only you will have write access to them,
+so others will not be able to 
+\link{vadvance.1.html}{\bf{vadvance}(1)} in your session or 
+\link{vcheckin.1.html}{\bf{vcheckin}(1)} your reserved version number.
+The \it{work-dir} inherits its access permission from its parent directory.
+
+In the presence of replication, a checkout cannot always be carried
+out entirely in the local repository.  In particular, the local
+repository may contain no replica of one of the needed objects, or it
+may contain a non-master replica where the master replica is needed.
+(See \link{vrepl.1.html}{\bf{vrepl}(1)} 
+and \link{vmaster.1.html}{\bf{vmaster}(1)} 
+for more information about
+replication and mastership.)  \bf{vcheckout} handles such
+cases automatically, performing any of the following remote actions
+that prove necessary:
+\begin{itemize}
+\item Fill in defaults for \it{old-version} and \it{new-version}
+from the remote master copy of \it{package}.
+\item Obtain a unique name for \it{session-dir} from
+the remote master copy of its parent directory.
+\item Replicate \it{old-version} into the local repository.
+\item Create the \it{new-version} stub in the remote master copy of its parent
+directory, setting its \tt{checkout-from} attribute to the name of the
+remote repository and its \tt{checkout-to} attribute to the name of the
+local repository.  Then replicate and transfer mastership of the new stub 
+to the local repository.
+\item Create the \it{session-dir} in the remote master copy of its parent 
+directory, setting its \tt{checkout-from} attribute to the name of the
+remote repository and its \tt{checkout-to} attribute to the name of the
+local repository.  Then replicate and transfer mastership of the new directory
+to the local repository.
+\end{itemize}
+
+\bf{vcheckout} returns status 0 for success,
+1 for parameter syntax errors, or 2 for more serious errors.  (Note
+that if any of the \link{#Triggers}{trigger commands} fail,
+\bf{vcheckout} returns status 2.)
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+\item{\anchor{-o}{-o} \it{old-version}} 
+The old package version on which the new one is to be based.
+If \it{old-version} is unqualified, it is interpreted relative to \it{package}.
+Defaults to the highest version
+number bound in \it{package}
+(to something other than a stub);
+or if there are no version numbers bound, -O is assumed.
+\item{\anchor{-O}{-O}} 
+If this flag is given, the new version is not based on a previous version.
+Omits binding 
+\it{session-dir}\tt{/0}, initializes \it{work-dir} to empty, and omits
+setting the \tt{old-version} attribute.  For purposes of defaulting other
+attributes, \tt{old-version} is taken to be "0".
+\item{\anchor{-n}{-n} \it{new-version}}
+The new package version that will be created when the package is checked
+in.  A stub is created to reserve this name.
+If \it{new-version} is unqualified, it
+is interpreted relative to \it{package}.
+Defaults to 1 plus the highest version number bound in \it{package}
+(to something other than a stub); or 1 if there are no version 
+numbers bound.
+\item{\anchor{-N}{-N}}
+Omits creating a stub to reserve the new name and omits setting the
+\tt{new-version} attribute.  This option is useful if you want to get
+a private copy of a package to edit and do not intend to check 
+in your changes.  (Also affects the default value for -s; see
+that option for details.)
+\item{\anchor{-s}{-s} \it{session-dir}}
+The session directory that will hold immutable working versions created
+during the checkout session.
+
+If \it{session-dir} is unqualified and the -F flag is not given, it
+is interpreted relative to \it{package}.
+
+Defaults to \it{new-version} with \tt{checkout/} inserted before the
+last arc, unless the -N or -F flag is given.  For example, if
+\it{new-version} is \tt{/vesta/src.dec.com/test/5}, \it{session-dir}
+defaults to \tt{/vesta/src.dec.com/test/checkout/5}.
+
+If the -N flag is given and \it{old-version} does not contain 
+a \tt{checkout} arc, \it{session-dir} defaults to \it{old-version}
+with \tt{checkout/} inserted before the last arc 
+and \tt{.}\it{user}\tt{_}\it{realm}\tt{.n} appended, where n is a small
+integer chosen to make the name unique.  For example, if
+\it{old-version} is \tt{/vesta/src.dec.com/test/4}, then \it{session-dir}
+might default to \tt{/vesta/src.dec.com/test/checkout/4.mann_pa.dec.com.2}.
+
+If -N is given and \it{old-version} already contains the arc \tt{checkout},
+then \it{session-dir} defaults to \it{old-version} with the last "\tt{/}"
+replaced by a "\tt{.}" and \tt{.}\it{user}\tt{_}\it{realm}\tt{.n} 
+appended, where n is a small integer chosen to make the name unique.
+For example, if \it{old-version} is \tt{/vesta/src.dec.com/test/checkout/5/12},
+then \it{session-dir} might default
+to \tt{/vesta/src.dec.com/test/checkout/5.12.mann_pa.dec.com.1}.
+
+If the \link{#-F}{-F flag} is given, these same rules are followed,
+but the repository root is replaced with the
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} setting.  Any
+directories on this path which don't exist will be created.  So, for
+example:
+
+\begin{itemize}
+\item If \it{package} is \tt{/vesta/example.com/pkg}, \it{session-dir}
+is \tt{checkout/123.foo}, and \tt{[UserInterface]ForeignParent} is
+\tt{/vesta/example.net/foreign}, then the session direcotry to be used
+would be
+\tt{/vesta/example.net/foreign/example.com/pkg/checkout/123.foo}.
+\item If \it{old-version} is
+\tt{/vesta/\bf{\it{<foreign-site>}}/test/4}, then \it{session-dir}
+might default to
+\tt{/vesta/\bf{\it{<current-site>}}/foreign/\bf{\it{<foreign-site>}}/test/checkout/4.mann_pa.dec.com.2}.
+\item If
+\it{old-version} is \tt{/vesta/\bf{\it{<foreign-site>}}/test/checkout/5/12},
+then \it{session-dir} might default to
+\tt{/vesta/\bf{\it{<current-site>}}/foreign/\bf{\it{<foreign-site>}}/test/checkout/5.12.mann_pa.dec.com.1}.
+\end{itemize}
+
+\item{\anchor{-u}{-u}}
+Appends \tt{.n} to a non-default session directory specified with the
+-s flag, where n is a small integer chosen to make the name unique.
+Has no effect if the -s flag was not used.
+\item{\anchor{-S}{-S}}
+Omits creating the session directory and placing a base version in it,
+and omits setting the \tt{session-dir} attribute.  If you do this, it
+will be pointless to edit files in the working directory, because there
+will be no way to advance or check in your changes.
+\item{\anchor{-F}{-F}}
+Foreign non-exclusive checkout. Useful mostly in cases when the
+master repository of the package/branch being checked out is
+inaccessible or won't grant a permission for the operation.  As with
+the \link{#-N}{-N} flag, it omits reserving a new version and omits
+setting the \tt{new-version} attribute, so user can get a private copy
+of a package to edit.  Session directories of all foreign
+non-exclusive checkouts are placed under
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} directory
+according to the rules described uder the \link{#-s}{-s flag} above.
+\item{\anchor{-w}{-w} \it{work-dir}}
+The mutable working directory.  If \it{work-dir} is unqualified, it is
+interpreted relative to
+\link{#Configuration}{\it{DefaultWorkParent}}\tt{/}\it{user}, where
+\it{user} is your local user name.  Defaults to the last arc of the
+name \it{package} that does not begin with a decimal digit.  If the
+directory already exists, "\tt{.}" and a small integer will be
+appended to make the name unique.  (Note that this means you may not
+get exactly the directory name you specify with this flag.)
+\item{\anchor{-W}{-W}}
+Omits creating the mutable working directory, and omits setting the
+\tt{work-dir} attribute.
+\item{\anchor{-m}{-m} \it{message}}
+Specify the checkout descriptive message.  If the \it{message}
+argument is \tt{"-"}, the user will be prompted to enter a message.
+(\link{#Message}{See the "Message Entry" section below.})  If
+\it{message} is any other text, it will be used as the checkout
+descriptive message without prompting the user.  If neither the -m
+flag nor the \link{#-M}{-M flag} is used, the default is "\tt{-m -}"
+(although this can be changed with the
+\link{#Configuration}{\tt{[UserInterface]vcheckout_message}
+configuration setting}).
+\item{\anchor{-M}{-M}}
+Omit the checkout descriptive message.
+\item{\anchor{-h}{-h} \it{hints}}
+If \bf{vcheckout} fails to find the master copy of a directory it
+needs to modify (or fails to find any copy of the old version) in
+either the local repository or any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-R}{-R} \it{repos}}
+Check out into \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.
+If the -f flag is not given,
+the parent directory of \it{new-version} must be of type "package"
+(that is, its \tt{type} attribute must include this value), and the
+parent directory of \it{session-dir} must be of type "checkout".
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Message}{Message Entry}}
+
+\bf{vcheckout}'s default behavior is to prompt the user for a
+\it{checkout descriptive message}.  If the \tt{EDITOR}
+\link{#Env_Vars}{environment variable} is set, the external editor
+program it specifies is invoked to edit the message.  Otherwise, the
+message is read from standard input.  A prompt is printed if the
+standard input is a terminal:
+
+\begin{verbatim}
+Enter checkout description, terminated with ^D or . on a line by itself
+: 
+\end{verbatim}
+
+If the standard input is not a terminal (e.g. it was redirected to a
+file or a pipe), no prompt will be printed, but the standard input
+will still be used as the checkout descriptive message.  (Note that
+when \tt{EDITOR} is set, the external editor is invoked even if the
+standard input is not a terminal.)
+
+When using an external editor, the initial text will be "\tt{<enter
+checkout description here>}".  If the initial text is left unedited or
+the user enters an empty message, they will be asked for confirmation
+before completing the operation:
+
+\begin{verbatim}
+Empty checkout description.  Continue (y/n)? 
+\end{verbatim}
+
+This is the only chance to abort when \tt{EDITOR} is set.  (So if you
+change your mind and are using an external editor, exit the editor
+either with the message unedited or with an empty message.)
+
+The \link{#-m}{-m flag} can be used to specify the checkout
+descriptive message on the command line.  The \link{#-M}{-M flag} can
+be used to omit the checkout descriptive message.  In either of these
+cases, no external editor will be invoked, and the standard input will
+not be read.
+
+The default of prompting for a checkout descriptive message can be
+disabled with the
+\link{#Configuration}{\tt{[UserInterface]vcheckout_message}
+configuration setting}.  However, this can be overridden on the
+command line with "\tt{-m -}", which will always cause \bf{vcheckout}
+to prompt for a checkout descriptive message.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending
+\tt{@}\it{realm} to the local name.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for the master copy of an object and for a copy of \it{old-version}.
+Each repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to \it{[Repository]VestaSourceSRPC_port}.  This
+setting is optional.
+\item{\it{vcheckout_message}}
+A boolean configuration setting.  Determines whether \bf{vcheckout}
+will prompt the user for a message describing the intention of the
+checkout.  If it is equal (without regard to case) to "yes", "on", or
+"true", or can be parsed as an integer that is non-zero,
+\bf{vcheckout} will ask the user to enter a message (as if
+"\tt{\link{#-m}{-m} -}" had been given on the command line).  If it is
+equal (without regard to case) to "no", "off", or "false", or can be
+parsed as an integer that is zero, \bf{vcheckout} will not prompt for
+a message (as if the \link{#-M}{-M} flag had been given).  If not set,
+defaults to "true".
+\item{\it{ForeignParent}}
+The directory under which session directories of all foreign
+non-exclusive checkouts are placed.  (See the description of the
+\link{#-F}{-F flag} above.)  It is usually defined as
+\tt{/vesta/\bf{\it{<current-site>}}/foreign/}.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+Settings in the \tt{[vcheckout pre trigger]} and \tt{[vcheckout post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vcheckout} modifies the repository.  Each setting in the
+\tt{[vcheckout pre trigger]} section specifies a command to be run
+before any action is taken, and each setting in the \tt{[vcheckout
+post trigger]} section specifies a command to be run after all actions
+are complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vcheckout pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vcheckout /vesta/example.com/foo
+Tada:
+Hello,
+World!
+Reserving version /vesta/example.com/foo/3
+Creating session /vesta/example.com/foo/checkout/3
+Making working directory /vesta-work/jsmith/foo
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vcheckout pre trigger]} section
+exit with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vcheckout} will exit without
+performing the checkout.
+
+The commands in the \tt{[vcheckout post trigger]} section will only be
+executed if the checkout is successfully completed.  If \bf{vcheckout}
+fails with an error, the commands in the \tt{[vcheckout post trigger]}
+section \it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vcheckout} will not perform the checkout.  If any of the post
+trigger commands runs forever, \bf{vcheckout} will not complete.  (In
+other words, \it{a trigger command that hangs will cause
+\bf{vcheckout} to hang}.)  If any of the pre or post trigger commands
+exit with error status or are terminated by a signal, \bf{vcheckout}
+will exit without running any more commands from those sections.  (In
+other words, \it{a trigger command that fails will prevent further
+trigger commands from being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given, the trigger commands
+will not actually be run.
+
+Information about what \bf{vcheckout} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vcheckout}, this will always be "vcheckout".)
+\item{VESTA_REPOS}
+The local repository (\it{host}\tt{:}\it{port}) \bf{vcheckout}
+communicates with (either the default from the configuration file or
+the one specified with the \link{#-R}{-R flag}.
+\item{VESTA_MASTER_HINTS}
+Additional repositories which may have been consulted in order to find
+the master copies of the parent directories of \it{new-version} and
+\it{session-dir}.  This is the combination of the argument to the
+\link{#-h}{-h flag} (if it was used) and the hints from the
+\link{#Configuration}{\it{[UserInterface]DefaultHints} configuration
+setting} (if set in the configuration file).
+\item{VESTA_PACKAGE}
+The path to the package to be checked out.
+\item{VESTA_OLD_VERSION}
+The path to the version the checkout will be based upon (either
+automatically determined or specified with the \link{#-o}{-o flag}).
+\item{VESTA_OMIT_OLD_VERSION}
+Set to 1 if there is no old version (if either \link{#-O}{the -O flag}
+was given or if this is the first checkout of a new package with no
+versions), set to 0 otherwise.
+\item{VESTA_OLD_VERSION_REMOTE}
+Set to 1 if the old version was only found in a remote repository and
+will be replicated to the local repository during the checkout, set to
+0 otherwise.
+\item{VESTA_OLD_VERSION_REPOS}
+The repository (\it{host}\tt{:}\it{port}) where a replica of the old
+version was found.  If this is different from $VESTA_REPOS,
+$VESTA_OLD_VERSION_REMOTE will be 1.  If there is no old version, this
+will be set to the empty string.
+\item{VESTA_NEW_VERSION}
+The path to the new version to be reserved by the checkout (either
+automatically determined or specified with the \link{#-n}{-n flag}).
+\item{VESTA_OMIT_NEW_VERSION}
+Set to 1 if there is no new version (if either \link{#-N}{the -N flag}
+or \link{#-F}{the -F flag} was given), set to 0 otherwise.
+\item{VESTA_NEW_VERSION_REMOTE}
+Set to 1 if the parent directory of the new version (typically
+$VESTA_PACKAGE) is mastered in a remote repository, set to 0
+otherwise.  If this is set to 1, the new version will be reserved
+remotely and then be replicated to and have its mastership transferred
+to the local repository.
+\item{VESTA_NEW_VERSION_REPOS}
+The repository (\it{host}\tt{:}\it{port}) which has mastership of the
+parent directory of the new version.  If this is different from
+$VESTA_REPOS, $VESTA_NEW_VERSION_REMOTE will be 1.  If there is
+no new version, this will be set to the empty string.
+\item{VESTA_SESSION_DIR}
+The path to the session directory to be created by the checkout (either
+automatically determined or specified with the \link{#-s}{-s flag}).
+\item{VESTA_OMIT_SESSION_DIR}
+Set to 1 if no session directory will be created (if \link{#-S}{the -S
+flag} was given), set to 0 otherwise.
+\item{VESTA_SESSION_DIR_REMOTE}
+Set to 1 if the parent directory of the session directory (typically
+"$VESTA_PACKAGE/checkout") is mastered in a remote repository, set to
+0 otherwise.  If this is set to 1, the session directory will be
+created remotely and then be replicated to and have its mastership
+transferred to the local repository.
+\item{VESTA_SESSION_DIR_REPOS}
+The repository (\it{host}\tt{:}\it{port}) which has mastership of the
+parent directory of the session directory.  If this is different from
+$VESTA_REPOS, $VESTA_SESSION_DIR_REMOTE will be 1.  If there is
+no session directory, this will be set to the empty string.
+\item{VESTA_WORK_DIR}
+The full path to \it{work-dir} (either automatically determined or
+specified with \link{#-w}{the -w flag}).
+\item{VESTA_OMIT_WORK}
+Set to 1 if \link{#-W}{the -W flag} was given, set to 0
+otherwise.
+\item{VESTA_USE_FOREIGN_TREE}
+Set to 1 if \link{#-F}{the -F flag} was given, set to 0 otherwise.
+(Note that if the session directory would be inside the directory
+specified in the
+\link{#Configuration}{\tt{[UserInterface]ForeignParent}} without this
+option, such as checking out a branch created there with "vbranch -F",
+this may have no effect.)
+\item{VESTA_MESSAGE}
+The checkout message, or the empty string if there is no checkout
+message.
+\item{VESTA_OMIT_MESSAGE}
+Set to 1 if there is no checkout message (if \link{#-M}{the -M flag}
+was given or
+\link{#Configuration}{\tt{[UserInterface]vcheckout_message}} was used
+to disable checkout messages), set to 0 otherwise.
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vcheckout pre trigger]
+// If the user tries to check out a package with a non-empty
+// "obsolete" attribut, print an error and exit
+50no_obsolete = if vattrib -q -G obsolete $VESTA_PACKAGE > /dev/null; then echo "Error: $VESTA_PACKAGE is marked obsolete"; exit 1; fi
+
+[vcheckout post trigger]
+// Replicate all new version reservations to known peer repositories
+// so that they're visible with vwhohas
+50repl_reservations = [ $VESTA_OMIT_NEW_VERSION -eq 1 ] || for r in $VESTA_MASTER_HINTS; do vrepl -s $VESTA_REPOS -d $r -e+ $VESTA_NEW_VERSION; done
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vcheckout} is atomic if the checkout modifies only the local
+repository.  If one or more remote repositories must be modified,
+however, the action performed at each repository is individually
+atomic, but \bf{vcheckout} can die between the actions on different
+repositories.  To make this problem less likely to occur,
+\bf{vcheckout} ignores \tt{SIGINT} (the ^C interrupt) during the
+critical section.
+
+You can clean up after such an incomplete checkout by using \bf{vcheckin} to
+check in a new version that is identical to the previous version.
+For example, if \tt{/vesta/foo.com/pkg} was incompletely checked out,
+leaving a master stub for version 33, the command would be:
+\begin{verbatim}
+vcheckin -c /vesta/foo.com/pkg/32 -n /vesta/foo.com/pkg/33 -S -W
+\end{verbatim}
+This command must be directed to the repository that holds the master
+copy of the reservation stub (\tt{33} in the example).
+In the case of a remote checkout, this
+might be either the source or destination repository, depending on
+how far the checkout got before it died.
+If you need to clean up an incomplete checkout 
+but the above command fails because you are local to the wrong repository, 
+add the -R \it{repos} flag
+to the command line, where \it{repos} is the remote repository
+that holds the master stub.  In this example,
+you could find the stub's master repository with the command:
+\begin{verbatim}
+vattrib -g master-repository /vesta/foo.com/pkg/33
+\end{verbatim}
+
+When using \link{#-F}{the -F flag}, if the foreign hierarchy does not
+yet contain the necessary directories for a foreign session for the
+package being checked out, \it{they will be created before running
+\link{#Triggers}{the commands from the \tt{[vcheckout pre trigger]}
+section of the config file}}.  (For example, if the command line is
+"\tt{vcheckout -F /vesta/a.example.com/foo}" and
+\tt{[UserInterface]ForeignParent} is set to \tt{/vesta/b.example.com},
+the directory \tt{/vesta/b.example.com/a.example.com/foo/checkout}
+will be created if it does not already exist.)  This violates the rule
+of not altering the repository before the \tt{[vcheckout pre trigger]}
+commands are run, but is necessary to determine which repository has
+mastership of the foreign session directory parent (to set the
+$VESTA_SESSION_DIR_REPOS trigger variable), as well as other
+information passed to the trigger commands.
+
+\section{\anchor{Env_Vars}{Environment Variables}}
+
+\begin{description}
+\item{\tt{VESTACONFIG}}
+If set, specifies the Vesta configuration file to be used. See
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}.
+\item{\tt{EDITOR}}
+If set, specifies the editor to use for
+\link{#Message}{editing the checkout descriptive message}.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

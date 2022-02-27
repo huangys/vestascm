@@ -1,0 +1,164 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vfindany - Locate a repositrory with a real copy of an object}{vfindany}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vfindany} - Locate a repositrory with a real copy of an object
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vfindany}
+[\link{#-h}{-h \it{hints}}]
+\it{path}
+
+In the most common usage, only the \it{path} argument is given.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section for
+definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vfindany} command attempts to find a real copy of a prticular
+object (i.e. one that is not a stub and not a ghost) in some
+repository.  This is simply a command-line interface to the algorithm
+used by \link{vcheckout.1.html}{\bf{vcheckout}} and other repository
+tools.
+
+If the name \it{path} is unqualified (does not have
+"\tt{/}", "\tt{.}", or "\tt{..}"
+as its first arc), it is interpreted relative to the
+site's default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.
+
+Note that \it{path} is required.
+
+In searching for a real copy of the object, the following
+reopositories will be consulted:
+
+\begin{itemize}
+\item The local repository
+\item Any repositories \link{#-h}{given as \it{hints} on the command
+line}
+\item Any repositories \link{#Configuration}{given as \it{hints} with
+the \it{[UserInterface]DefaultHints} configuration setting}
+\item Any repositories found in \tt{master-repository} "hint"
+attributes on the object or enclosing directories
+\end{itemize}
+
+The output of \bf{vfindany} is a host name and TCP port number in
+the format \it{host}\tt{:}\it{port}:
+
+\begin{verbatim}
+% vfindany /vesta/vestasys.org                 
+dev.vestasys.org:21776
+\end{verbatim}
+
+Note that the output is the \it{authoritative} or \it{advertised}
+address for the repository.  In other words, it's the host and port
+which the repository server knows as its own address.  The same
+repository might be reachable with more than one address.  In some
+cases \bf{vfindany} may have reached the repository using an address
+other than the one displayed.  For example:
+
+\begin{itemize} 
+\item A repository host might have multiple hostnames (e.g. aliases in
+a local \tt{/etc/hosts} files, or DNS \tt{CNAME} records).
+\item The optional \it{[Repository]master_hint} configuration setting
+can be used to give a repository a particular authoritative address.
+This is sometimes different from the address used to contact a
+repository.  A repository on a laptop installation might be contacted
+using \tt{localhost} but have \it{[Repository]master_hint} set to its
+address when attached to a "home" network.
+\end{itemize}
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-h}{-h} \it{hints}}
+If \bf{vfindany} fails to find a real copy of an object in either
+the local repository or any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]}
+section of the Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{realm}}
+Global user names are formed by appending
+\tt{@}\it{realm} to the local name.
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for a copy of an object.  Each repository is specified by
+host name and TCP port number in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it defaults to
+\it{[Repository]VestaSourceSRPC_port}.  This setting is optional.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+If \tt{[UserInterface]realm} is not set, \it{realm} from the
+\tt{[Repository]} section is used instead.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vcheckout.1.html}{\bf{vcheckout}(1)},
+\link{repository.8.html}{\bf{repository}(8)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk <\link{mailto:ken@xorian.net}{\tt{ken@xorian.net}}>

@@ -1,0 +1,549 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vcheckin - Check in a Vesta package}{vcheckin}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vcheckin} - Check a new version of a package into the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vcheckin} [\link{#-q}{-q}] [\link{#-Q}{-Q}] [\link{#-v}{-v}]
+[\link{#-f}{-f}] 
+[\link{#-m}{-m \it{message}} | \link{#-M}{-M}]
+[\link{#-s}{-s \it{session-dir}}] [\link{#-S}{-S}]
+[\link{#-c}{-c \it{content}} | \link{#-C}{-C}] 
+[\link{#-n}{-n \it{new-version}}]
+[\link{#-R}{-R \it{repos}}]
+[\link{#-d}{-d \it{dstrepos}} | \link{#-D}{-D}]
+[\link{#-w}{[-w] \it{work-dir}}] [\link{#-W}{-W}]
+
+In the most common usage, vcheckin is invoked from the checkout
+session's working directory, and no arguments are needed.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Message}{Message Entry}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#Env_Vars}{Environment Variables}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vcheckin} command checks in a new public version of a package,
+binding the new package content that was created in a checkout session
+to the new version name that was reserved by
+\link{vcheckout.1.html}{\bf{vcheckout}}.  It
+also ends the checkout session by deleting the session's working
+directory.
+
+\bf{vcheckin} will abort the checkin and print the following error
+message if any files in the working directory tree have been changed,
+renamed, or deleted since the most recent \it{vadvance} or \it{vmake}
+operation.
+
+\begin{verbatim}
+  vcheckin: work-dir has been modified since last advance
+\end{verbatim}
+
+This safeguard is included to prevent inadvertent checkins of changes
+that have yet to be built. To proceed with the checkin, you should
+first run \it{vmake}; \it{vadvance} can be used instead of \it{vmake},
+but if the changes in question are substantive, you may very well
+check in changes that fail to build successfully.
+
+\begin{html}
+\<IMG SRC="vcheckin.gif" ALT="vcheckin figure"
+WIDTH=436 HEIGHT=427 BORDER=0\>
+\end{html}
+
+In more detail, \bf{vcheckin}:
+\begin{itemize}
+\item Prompts the user to enter a change history \it{message}.
+(\link{#Message}{See the "Message Entry" section below.})
+\item Deletes the master stub \it{new-version} and rebinds its name,
+either to the
+immutable directory \it{content},
+or (with the -C flag) to an empty immutable directory.
+\item Deletes the mutable directory \it{work-dir}.
+\item Sets the following attributes:
+\begin{description}
+\item{On \it{new-version}}
+\tt{old-version}, \tt{session-dir}, \tt{content}, \tt{checkin-time},
+\tt{checkin-by}, and \tt{message}.
+\item{On \it{session-dir}}
+\tt{checkin-time} and \tt{checkin-by}.
+\end{description}
+\end{itemize}
+
+Directory names used as attribute values are canonicalized to start with 
+"\tt{/}".
+The \tt{checkout-by} attribute is set to the invoking user's global name and
+the \tt{creation-time} attribute to the current date and time.  The
+\tt{old-version} attribute is copied from the corresponding attribute on
+\it{session-dir}, or from the master stub if there is no \it{session-dir}.
+
+You must have read access to \it{content}, write access to
+the existing \it{new-version} stub, and write access to
+the parent directories of \it{new-version} and \it{work-dir}.
+The newly created version is owned by you, but
+has access permissions inherited from its parent directory.
+
+In the presence of replication, the package may have been checked out
+from another repository.  (See \link{vrepl.1.html}{\bf{vrepl}(1)} 
+and \link{vmaster.1.html}{\bf{vmaster}(1)} 
+for more information about
+replication and mastership.)  
+As a convenience, if the \it{new-version} 
+stub has a \tt{checkout-from} attribute specifying a remote repository,
+\bf{vcheckin} attempts to replicate \it{new-version} to that repository
+after checking it in.  This behavior can be altered with the
+\link{#-d}{-d} or \link{#-D}{-D} flag.
+
+\bf{vcheckin} returns status 0 for success,
+1 for parameter syntax errors, or 2 for more serious errors.  (Note
+that if any of the \link{#Triggers}{trigger commands} fail,
+\bf{vcheckin} returns status 2.)
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+Also suppresses prompting for the change history message.
+\item{\anchor{-m}{-m} \it{message}}
+Specify the change history message.  If the \it{message} argument is
+\tt{"-"}, the user will be prompted to enter a message.
+(\link{#Message}{See the "Message Entry" section below.})  If
+\it{message} is any other text, it will be used as the change history
+message without prompting the user.  If neither the -m flag nor the
+\link{#-M}{-M flag} is used, the default is "\tt{-m -}" (although this
+can be changed with the
+\link{#Configuration}{\tt{[UserInterface]vcheckin_message}
+configuration setting}).
+\item{\anchor{-M}{-M}}
+Omit the change history message.  (Note that if the new version
+reservation already has a message attribute, such as one added by
+\bf{vcheckout}, \bf{vcheckin} will not remove it.  With newer versions
+of the repository, such a message will be preserved on the new
+version.)
+\item{\anchor{-s}{-s} \it{session-dir}}
+The session directory that was created at checkout time.
+If the name \it{session-dir} 
+is unqualified (does not have "\tt{/}", "\tt{.}", or "\tt{..}"
+as its first arc), it is interpreted relative to the
+site's default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.  
+Defaults to the \tt{session-dir}
+attribute of \it{work-dir}, if any.
+\item{\anchor{-S}{-S}}
+There is no session directory.  Other flags whose default values depend
+on \it{session-dir} must be given explicitly, and the step of updating
+the session directory's attributes is omitted.
+\item{\anchor{-c}{-c} \it{content}}
+The content of the new version that is to be checked in.
+If the name \it{content} is 
+unqualified, it is interpreted 
+relative to \it{session-dir}, or to 
+\link{#Configuration}{\it{DefaultPackageParent}} if there is no 
+\it{session-dir}.
+Defaults to the highest version
+number bound in \it{session-dir}, if any.
+That is, if there is a \it{session-dir}, it is searched
+for arcs consisting entirely of decimal digits, 
+and the one with the highest value is chosen.
+If there are no such arcs, -C is taken as the default.
+Hint: You can "vcheckin -c 0" to
+abandon a checkout session by checking in a version identical to
+what you checked out.
+\item{\anchor{-C}{-C}}
+Check in an empty directory as the new version.
+\item{\anchor{-n}{-n} \it{new-version}}
+The name of the new version.  A master stub by this name must exist.
+If the name \it{new-version} 
+is unqualified, it is interpreted relative to the
+site's default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.  
+Defaults to the \tt{new-version}
+attribute of \it{session-dir} if any; otherwise
+to the \tt{new-version} attribute of \it{work-dir}, if any.
+\item{\anchor{-w}{-w} \it{work-dir}}
+The mutable working directory.
+If you place this option last on the command line, you can omit the -w.
+If \it{work-dir} is unqualified, it is relative
+to \link{#Configuration}{\it{DefaultWorkParent}}\tt{/}\it{user},
+where \it{user} is your local user name.
+Defaults to the current directory.
+\item{\anchor{-W}{-W}}
+There is no working directory.  Other flags whose default values depend
+on \it{work-dir} must be given explicitly, and the step of deleting the
+working directory is omitted.
+\item{\anchor{-R}{-R} \it{repos}}
+Check in a working directory and session from \it{repos} instead of
+the default local repository.  The repository is specified by host
+name and TCP port number in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-d}{-d} \it{dstrepos}}
+Replicate \it{new-version} to the specified destination repository
+after checking it in.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+If neither -d nor -D is given, the default is
+taken from the \tt{checkout-from} attribute on the \it{new-version} stub;
+if this attribute does not have a value, no replication is done.
+\item{\anchor{-D}{-D}}
+Do not replicate \it{new-version} to another repository after checking it in.
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.
+The directory \it{session-dir} must be of type \tt{session} (that is, its
+\tt{type} attribute must include this value), unless the
+\link{#-f}{-f} or \link{#-S}{-S} flag is given.
+The directory \it{work-dir} must 
+have a nonempty \tt{checkout-time} attribute, unless the
+\link{#-f}{-f} or \link{#-W}{-W} flag is given.
+The directory tree rooted at \it{work-dir} must not have been modified since
+\it{content} was created, unless the \link{#-f}{-f}, \link{#-c}{-c}, or
+\link{#-C}{-C} flag is given.
+The \it{new-version} must initially be a checkout stub (a master stub with
+a nonempty \tt{checkout-time} attribute), unless the \link{#-f}{-f} flag
+is given.  Even with -f, \it{new-version} must be a master stub.
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Message}{Message Entry}}
+
+\bf{vcheckin}'s default behavior is to prompt the user for a
+\it{change history message}.  If the \tt{EDITOR}
+\link{#Env_Vars}{environment variable} is set, the external editor
+program it specifies is invoked to edit the message.  Otherwise, the
+message is read from standard input.  A prompt is printed if the
+standard input is a terminal:
+
+\begin{verbatim}
+Enter change history message, terminated with ^D or . on a line by itself
+: 
+\end{verbatim}
+
+If the standard input is not a terminal (e.g. it was redirected to a
+file or a pipe), no prompt will be printed, but the standard input
+will still be used as the change history message.  (Note that when
+\tt{EDITOR} is set, the external editor is invoked even if the
+standard input is not a terminal.)
+
+When using an external editor, the initial text will either be the
+checkout description entered with
+\link{vcheckout.1.html}{\bf{vcheckout}}, or "\tt{<enter change history
+message here>}" if there is no checkout description.  If the initial
+text is left unedited or the user enters an empty message, they will
+be asked for confirmation before completing the checkin operation:
+
+\begin{verbatim}
+Empty change history message.  Continue (y/n)? 
+\end{verbatim}
+
+This is the only chance to abort when \tt{EDITOR} is set.  (So if you
+change your mind and are using an external editor, exit the editor
+either with the message unedited or with an empty message.)
+
+The \link{#-m}{-m flag} can be used to specify the change history
+message on the command line.  The \link{#-M}{-M flag} can be used to
+omit the change history message.  In either of these cases, no
+external editor will be invoked, and the standard input will not be
+read.
+
+The default of prompting for a change history message can be disabled
+with the \link{#Configuration}{\tt{[UserInterface]vcheckin_message}
+configuration setting}.  However, this can be overridden on the
+command line with "\tt{-m -}", which will always cause \bf{vcheckin}
+to prompt for a change history message.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending
+\tt{@}\it{realm} to the local name.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\it{vcheckin_message}}
+A boolean configuration setting.  Determines whether \bf{vcheckin}
+will prompt the user for a change history message.  If it is equal
+(without regard to case) to "yes", "on", or "true", or can be parsed
+as an integer that is non-zero, \bf{vcheckin} will ask the user to
+enter a message (as if "\tt{\link{#-m}{-m} -}" had been given on the
+command line).  If it is equal (without regard to case) to "no",
+"off", or "false", or can be parsed as an integer that is zero,
+\bf{vcheckin} will not prompt for a message (as if the \link{#-M}{-M}
+flag had been given).  If not set, defaults to "true".
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+Settings in the \tt{[vcheckin pre trigger]} and \tt{[vcheckin post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vcheckin} modifies the repository.  Each setting in the
+\tt{[vcheckin pre trigger]} section specifies a command to be run
+before any action is taken, and each setting in the \tt{[vcheckin post
+trigger]} section specifies a command to be run after all actions are
+complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vcheckin pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vcheckin /vesta-work/jsmith/foo
+Tada:
+Hello,
+World!
+Checking in /vesta/example.com/foo/3
+Deleting directory /vesta-work/jsmith/foo
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vcheckin pre trigger]} section exit
+with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vcheckin} will exit without
+performing the checkin.
+
+The commands in the \tt{[vcheckin post trigger]} section will only be
+executed if the checkout is successfully completed.  If \bf{vcheckin}
+fails with an error, the commands in the \tt{[vcheckin post trigger]}
+section \it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vcheckin} will not perform the checkin.  If any of the post
+trigger commands runs forever, \bf{vcheckin} will not complete.  (In
+other words, \it{a trigger command that hangs will cause \bf{vcheckin}
+to hang}.)  If any of the pre or post trigger commands exit with error
+status or are terminated by a signal, \bf{vcheckin} will exit without
+running any more commands from those sections.  (In other words, \it{a
+trigger command that fails will prevent further trigger commands from
+being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given, the trigger commands
+will not actually be run.
+
+Information about what \bf{vcheckin} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vcheckin}, this will always be "vcheckin".)
+\item{VESTA_REPOS}
+The local repository (\it{host}\tt{:}\it{port}) \bf{vcheckin}
+communicates with (either the default from the configuration file or
+the one specified with the \link{#-R}{-R flag}.
+\item{VESTA_WORK_DIR}
+The full path to \it{work-dir}.  Set to the empty string if
+\link{#-W}{-W was used}.
+\item{VESTA_OMIT_WORK}
+Set to 1 if \link{#-W}{the -W flag} was given, set to 0
+otherwise.
+\item{VESTA_SESSION_DIR}
+The path to the session directory to be use during checkin (typically
+to find the snapshot to use as the new version), either automatically
+determined or specified with the \link{#-s}{-s flag}).  Set to the
+empty string if \link{#-S}{-S was used}.
+\item{VESTA_OMIT_SESSION_DIR}
+Set to 1 if no session directory will be used (if \link{#-S}{the -S
+flag} was given), set to 0 otherwise.
+\item{VESTA_CONTENT}
+The full path to \it{content}.  Set to the empty string if
+\link{#-C}{-C was used}.
+\item{VESTA_OMIT_CONTENT}
+Set to 1 if the new version will have no content (if \link{#-C}{the -C
+flag} was given), set to 0 otherwise.
+\item{VESTA_NEW_VERSION}
+The path to the new version being checked in (either automatically
+determined or specified with the \link{#-n}{-n flag}).
+\item{VESTA_OLD_VERSION}
+The path to the old version of the version being checked in.  This is
+determined from the \it{content} being checked in and may be different
+from the \tt{old-version} attribute on the version reservation stub
+set by \bf{vcheckout}.
+\item{VESTA_DEST_REPOS}
+The repository to which the new version will be replicated, if any
+(either automatically determined or specified with the \link{#-d}{-d
+flag}).  Will be set to the empty string if no replication is to be
+performed.
+\item{VESTA_OMIT_DEST_REPOS}
+Set to 1 if no replication of the new version will be performed (if it
+was no checked out from a remote master repository or if the
+\link{#-D}{-D flag was used}), set to 0 otherwise.
+\item{VESTA_MESSAGE}
+The checkin message, or the empty string if there is no checkin
+message.
+\item{VESTA_OMIT_MESSAGE}
+Set to 1 if there is no checkin message (if \link{#-M}{the -M flag}
+was given or
+\link{#Configuration}{\tt{[UserInterface]vcheckin_message}} was used
+to disable checkout messages), set to 0 otherwise.
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vcheckin pre trigger]
+// Force users to describe all checkins
+50force_message = if [ $VESTA_OMIT_MESSAGE -eq 1 -o -z "$VESTA_MESSAGE" ]; then echo "Policy requires a checkin description"; exit 1; fi
+
+[vcheckin post trigger]
+// Replicate all new checkins to known peer repositories so that
+// they're immediately available
+50repl_checkins = for r in `vgetconfig UserInterface DefaultHints 2> /dev/null`; do vrepl -s $VESTA_REPOS -d $r -e+ $VESTA_NEW_VERSION; done
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+It is annoying when \bf{vcheckin} deletes the current directory, which is what
+happens in the default case; you tend to get messages like "Stale NFS file
+handle" from the shell afterwards.  Here is a csh alias that avoids the
+problem by automatically changing to the parent directory after a successful
+vcheckin:
+\begin{verbatim}
+alias vcheckin "pushd .. > /dev/null ; pushd > /dev/null ; \
+	\vcheckin \!* || pushd > /dev/null ; popd > /dev/null"
+\end{verbatim}
+
+\section{\anchor{Env_Vars}{Environment Variables}}
+
+\begin{description}
+\item{\tt{VESTACONFIG}}
+If set, specifies the Vesta configuration file to be used. See
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}.
+\item{\tt{EDITOR}}
+If set, specifies the editor to use for
+\link{#Message}{editing the change history message}.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vadvance.1.html}{\bf{vadvance}(1)},
+\link{vmake.1.html}{\bf{vmake}(1)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

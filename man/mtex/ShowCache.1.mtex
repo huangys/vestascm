@@ -1,0 +1,78 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{ShowCache(1) man page}{ShowCache}{1}
+
+\section{Name}
+
+ShowCache - list the files maintained by the Vesta-2 cache server
+
+\section{Synopsis}
+
+\bf{ShowCache} [ \bf{-v}
+
+\section{Description}
+
+\it{ShowCache} displays a list of the files maintained by the Vesta-2
+cache server. This includes the cache server's log files, and the
+files containing stable cache entries.
+
+By default, the files containing the stable cache entries are not
+listed, since there are likely to be so many of them. If you
+specify the \bf{-v} switch, all of the stable cache files are listed.
+
+\section{Configuration Variables}
+
+\it{ShowCache} lists files contained in a part of the filesystem
+pointed to by the current Vesta configuration file. In particular, it
+reads the following values from the \it{CacheServer} section of the
+configuration file:
+
+\begin{verbatim}
+MetaDataRoot     - root of Vesta-2 meta-data
+  MetaDataDir    - root of cache server meta-data sub-tree
+    SCacheDir    - root of stable cache entries sub-tree
+    SVarsDir     - root of stable variables sub-tree
+    WeededLogDir - directory containing log of weeded MPKFiles
+    CacheLogDir  - directory containing the cache log
+    GraphLogDir  - directory containing the graph log
+    CILogDir     - directory containing the used cache index log
+\end{verbatim}
+
+Nesting indicates how the directory tree corresponding to these names
+is structured. If the \it{MetaDataRoot} value is the empty string,
+then the current directory is used.
+
+\section{See Also}
+
+\link{CleanCache.1.html}{CleanCache(1)},
+\link{CreateCacheDirs.1.html}{CreateCacheDirs(1)},
+\link{EraseCache.1.html}{EraseCache(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{VCache.1.html}{VCache(1)},
+\link{WhichCache.1.html}{WhichCache(1)}.
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Thu Jun  5 15:35:25 PDT 1997 by heydon
+\end{verbatim}

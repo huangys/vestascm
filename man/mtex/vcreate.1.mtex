@@ -1,0 +1,547 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vcreate - Create a Vesta package}{vcreate}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vcreate} - Create a new package in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vcreate} [\link{#-q}{-q}] [\link{#-Q}{-Q}]
+[\link{#-v}{-v}]
+[\link{#-aA}{-a} | \link{#-aA}{-A}]  [\link{#-f}{-f}] 
+[\link{#-o}{-o \it{old-version}} | \link{#-O}{-O}] 
+[\link{#-m}{-m \it{message}} | \link{#-M}{-M}]
+[\link{#-h}{-h \it{hints}}]
+[\link{#-R}{-R \it{repos}}]
+\it{package}
+
+In the most common usage, only the \it{package} argument is given.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Message}{Message Entry}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#Env_Vars}{Environment Variables}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vcreate} command creates a new package in the Vesta
+repository.  The package initially is not checked out;
+use \link{vcheckout.1.html}{\bf{vcheckout}(1)} to check it out
+and begin creating version 1.
+
+By default, the new package initially contains version 0 as an empty
+directory.  If an old version is specified with the -o flag, it is
+copied into the new package as version 0.
+
+In more detail, \bf{vcreate}:
+\begin{itemize}
+\item Prompts the user to enter a package descriptive \it{message}.
+(\link{#Message}{See the "Message Entry" section below.})
+\item Creates a new appendable directory named 
+\it{package}, containing an appendable subdirectory named \tt{checkout}.  
+\item Creates a master stub named \tt{latest} in each of these
+directories.
+\item Binds the name \it{package}\tt{/0} to the same immutable
+directory named by \it{old-version}, if specified, or to an empty
+directory.
+\item Sets attributes as follows:
+\begin{description}
+\item{On \it{package}}
+\tt{created-by}, \tt{creation-time}, \tt{old-version} if specified, 
+\tt{type} (= "package"), and optionally \tt{message}.
+\item{On \it{package}\tt{/latest}}
+\tt{symlink-to} (= $LAST).
+\item{On \it{package}\tt{/checkout/latest}}
+\tt{symlink-to} (= $LAST).
+\item{On \it{package}\tt{/0}}
+\tt{old-version}, if specified.
+\item{On \it{old-version}, if specified}
+\tt{next-packages}
+\end{description}
+\end{itemize}
+
+\begin{html}
+\<IMG SRC="vcreate.gif" ALT="vcreate figure"
+WIDTH=337 HEIGHT=276 BORDER=0\>
+\end{html}
+
+If the name \it{package} or \it{old-version} is unqualified (does not
+have "\tt{/}", "\tt{.}", or "\tt{..}"  as its first arc), it is interpreted
+relative to the site's default directory of packages,
+\link{#Configuration}{\it{DefaultPackageParent}}.
+
+You must have write access to the directory in which \it{package} is
+to be placed. The newly created package is owned by you, but has
+access permissions inherited from its parent directory.
+
+In the presence of replication, package creation cannot always be
+carried out entirely in the local repository.  In particular, the
+local repository may contain no replica of one of the needed objects,
+or it may contain a non-master replica where the master replica is
+needed.  Also, the \link{#-aA}{-a/-A} flags control which repository
+\bf{vcreate} will give mastership of the created package.  (See
+\link{vrepl.1.html}{\bf{vrepl}(1)} and
+\link{vmaster.1.html}{\bf{vmaster}(1)} for more information about
+replication and mastership.)  The exact steps are slightly different
+depending on which repository has the master copy of the parent
+directory of \it{package} and whether the local repository is to have
+the master copy of the created package (controlled by the
+\link{#-aA}{-a/-A} flags).
+
+If the parent directory of \it{package} is mastered locally,
+\bf{vcreate} creates the package in the local repository (and the
+\link{#-aA}{-a/-A} flags have no effect).  However, if
+\it{old-version} was specified and does not exist locally,
+\bf{vcreate} searches for a copy and replicates it to the local
+repository before creating the package.
+
+If the parent directory of \it{package} is not mastered locally,
+\bf{vcreate} may give mastership of \it{package} to the local
+repository, if either the \link{#-aA}{-a} flag is specified or
+\link{#vcreate_acquires}{\it{[UserInterface]vcreate_acquires}} is set
+to true.  If \it{old-version} was specified and does not exist
+locally, \bf{vcreate} searches for a copy and replicates it to the
+local repository.  \bf{vcreate} then creates the package remotely in
+the master copy (except for inserting \it{old-version}), replicates it
+to the local repository, transfers mastership, and finally inserts
+\it{old-version}.
+
+If the \link{#-aA}{-A} flag is specified or
+\link{#vcreate_acquires}{\it{[UserInterface]vcreate_acquires}} is set
+to false and the parent directory of \it{package} is mastered
+remotely, \bf{vcreate} will leave mastership of \it{package} with the
+master repository of its parent directory.  In this case, if
+\it{old-version} was specified and does not exist in the remote master
+repository, \bf{vcreate} searches for a copy and replicates it to that
+repository.  \bf{vcreate} then creates the package remotely in the
+master copy (including inserting \it{old-version}), and replicates it
+to the local repository.
+
+\bf{vcreate} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors.  (Note that if any of the
+\link{#Triggers}{trigger commands} fail, \bf{vcreate} returns status
+2.)
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+\item{\anchor{-o}{-o} \it{old-version}}
+Specifies the initial content (version 0) for the new package.
+Must be an immutable directory, typically a version of some other package.
+By default, version 0 is an empty directory.  Hint: if you are using this flag,
+you might want to consider using \link{vbranch.1.html}{\bf{vbranch}(1)}
+instead.  Perhaps you are really creating a branch of an existing package,
+not a completely new package.
+\item{\anchor{-O}{-O}}
+Create version 0 as an empty directory in the new package (default).
+\item{\anchor{-m}{-m} \it{message}}
+Specify the package descriptive message.  If the \it{message} argument
+is \tt{"-"}, the user will be prompted to enter a message.
+(\link{#Message}{See the "Message Entry" section below.})  If
+\it{message} is any other text, it will be used as the package
+descriptive message without prompting the user.  If neither the -m
+flag nor the \link{#-M}{-M flag} is used, the default is "\tt{-m -}"
+(although this can be changed with the
+\link{#Configuration}{\tt{[UserInterface]vcreate_message}
+configuration setting}).
+\item{\anchor{-M}{-M}}
+Omit the package descriptive message.
+\item{\anchor{-h}{-h} \it{hints}}
+If \bf{vcreate} fails to find the master copy of a directory it needs
+to modify (or fails to find any copy of the old version) in either the
+local repository or any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-R}{-R} \it{repos}}
+Create the package in \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-aA}{-a or -A}}
+Do (-a) or do not (-A) acquire mastership of the created package when
+the local repository doesn't have mastership of the parent directory.
+The default is controlled by the
+\link{#vcreate_acquires}{\it{[UserInterface]vcreate_acquires}}
+configuration setting.  (Note that if the parent directory of
+\it{package} is mastered in the local repository, these flags have no
+effect.)
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.  If the -f flag is not given, the new
+package's parent directory must be of type "package-parent" (that is,
+its \tt{type} attribute must include this value).  To create a new
+directory that can hold packages, use mkdir(1), then use
+\link{vattrib.1.html}{\bf{vattrib}(1)} to add the necessary attribute,
+or use \link{vmkdir.1.html}{\bf{vmkdir}(1)} with it's
+\link{vmkdir.1.html#-p}{-p flag}.
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Message}{Message Entry}}
+
+\bf{vcreate}'s default behavior is to prompt the user for a
+\it{package descriptive message}.  If the \tt{EDITOR}
+\link{#Env_Vars}{environment variable} is set, the external editor
+program it specifies is invoked to edit the message.  Otherwise, the
+message is read from standard input.  A prompt is printed if the
+standard input is a terminal:
+
+\begin{verbatim}
+Enter package description, terminated with ^D or . on a line by itself
+: 
+\end{verbatim}
+
+If the standard input is not a terminal (e.g. it was redirected to a
+file or a pipe), no prompt will be printed, but the standard input
+will still be used as the package descriptive message.  (Note that
+when \tt{EDITOR} is set, the external editor is invoked even if the
+standard input is not a terminal.)
+
+When using an external editor, the initial text will be "\tt{<enter
+package description here>}".  If the initial text is left unedited or
+the user enters an empty message, they will be asked for confirmation
+before completing the operation:
+
+\begin{verbatim}
+Empty package description.  Continue (y/n)? 
+\end{verbatim}
+
+This is the only chance to abort when \tt{EDITOR} is set.  (So if you
+change your mind and are using an external editor, exit the editor
+either with the message unedited or with an empty message.)
+
+The \link{#-m}{-m flag} can be used to specify the package descriptive
+message on the command line.  The \link{#-M}{-M flag} can be used to
+omit the package descriptive message.  In either of these cases, no
+external editor will be invoked, and the standard input will not be
+read.
+
+The default of prompting for a package descriptive message can be
+disabled with the
+\link{#Configuration}{\tt{[UserInterface]vcreate_message}
+configuration setting}.  However, this can be overridden on the
+command line with "\tt{-m -}", which will always cause \bf{vcreate} to
+prompt for a package descriptive message.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is optional.  If it is not set,
+\tt{[Repository]realm} is used.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\anchor{vcreate_acquires}{\it{vcreate_acquires}}}
+Sets the default policy for which repository should have mastership of
+the created package when the master repository of the parent directory
+is remote.  If it is equal (witout regard to case) to "yes", "on", or
+"true", or can be parsed as an integer that is non-zero, the local
+repository will acquire mastership (as if the \link{#-aA}{-a} flag had
+been given).  If it is equal (witout regard to case) to "no", "off",
+or "false", or can be parsed as an integer that is zero, the master
+repository of the parent directory will retain mastership of the
+created package (as if the \link{#-aA}{-A} flag had been given).  If
+not set, defaults to "false".
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for the master copy of an object and for a copy of \it{old-version}.
+Each repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to \it{[Repository]VestaSourceSRPC_port}.  This
+setting is optional.
+\item{\it{vcreate_message}}
+A boolean configuration setting.  Determines whether \bf{vcreate} will
+prompt the user for a descriptive message.  If it is equal (without
+regard to case) to "yes", "on", or "true", or can be parsed as an
+integer that is non-zero, \bf{vcreate} will ask the user to enter a
+message (as if "\tt{\link{#-m}{-m} -}" had been given on the command
+line).  If it is equal (without regard to case) to "no", "off", or
+"false", or can be parsed as an integer that is zero, \bf{vcreate}
+will not prompt for a message (as if the \link{#-M}{-M} flag had been
+given).  If not set, defaults to "true".
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is only used if \tt{[UserInterface]realm} is
+not set.
+\end{description}
+
+Settings in the \tt{[vcreate pre trigger]} and \tt{[vcreate post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vcreate} modifies the repository.  Each setting in the
+\tt{[vcreate pre trigger]} section specifies a command to be run
+before any action is taken, and each setting in the \tt{[vcreate post
+trigger]} section specifies a command to be run after all actions are
+complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vcreate pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vcreate /vesta/example.com/...
+Tada:
+Hello,
+World!
+Creating package /vesta/example.com/...
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vcreate pre trigger]} section exit
+with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vcreate} will exit without
+creating a package.
+
+The commands in the \tt{[vcreate post trigger]} section will only be
+executed if a new package is successfully created.  If \bf{vcreate}
+fails with an error, the commands in the \tt{[vcreate post trigger]}
+section \it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vcreate} will not create a package.  If any of the post trigger
+commands runs forever, \bf{vcreate} will not complete.  (In other
+words, \it{a trigger command that hangs will cause \bf{vcreate} to
+hang}.)  If any of the pre or post trigger commands exit with error
+status or are terminated by a signal, \bf{vcreate} will exit without
+running any more commands from those sections.  (In other words, \it{a
+trigger command that fails will prevent further trigger commands from
+being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given, the trigger commands
+will not actually be run.
+
+Information about what \bf{vcreate} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vcreate}, this will always be "vcreate".)
+\item{VESTA_REPOS}
+The local repository (\it{host}\tt{:}\it{port}) \bf{vcreate}
+communicates with (either the default from the configuration file or
+the one specified with the \link{#-R}{-R flag}.
+\item{VESTA_MASTER_HINTS}
+Additional repositories which may have been consulted in order to find
+the master copy of the parent directory of the package.  This is the
+combination of the argument to the \link{#-h}{-h flag} (if it was
+used) and the hints from the
+\link{#Configuration}{\it{[UserInterface]DefaultHints} configuration
+setting} (if set in the configuration file).
+\item{VESTA_MASTER_REMOTE}
+Set to 1 if the parent directory of the package created by
+\bf{vcreate} is mastered in a remote repository, set to 0 otherwise.
+If this is set to 1, the package will be created in the remote
+master ($VESTA_MASTER_REPOS) and replicated to the local repository
+($VESTA_REPOS).
+\item{VESTA_MASTER_REPOS}
+The repository (\it{host}\tt{:}\it{port}) with mastership of the
+parent directory of the package created by \bf{vcreate}.  If this is
+different from $VESTA_REPOS, $VESTA_MASTER_REMOTE will be set to 1 and
+the package is created at the remote master repository.
+\item{VESTA_PACKAGE}
+The package created by \bf{vcreate}.
+\item{VESTA_OLD_VERSION}
+The path to the version the package will be based upon (specified with
+the \link{#-o}{-o flag}).  This will become version 0 within the
+created package.
+\item{VESTA_OMIT_OLD_VERSION}
+Set to 1 if there is no old version (which is the default unless the
+\link{#-o}{-o flag} is given), set to 0 otherwise.
+\item{VESTA_OLD_VERSION_REMOTE}
+Set to 1 if the old version was not found in the master repository of
+the package parent ($VESTA_MASTER_REPOS), set to 0 otherwise.  If set
+to 1, the old version will be replicated from the repository where it
+was found ($VESTA_OLD_VERSION_REPOS) to the master repository of the
+package parent directory before creating the package.
+\item{VESTA_OLD_VERSION_REPOS}
+The repository (\it{host}\tt{:}\it{port}) where a replica of the old
+version was found.  If this is different from $VESTA_MASTER_REPOS,
+$VESTA_OLD_VERSION_REMOTE will be 1.  If there is no old version, this
+will be set to the empty string.
+\item{VESTA_ACQUIRE_MASTERSHIP}
+Set to 1 if \bf{vcreate} is creating a package at a remote master
+repository and acquiring mastership of it in the local repository, set
+to 0 otherwise.  (If $VESTA_REPOS is the same as $VESTA_MASTER_REPOS
+this will be 0.)  See \link{#-aA}{the description of the -a/-A flags
+above}.
+\item{VESTA_MESSAGE}
+The package description message, or the empty string if there is no
+description message.
+\item{VESTA_OMIT_MESSAGE}
+Set to 1 if there is no package description message (if \link{#-M}{the
+-M flag} was given or
+\link{#Configuration}{\tt{[UserInterface]vcreate_message}} was used to
+disable package messages), set to 0 otherwise.
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vcreate pre trigger]
+// If the enclosing directory has a non-empty "obsolete" attribute,
+// prevent new packages from being created there.
+50no_obsolete = parent=`dirname $VESTA_PACKAGE` if vattrib -q -G obsolete $parent > /dev/null; then echo "Error: $parent is marked obsolete"; exit 1; fi
+
+[vcreate post trigger]
+// Replicate all new packages to known peer repositories
+50repl = for r in $VESTA_MASTER_HINTS; do vrepl -s $VESTA_REPOS -d $r -e+ $VESTA_PACKAGE; done
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vcreate} is atomic if it modifies only the local
+repository.  If a remote repository must be modified, however, the
+action performed at each repository is individually atomic, but
+\bf{vcreate} can die between the actions on the remote and local
+repositories.  To make this problem less likely to occur, \bf{vcreate}
+ignores \tt{SIGINT} (the ^C interrupt) during the critical section.
+
+\section{\anchor{Env_Vars}{Environment Variables}}
+
+\begin{description}
+\item{\tt{VESTACONFIG}}
+If set, specifies the Vesta configuration file to be used. See
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}.
+\item{\tt{EDITOR}}
+If set, specifies the editor to use for
+\link{#Message}{editing the package descriptive message}.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

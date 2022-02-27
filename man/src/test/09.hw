@@ -1,0 +1,20 @@
+PROC Main() IS
+    10 - 6 # 4 -> Wr("Oops1") |
+    2 + 3 # 5 -> Wr("Oops2") |
+    2 * 3 # 6 -> Wr("Oops3") |
+    5 DIV 2 # 2 -> Wr("Oops4") | 
+    1 = 1 # 1 -> Wr("Oops5") |
+    (1 AND 1) # 1 -> Wr("Oops6") |
+    (1 OR 0) # 1 -> Wr("Oops7") |
+    (NOT 1) # 0 -> Wr("Oops8") |
+    - 2 + 2 # 0 -> Wr("Oops9") |
+    3 < 2  -> Wr("Oops10") |
+    3 <= 2 -> Wr("Oops11") |
+    2 > 3  -> Wr("Oops12") |
+    2 >= 3 -> Wr("Oops13") |
+    -3 DIV 2 # -2 -> Wr("Oops14") |
+    -3 DIV -2 # 1 -> Wr("Oops15") |
+    -2 MOD 5 # 3 -> Wr("Oops16") |
+    NOT 5 < 7 -> Wr("Oops17") |
+    Wr("hello world\n")
+END;

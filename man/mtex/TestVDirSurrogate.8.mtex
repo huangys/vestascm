@@ -1,0 +1,103 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{TestVDirSurrogate - test program for repository}{TestVDirSurrogate}{8}
+
+\section{Name}
+
+\bf{TestVDirSurrogate} - test program for repository
+
+\section{Synopsis}
+
+\bf{TestVDirSurrogate}
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+
+\bf{TestVDirSurrogate} is a test program for the Vesta repository.
+It provides a way to exercise most of the functions of the 
+\tt{VDirSurrogate}, \tt{VestaSource}, and \tt{AccessControl}
+interfaces that are available to client programs outside the
+repository address space.
+The program uses library code that makes SRPC calls to the
+repository server, using the \tt{VestaSourceSRPC} interface.
+
+\bf{TestVDirSurrogate} maintains an array of VestaSource objects.
+Initially the appendable root (conventionally
+/vesta) is source #0, and the mutable root (conventionally
+/vesta-work) is source #1.  Each command that creates a new
+VestaSource object returns its number, and these numbers can be used
+in further commands.
+
+After starting the program, type "?" for a list of available commands.
+Most commands relate directly to a similarly-named method
+of the VestaSource, VDirSurrogate, or AccessControl interface.
+
+\section{\anchor{Flags}{Flags}}
+
+None.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \it{[Repository]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{VestaSourceSRPC_port}}
+UDP port on which the SRPC interface that supports VDirSurrogate and
+friends is exported.  The SRPC interface itself is described in
+\tt{VestaSourceSRPC.H}; hence the name.
+\item{\it{VestaSourceSRPC_host}}
+Host from which VestaSourceSRPC is exported.  This must be the host on
+which the \bf{repository} process is running.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{TestVDirSurrogate} has very rudimentary input error checking.  If you
+type a letter where it wants to see a number, you could easily put it
+into an infinite loop.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repository.8.html}{\bf{repository}(8)},
+\link{TestShortId.8.html}{\bf{TestShortId}(8)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Tue Apr 29 23:14:13 PDT 2003 by mann
+     modified on Mon Nov 12 18:37:13 EST 2001 by ken@xorian.net
+\end{verbatim}

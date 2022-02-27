@@ -1,0 +1,203 @@
+% Copyright (C) 2004, Kenneth C. Schalk
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmastercoup - Take mastership of an appendable directory with no master copy}{vmastercoup}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vmastercoup} - Take mastership of an appendable directory with no master copy
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vmastercoup}
+[\link{#-p}{-p \it{peer repos}} ...]
+[\link{#-R}{-R \it{repos}}]
+[\link{#-r}{-r}]
+[\link{#-a}{-a}]
+[\link{#-v}{-v}]
+[\link{#-Q}{-Q}]
+[\it{directory}...]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vmastercoup} command is used to set the
+\it{\link{vesta-intro.1.html#master}{master}} flag on an
+\it{\link{vesta-intro.1.html#appendable_directory}{appendable
+directory}}.  This should only be used if the original master copy has
+been irretrievably lost.  (See the
+\link{vrepl.1.html#Vesta_Replication}{Vesta Replication} section of
+the \link{vrepl.1.html}{\bf{vrepl}(1)} man page for a description of
+the replication design, including the meaning of the master flag.)
+
+Unlike \it{\link{vsmashmaster.8.html}{vsmashmaster}} (which simply
+sets the master flag), \bf{vmastercoup} first attempts to ensure that
+setting the master flag will not violate the replication
+\it{\link{vesta-intro.1.html#agreement}{agreement}} invariant.  One or
+more peer repositories are consulted to find names which exist in the
+appendable directory in other replicas.  These names are then added in
+target repository prior to setting the master flag.
+
+Turning on the master flag is dangerous, even in the way
+\bf{vmastercoup} does it.  It's not possible to guarantee that all
+replicas have been searched, so some names may be missing in the new
+master when the tool exits.  Also, it's not possible to guarantee that
+some other repository doesn't also have the master flag set for the
+object, which would allow both to believe that they have the right to
+independently add new names in a directory.  (In other words, two
+different version 3s with different contents could be checked into the
+same package at two different repositories.)
+
+Because of these dangers, \bf{vmastercoup} always prints a warning and
+asks for confirmation.
+
+If no \it{directory} is given, the master flag of the current working
+directory is set.
+
+\bf{vmastercoup} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors (network errors, replication
+errors, configuration file errors), and 3 for logical errors,
+including:
+
+\begin{itemize}
+\item A master copy of the \it{directory} is discovered in another
+repository
+\item The \it{directory} is not an appendable driectory
+\item Insufficient permission.  (Only the special wizard user can use
+\bf{vmastercoup}.)
+\item Errors accessing peer repositories.
+\end{itemize}
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+
+\item{\anchor{-p}{-p \it{repos}}}
+Specifies a peer repository to consult as a host name and TCP port
+number in the format \it{host}\tt{:}\it{port}.  May be specified
+multiple times, causing multiple peers to be consulted.  The
+\tt{:}\it{port} portion may be omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\item{\anchor{-R}{-R \it{repos}}}
+Make changes to \it{repos} instead of the default local repository.
+The repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\item{\anchor{-r}{-r}}
+Replicate objects from peers.  Without this option, names found in
+peer repositoriesn but not in the target repository will be added as
+non-master stubs.
+
+\item{\anchor{-v}{-v}}
+Verbose mode.  Causes the tool to print various messages to standard
+output about its progress.
+
+\item{\anchor{-Q}{-Q}}
+Query mode: print what would be done, but make no changes.
+
+\item{\anchor{-a}{-a}}
+Aggressively search for more peers to consult.  Causes any
+repositories named in \tt{#replicate-from}, \tt{#mastership-from}, and
+\tt{#mastership-to} attributes on \it{directory} and any parent
+directories to be added to the set of peers consulted.  Regardless of
+whether this option is present, any repositories named in
+\tt{master-repository} attributes on \it{directory} and its parent
+directories will be consulted as peers.
+
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  (Thie setting is optional.  \it{[Repository]realm} is
+used if it's not set.)
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.
+\item{\it{vwizard_user}}
+The global name of a user with the ability to perform agreement
+operations.  (Changing the master flag is an agreement operation.)
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+Because it is an operation that can violate inter-repository
+agreement, only the special "wizard" user can use \bf{vmastercoup}.
+
+No repository is allowed to have the master flag set on the repository
+root (\tt{/vesta}).  This tool will refuse to set the master flag on
+it if asked.
+
+This tool is so rarely needed, that it has had only minimal testing.
+It may not operate correctly in all cases.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)},
+\link{vsmashmaster.8.html}{\bf{vsmashmaster}(8)}
+
+\section{\anchor{Author}{Author}}
+
+Kenneth C. Schalk
+<\tt{ken at xorian dot net}>
+
+\begin{verbatim}
+Last modified on Sat Nov 13 22:59:18 EST 2004 by ken@xorian.net  
+\end{verbatim}

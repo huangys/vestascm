@@ -1,0 +1,756 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{VCacheToDo(7) man page}{VCacheToDo}{7}
+
+\section{Name}
+
+VCacheToDo - things to do to complete the VCache(1)
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#ToDoMajorSect}{To Do - Major Items}
+\item \link{#ToDoRequiredSect}{To Do - Required}
+\item \link{#ToDoEnhancementsSect}{To Do - Enhancements}
+\item \link{#DoneSect}{Done}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+% ----------------------------- Major Items ----------------------------------
+%
+\section{\anchor{ToDoMajorSect}{To Do - Major Items}}
+
+These are the major items that still need to be done. In some cases,
+a small amount of design work is required.
+
+\begin{itemize}
+\item
+There is a design for how the cache server could be partitioned into
+multiple processes, each one serving a subset of the cache entries,
+but no aspects of that design have been implemented.
+\end{itemize}
+
+% ---------------------------- Required Items ---------------------------------
+%
+\section{\anchor{ToDoRequiredSect}{To Do - Required}}
+
+These are items that must be taken care of before the cache server is
+completed.
+
+\begin{itemize}
+\item
+We need to develop a cache-wide policy for deciding which (old)
+entries to cache in memory. Currently, only a local policy has been
+implemented. As a result, the number of ``warm'' cache entries
+retained in memory is potentially unbounded.
+
+The current policy works as follows. Whenever a hit occurs to an entry
+on disk, that entry is loaded into the corresponding volatile PKFile
+as a ``warm'' cache entry. When a volatile PKFile is flushed to disk,
+its new entries are flushed to disk. Which entries remain in the
+volatile PKFile after that are determined by the configuration
+variables [CacheServer]/KeepNewOnFlush and
+[CacheServer]/KeepOldOnFlush. By default, no entries are retained. See
+the \link{VCache.1.html#ConfigSect}{VCache(1)} man page for details.
+
+\item
+When VPKFile's become empty, they are currently not
+being removed from the \tt{CacheS::cache} table or the corresponding
+VMultiPKFile. Similarly, when a VMultiPKFile becomes empty, it is not
+being removed from the \tt{CacheS::mpkTbl} table (see
+\tt{CacheS::VToSCache}).
+
+\item
+The \tt{SVCache} spec allows the \tt{SetHitFilter} and \tt{EndMark}
+procedures to change \tt{hitFilter} non-atomically, but the current
+implementation doesn't exploit that freedom. This means that the cache
+server's global lock is held for a longer period of time than strictly
+necessary, potentially blocking calls on the server.
+\end{itemize}
+
+% ----------------------------- Enhancements ----------------------------------
+%
+\section{\anchor{ToDoEnhancementsSect}{To Do - Enhancements}}
+
+These are items that are not necessary for the correct functioning of
+the cache server, but they will improve its effeciency or enhance its
+functionality.
+
+\begin{itemize}
+\item
+\tt{SMultiPKFileRep::Header::Read} does not have support for reading
+headers of type \tt{SMultiPKFileRep::HT_HashTable}. Currently,
+only types \tt{SMultiPKFileRep::HT_List} and
+\tt{SMultiPKFileRep::HT_SortedList} are supported.
+
+\item
+\tt{SMultiPKFileRep::Header::Write} does not have support for writing
+entries of type \tt{SMultiPKFileRep::HT_HashTable}. Currently,
+only types \tt{SMultiPKFileRep::HT_List} and
+\tt{SMultiPKFileRep::HT_SortedList} are supported.
+
+\item
+\tt{SPKFileRep::Header::Read} does not have support for reading headers of
+type \tt{SPKFileRep::HT_HashTable} and \tt{SPKFileRep::HT_PerfectHashTable}.
+Currently, only types \tt{SPKFileRep::HT_List} and
+\tt{SPKFileRep::HT_SortedList} are supported.
+
+\item
+\tt{SPKFileRep::Header::Write} does not have support for writing
+entries of type \tt{SPKFileRep::HT_HashTable} and
+\tt{SPKFileRep::HT_PerfectHashTable}.
+
+\item
+\tt{SPKFileRep::Header::Skip} does not have support for skipping over
+<CFPTypedHeader> records of type \tt{SPKFileRep::HT_HashTable} and
+\tt{SPKFileRep::HT_PerfectHashTable}. Nor is there support in
+\tt{SPKFile::LookupCFP} for looking up CFP's when the header
+entries are written in either of these two formats.
+\end{itemize}
+
+% --------------------------------- Done --------------------------------------
+%
+\section{\anchor{DoneSect}{Done}}
+
+The following items have been completed.
+
+\begin{description}
+\item{\tt{Done on Tue Sep  5 2000 by \link{mailto:ken@xorian.net}{KCS}}}
+Several race conditions in writing to the stable cache have been
+fixed.  First, it was possible for a second call to one of the cache
+server's log-flushing methods (\tt{CacheS::FlushUsedCIs},
+\tt{CacheS::FlushGraphLog}, \tt{CacheS::FlushCacheLog}) to return if
+there was nothing to flush, even if another thread was still in the
+process of flushing the corresponding log.  This could allow
+information to be written to disk out of order, resulting in
+inconsistent stable state.  This was corrected by forcing the flushing
+methods to always make use of the \tt{FlushQueue} mechanism.
+Secondly, there was a race condition in the code for VToSCache which
+allowed new entries to be added to the MultiPKFile being flushed
+between the time the graphLog (and hence, the usedCILog) were flushed
+and the time the VPKFiles within the MultiPKFile were
+checkpointed. This made it possible for a new entry created during
+that window to appear in the stable cache without appearing in the
+graphLog, thereby violating one of the cache invariants (B7x,
+according to the todo item previously listed above).  The VPKFiles are
+now checkpointed \it{before} the graph log is flushed, thereby
+guaranteeing that all entries written to a MultiPKFile will have their
+CI allocations and graph log entries recorded.
+
+\item{\tt{Done on Mon Jul  6 09:17:54 PDT 1998 by heydon}}
+The code that arranges to call the routine for cleaning the cache log
+is overly simple. This item was addressed quite a while ago, but I
+only recently noticed it was no longer a problem.
+
+\item{\tt{Done on Tue Apr 15 09:23:10 PDT 1997 by heydon}}
+Shipped v1.11.
+
+\item{\tt{Done on Mon Apr 14 09:21:59 PDT 1997 by heydon}}
+Fixed bug in leases implementation in which the backround expiration
+thread was deadlocking. The problem was that the Leases::Debug method
+had too low a locking level.
+
+\item{\tt{Done on Mon Mar 24 16:28:07 PST 1997 by heydon}}
+Shipped v1.10.
+
+\item{\tt{Done on Mon Mar 24 16:27:44 PST 1997 by heydon}}
+Added code to prune the usedCILog and graphLog.
+
+\item{\tt{Done on Tue Mar 18 14:00:20 PST 1997 by heydon}}
+Shipped v1.9.
+
+\item{\tt{Done on Tue Mar 18 13:47:48 PST 1997 by heydon}}
+Added a timestamp to \tt{Root} entries in the graphLog. Currently,
+this field is unused, but in the future it may be used by the weeder
+to automatically keep roots that are new enough, even if the weeder
+wasn't explicitly told to keep them.
+
+\item{\tt{Done on Tue Mar 18 13:46:48 PST 1997 by heydon}}
+Changed recovery code so that it no longer reverts from cache
+state 1 back to state 0. This work is now done in the WeederRecovering
+method, but only if the weeder did not finish its marking work.
+
+\item{\tt{Done on Tue Mar 18 10:37:25 PST 1997 by heydon}}
+Fixed bug in recovery of emptyPKLog in which all records but the first
+in the emptyPKLog for a given PK were being ignored.
+
+\item{\tt{Done on Mon Mar 17 10:39:16 PST 1997 by heydon}}
+Made many changes to the cache server's weeder interface.
+
+\item{\tt{Done on Thu Mar 13 10:39:16 PST 1997 by heydon}}
+Shipped v1.8.
+
+\item{\tt{Done on Thu Feb 27 10:39:16 PST 1997 by heydon}}
+Changed the signature of the Checkpoint method to include
+the fingerprint of the directory containing the evaluated
+model.
+
+\item{\tt{Done on Thu Dec 19 16:49:37 PST 1996 by heydon}}
+Shipped v1.7.
+
+\item{\tt{Done on Thu Dec 19 15:53:22 PST 1996 by heydon}}
+Added \bf{-n} switch to \link{CreateCacheDirs.1.html}{CreateCacheDirs(1)}.
+
+\item{\tt{Done on Thu Dec 19 15:35:05 PST 1996 by heydon}}
+Changed BitVector's to use slightly more compact representation
+in memory and on disk.
+
+\item{\tt{Done on Thu Dec 19 09:32:08 PST 1996 by heydon}}
+Added new "isEmpty" result to the "FreeVariables" method.
+This required that the cache server protocol version be
+incremented.
+
+\item{\tt{Done on Wed Dec 18 15:23:19 PST 1996 by heydon}}
+Changed VCache::HandleFailure to print the error message
+in all cases (even if the debugging level is "None") if
+it represents a non-standard SRPC failure.
+
+\item{\tt{Done on Wed Dec 18 15:21:40 PST 1996 by heydon}}
+Fixed memory smash bug in VestaVal::T::Print. A value of
+type \tt{signed char} was being cast to a value of type
+\tt{unsigned int}; sign extension was causing the sprintf
+of the resulting value to overflow the buffer. I added
+assertions to all similar sprintf statements to assure
+that they weren't overflowing their buffers.
+
+\item{\tt{Done on Thu Dec 12 16:45:10 PST 1996 by heydon}}
+Shipped VCache v1.6.
+
+\item{\tt{Done on Thu Dec 12 15:31:08 PST 1996 by heydon}}
+Occassionally, the MultiPKFiles were being created with bizarre
+names. The bug turned out to be in the use of the "form" function
+in the SMultiPKFile::Name method. This function does not seem
+to be thread-safe. All uses of the "form" function have now
+been eliminated.
+
+\item{\tt{Done on Wed Dec 11 13:36:46 PST 1996 by heydon}}
+Fixed a bug in PrintCacheLog in which EmptyPKLog was not being
+opened read-only. This meant that vestasrv priviledges were
+required to run the program. Opening the file read-only
+fixes that problem.
+
+\item{\tt{Done on Wed Dec  4 11:53:14 PST 1996 by heydon}}
+Shipped new \link{"CleanCache.1.html"}{CleanCache(1)} script.
+Also, made \link{"EraseCache.1.html"}{EraseCache(1)} and
+\link{"ShowCache.1.html"}{ShowCache(1)} scripts more robust.
+
+\item{\tt{Done on Wed Dec  4 08:42:56 PST 1996 by heydon}}
+Shipped VCache v1.5. This version writes a magic number into
+the header of a MultiPKFile.
+
+\item{\tt{Done on Mon Dec  2 13:38:04 PST 1996 by heydon}}
+Shipped new \link{"VCacheStats.1.html"}{VCacheStats(1)} program.
+
+\item{\tt{Done on Mon Nov 25 13:40:14 PST 1996 by heydon}}
+Shipped VCache v1.4. Mainly, this was to pick up new libraries. In
+addition, this version no longer supports the GetLookupStats method,
+since that information (and lots more) can now be collected using etp
+and pspec.
+
+\item{\tt{Done on Mon Oct 28 11:42:10 PST 1996 by heydon}}
+Shipped VCache v1.3.
+
+\item{\tt{Done on Mon Oct 28 11:40:59 PST 1996 by heydon}}
+Added support to SMultiPKFileRep::Header::Write for writing
+entries of type \tt{SMultiPKFileRep::HT_SortedList}.
+
+\item{\tt{Done on Sat Oct 26 15:37:28 PDT 1996 by heydon}}
+Shipped VCache v1.2.
+
+\item{\tt{Done on Sat Oct 26 15:03:57 PDT 1996 by heydon}}
+Added support for writing SPKFile header entry format
+\tt{SPKFileRep::HT_SortedList}; also added support to
+\tt{SPKFile::LookupCFP} for looking up common fingerprints
+efficiently for that header entry format.
+
+\item{\tt{Done on Wed Oct 23 09:22:22 PDT 1996 by heydon}}
+Shipped VCache v1.1.
+
+\item{\tt{Done on Tue Oct 22 23:43:05 PDT 1996 by heydon}}
+Changed cache server and SRPC implementation so no forked
+thread ever dies; instead, they loop endlessly waiting on
+a condition variable for work to do. This was done in the
+hope of avoiding the garbage collector crash.
+
+\item{\tt{Done on Wed Oct  9 17:56:42 PDT 1996 by heydon}}
+There is a race condition in AddEntry: the test that leases on
+the "kids" and on the deriveds have not expired must be moved
+to \it{after} the code that writes the graphLog entry. As it is
+now, the code differs from the spec: the test now occurs even
+before the new CI is created and leased. But the spec is wrong
+too: the test must occur after the graphLog entry is written.
+Otherwise, the following could happen. First, the test for necessary
+leases might pass. Then, between that time and the time the graph
+log entry is written, one of the necessary child or derived leases
+might expire. If the weeder ran, the corresponding entry or derived
+would be deleted, since the graph log entry that would protect it
+has yet to be written. We would then create a cache entry that
+contained a non-existent child or derived! Hence, we must write
+a speculative graphLog entry, and then check that the necessary
+leases exist before creating and installing the entry. If that
+test fails, we may have a "ghost" entry in the graph log, but
+it will not have a parent to protect it, and eventually its
+lease will expire. It will then be deleted from the graph log
+by the weeded, at which point the cache server can re-use its
+cache index.
+
+\item{\tt{Done on Tue Oct  1 14:36:04 PDT 1996 by heydon}}
+Fixed a bug in QuickWeed(1): it was not handling the case
+in which the repository call to create a file was failing.
+
+\item{\tt{Done on Tue Sep 24 15:30:35 PDT 1996 by heydon}}
+Shipped VCache v1.0. This was the first version of the cache
+server that printed an explicit version number.
+
+\item{\tt{Done on Tue Sep 24 15:08:41 PDT 1996 by heydon}}
+Changed QuickWeed(1) to weed against multiple caches.
+
+\item{\tt{Done on Mon Sep 23 17:20:26 PDT 1996 by heydon}}
+Changed QuickWeed(1) to detect if an error occurs writing the
+derived keep file, and to abort in the event of such an error.
+
+\item{\tt{Done on Mon Sep 23 16:56:04 PDT 1996 by heydon}}
+Fixed EraseCache(1) script so it now asks for confirmation before
+deleting anything.
+
+\item{\tt{Done on Mon Sep 16 11:28:15 PDT 1996 by heydon}}
+Once copies were made of cache entries at MultiPKFile flush time,
+the previous change was not necessary. Now that the cache entries
+in VPKFiles are immutable, so there is no reason the entries in
+the cache log cannot contain pointers to those entries.
+
+\item{\tt{Done on Fri Sep 13 17:36:57 PDT 1996 by heydon}}
+There is a bug with the storage of cache entries in the
+volatile cache log. The problem is that the cache log stores
+a \it{pointer} to the newly-added cache entry. Because of this
+alias, there is a race condition: the cache entry is not protected
+by the appropriate VPKFile lock when the cache log is flushed to
+disk. This could produce a crash as follows: if two threads
+simultaneously flush the cache log and a MultiPKFile to stable
+storage, the thread flushing the MultiPKFile might modify a
+new cache entry in the course of updating its common names. The
+modified entry might then be flushed to the cache log before the
+new version of the MultiPKFile was committed. If the server then
+crashed, it would see the modified entry on recovery. To avoid a race,
+the cache log must store \it{copies} of any mutable cache entry fields.
+
+\item{\tt{Done on Fri Sep 13 17:36:32 PDT 1996 by heydon}}
+There is a race in \it{SMultiPKFile::Rewrite}: some fields
+of a \it{VPKFileChkPt} point back to the original VPKFile,
+so they should only be accessed with the VPKFile lock held.
+In particular, combined fingerprints may be unlazied in the
+process of flushing the entries to disk, so a lock must be
+held for those operations. The fix is for the checkpoint to
+include \it{copies} of the mutable fields of any cache entries
+in the initial VPKFile.
+
+\item{\tt{Done on Fri Sep 13 14:54:36 PDT 1996 by heydon}}
+When a log is checkpointed, any old logs and checkpoints associated
+with it should be deleted. Tim will be adding this functionality to
+VestaLog, so the cache server will pick it up for free.
+
+\item{\tt{Done on Fri Sep 13 14:37:38 PDT 1996 by heydon}}
+Changed \it{PrintCacheLog} and \it{PrintGraphLog} programs
+to open the logs in read-only mode. As a result, these programs
+no longer have to be run as \tt{vestasrv}.
+
+\item{\tt{Done on Mon Sep  9 16:58:18 PDT 1996 by heydon}}
+Change \tt{CacheS::FlushAll} so it forks threads to flush
+up to five MultiPKFiles to the stable cache at once.
+
+\item{\tt{Done on Mon Sep  9 15:09:13 PDT 1996 by heydon}}
+When a short string (such as a ShortId) is fingerprinted,
+only the high-order bits of the fingerprint words are significant.
+Unfortunately, the \tt{PKPrefix} interface was selecting
+these insignificant bits from the PK to use to form the name of the
+corresponding MultiPKFile. As a result, many otherwise-unrelated PK's
+were ending up in the same MultiPKFile. I've changed the PKPrefix
+interface to use the high-order bits instead.
+
+\item{\tt{Done on Sat Sep  7 19:54:49 PDT 1996 by heydon}}
+The EraseCache(1) program should not allow the possibility
+of deleting the logs without deleting all of the stable
+MultiPKFiles. This will lead to problems. For example, if
+the \it{usedCIs} log is deleted, the first new entry will
+be assigned a cache index (CI) of 0. But there may already
+be a cache entry with index 0 in the stable cache! So I've
+removed the \bf{-entries} option from EraseCache(1); now
+that program always deletes the stable cache files.
+
+\item{\tt{Done on Fri Sep  6 19:17:22 PDT 1996 by heydon}}
+There was a bug in \tt{SMultiPKFileRep::AppendNewHeaderEntry}.
+This bug was actually causing a memory smash whenever a
+MultiPKFile was flushed to disk!
+
+\item{\tt{Done on Wed Sep  4 19:27:31 PDT 1996 by heydon}}
+An assertion in the code for reading a SPKFile was
+failing due to a PKFile growing larger than 64K. Each
+\it{SPKFileRep::HeaderEntry} contains an offset to
+the start of each list of entries (grouped by common
+fingerprint). The offset was being stored as a 2-byte
+\tt{unsigned short}, which was not large enough to
+hold values over 64K.
+
+\item{\tt{Done on Wed Sep  4 19:27:02 PDT 1996 by heydon}}
+Yuan reported a bug in which flush a MultiPKFile to disk
+was failing. The failure was evinced by an \it{FS::Failure}
+exception indicating a seek failure to location 0 of the
+original (non-existent) MultiPKFile. The bug is caused
+by the case in which the table of VPKFiles to flush contains
+some VPKFiles with no new entries, yet those VPKFiles do
+not exist in the MultiPKFile on disk. The fix is to simply
+not include those VPKFiles in the MultiPKFile header, so they
+will not be written to disk.
+
+\item{\tt{Done on Mon Jul 22 14:24:40 PDT 1996 by heydon}}
+Implemented policy for caching ``warm'' cache entries in a
+VPKFile's \it{oldEntries} table. New code was necessary to
+get the entries from the in-memory SPKFile rather than updating
+the old entries in memory (as was originally done). The problem
+with the original strategy is that ``warm'' entries produced
+from disk hits were incomplete, and so did not have sufficient
+information (such as a complete list of fingerprints) to be
+updated when the PKFile's set of common names changed at
+PKFile flush-time.
+
+\item{\tt{Done on Fri Jul 19 08:29:49 PDT 1996 by heydon}}
+Removed all timestamps and the max-timestamp heuristic from
+the cache server code. For the rationale behind this change,
+see my post to src.vesta on 15-July-96.
+
+\item{\tt{Done on Mon Jul 15 10:32:47 PDT 1996 by heydon}}
+Added \it{GetLookupStats} method for reporting statistics about
+the cache server's \it{Lookup} method.
+
+\item{\tt{Done on Mon Jul  8 11:53:18 PDT 1996 by heydon}}
+Changed printing routines so PrintMPKFile(1) would use a multi-line
+format for the "allNames" and "imap" fields.
+
+\item{\tt{Done on Mon Jul  1 13:42:21 PDT 1996 by heydon}}
+Changed PrintMPKFile(1) to take relative pathnames as well as absolute
+ones. Relative pathnames are interpreted relative to the directories
+specified in the Vesta configuration file.
+
+\item{\tt{Done on Thu Jun 27 15:10:04 PDT 1996 by heydon}}
+Fixed recovery bugs that were not updating the length of stable cache
+log or the number of entries in a VMultiPKFile correctly.
+
+\item{\tt{Done on Mon Jun 24 13:51:42 PDT 1996 by heydon}}
+Fixed bug in CacheS.C that was causing the cache server to crash if it
+did not detect the right files in its metadata directory structure.
+The bug was due to an unhandled exception, and was fixed by moving a
+call inside an existing "try" scope.
+
+\item{\tt{Done on Thu May 23 12:41:41 PDT 1996 by heydon}}
+Added \bf{-noHits} command-line option.
+
+\item{\tt{Done on Thu May  9 16:26:46 PDT 1996 by heydon}}
+Implemented the "CleanCacheLog" routine and arranged for it
+to be called automatically whenever the size of the cache log
+exceeds some threshold.
+
+\item{\tt{Done on Thu May  9 16:25:46 PDT 1996 by heydon}}
+For now, the only calls to CacheS::VToSCache are in
+CacheS::Checkpoint and in the DoDeletions thread. The Checkpoint
+method flushes \it{all} pending VMultiPKFiles, one at a time. The
+server should be changed to invoke VToSCache based on some
+resource-usage policy. Currently, the solution is to flush
+a volitile MultiPKFile when the number of entries in it exceeds
+some threshold. 
+
+\item{\tt{Done on Fri Apr 12 18:51:00 PDT 1996 by heydon}}
+Added code to print names and timestamps one per line.
+
+\item{\tt{Done on Fri Apr 12 18:39:38 PDT 1996 by heydon}}
+The code for recovering the cache log was going to disk to
+reach the "pkEpoch" on every entry in the log. I added a
+temporary table mapping PK's to their pkEpoch's to improve
+the efficiency of recovering the cache log.
+
+\item{\tt{Done on Fri Apr 12 18:38:16 PDT 1996 by heydon}}
+The locking level requirements were not being respected
+during recovery. I changed the recovery code to acquire
+the appropriate locks in a correct order.
+
+\item{\tt{Done on Tue Apr  9 17:08:52 PDT 1996 by heydon}}
+The table constructed at recovery from the EmptyPKLog needs to be
+preserved in memory and used to initialize the "pkEpoch" of newly-
+created VPKFiles. Also, it needs to be augmented when an
+SPKFile is deleted and have an entry removed when a non-empty
+SPKFile is written.
+
+\item{\tt{Done on Mon Apr  8 15:09:01 PDT 1996 by heydon}}
+I removed the locks associated with VMultiPKFiles. Now,
+the fields of a VMultiPKFile are protected by the centralized
+lock "CacheS.mu".
+
+\item{\tt{Done on Sun Apr  7 15:02:51 PDT 1996 by heydon}}
+The cache server specification contained a mistake in which
+deleted entries were not being ignored when the cache log
+was recovered. I designed and implemented a
+\link{VCacheImpl.7.html#CacheLog}{\it{pkEpoch algorithm}}
+for ignoring deleted and flushed entries in the cache log.
+
+\item{\tt{Done on Fri Apr  5 15:03:48 PDT 1996 by heydon}}
+Added "fvs" return value to the cache server "Lookup" method
+as requested by Yuan.
+
+\item{\tt{Done on Wed Apr  3 15:03:11 PDT 1996 by heydon}}
+Changed cache server client interface so that free variables
+are represented by Text sequences instead of as simple Texts
+as requested by Yuan. The new free variable types are defined
+in the "FV2" interface.
+
+\item{\tt{Done on Mon Mar 18 16:02:32 PST 1996 by heydon}}
+When a MultiPKFile is empty, we currently delete the file. However, if
+there are no longer any files in its directory, we should remove the
+directory (and recursively).
+
+\item{\tt{Done on Mon Mar 18 11:52:21 PST 1996 by heydon}}
+When the "WeededMPKs" log is checkpointed, the old log and (empty)
+checkpoint file are no longer needed and can be deleted. The "version"
+file written by the VestaLog implementation can be used to determine
+which log and checkpoint files are safe to delete.
+
+\item{\tt{Done on Tue Mar  5 14:06:10 PST 1996 by heydon}}
+If the list of free variables passed to the AddEntry method contains
+any duplicates, the current code will not detect it. Instead, it
+should return a \tt{CacheIntf::BadAddEntryArgs} result.
+
+\item{\tt{Done on Tue Mar  5 12:24:02 PST 1996 by heydon}}
+There is no support for the \it{sUsedCIs} log shrinking when cache
+entries are deleted.
+
+\item{\tt{Done on Tue Mar  5 12:23:11 PST 1996 by heydon}}
+The body of the cache server's \tt{DoDeletions} thread must still be
+implemented.
+
+\item{\tt{Done on Tue Mar  5 12:22:57 PST 1996 by heydon}}
+Once we support deleting an SPKFile from a MultiPKFile, it is possible
+for a MultiPKFile to become empty. In that case, we should delete the
+MultiPKFile itself.
+
+\item{\tt{Done on Tue Mar  5 12:21:39 PST 1996 by heydon}}
+\tt{SMultiPKFile::Rewrite} does not yet support \it{deleting} of
+entries. When it does, we have to handle the case of an empty SPKFile.
+In that case, no SPKFile should be written to the MultiPKFile.
+
+\item{\tt{Done on Tue Mar  5 12:21:25 PST 1996 by heydon}}
+\tt{SPKFile::Update} does not yet support \it{deleting} of entries. Once it
+does, we have to consider the case that all the entries from a PKFile
+are deleted, in which case the SPKFile should not be included in the
+MultiPKFile, and the corresponding VPKFile should be removed from the
+cache.
+
+\item{\tt{Done on Tue Mar  5 12:21:04 PST 1996 by heydon}}
+Once the weeder is implemented, the set of common names may
+actually \it{grow} at VtoSCache time. Currently, the methods for
+recomputing the fingerprints of existing cache entries at this
+time are written under the assumption that the common names will
+only get smaller (and hence, that the uncommon names will only be
+augmented). Is there a way to generalize this code (using XOR
+instead of OR?) to handle the new case once the weeder is
+implemented?
+
+\item{\tt{Done on Mon Jan 22 18:24:08 PST 1996 by heydon}}
+The cache server's weeder interface still needs to be designed and
+implemented. New code will also be necessary to handle the deletion of
+deriveds and cache entries (see more specific items below).
+
+\item{\tt{Done on Mon Jan 22 18:21:33 PST 1996 by heydon}}
+\tt{CacheS::Recover} should not recover entries from the cache log
+that are in the \tt{hitFilter} if \tt{deleting} is \tt{true}.
+
+\item{\tt{Done on Mon Jan 22 17:48:29 PST 1996 by heydon}}
+The \tt{hitFilter} and \tt{deleting} variables in \tt{CacheS} must be written
+stably and recovered in the \tt{Recover} method.
+
+\item{\tt{Done on Sun Jan 21 20:41:27 PST 1996 by heydon}}
+Currently, \tt{AddEntry} chooses new \tt{ci} by finding an unset bit in the
+\tt{usedCIs} bit vector. However, according to the spec, it is not
+allowed to choose a cache index in the \tt{hitFilter} set if
+\tt{deleting} is true.
+
+\item{\tt{Done on Fri Jan 19 11:38:43 PST 1996 by heydon}}
+The \tt{Leases} class needs a method call for returning the set of all
+leased cache entries.
+
+\item{\tt{Done on Fri Jan 19 09:35:08 PST 1996 by heydon}}
+There is no facility for disabling lease expiration.
+
+\item{\tt{Done on Thu Dec 14 17:28:51 PST 1995 by heydon}}
+We still need a way for the cache to detect if a derived lease has
+expired. This mechanism has been designed (see Allan's post to
+src.vesta on 14-Dec-95), but it has not been implemented. As described
+in that message, the interface to the cache server will have to change
+to include an extra timestamp argument to the \it{AddEntry} method.
+The cache server also has to export a new \it{RenewLease} method for
+renewing the lease on a specified cache entry.
+
+\item{\tt{Done on Tue Dec  5 16:56:56 PST 1995 by heydon}}
+Currently, the names in a VPKFile are stored twice: once in the
+\tt{allNames} list and once in the \tt{nameMap} table. It seems a bit of
+a waste to store the strings themselves twice. Perhaps the type of
+\tt{allNames} should be changed to a list of \it{pointers} to texts to
+save space?
+
+Solution: The actual solution was to provide an alternate
+implementation of the \tt{Text} interface in the vesta/basics package
+that copies pointers rather than buffers when texts are copied.
+
+\item{\tt{Done on Fri Nov 10 18:01:50 PST 1995 by heydon}}
+VPKFile::Update currently does not update the contents of the
+\tt{entries} table when the set of common names changes.
+
+\item{\tt{Done on Fri Nov 10 17:51:57 PST 1995 by heydon}}
+VPKFile::VPKFile(fp) should read the SPKFile from the stable cache
+in the event that there is no VPKFile in the (volatile) cache instead
+of always creating a new one from scratch.  
+
+\item{\tt{Done on Wed Nov  8 10:21:35 PST 1995 by heydon}}
+The \tt{SMultiPKFile::OpenAtomicWrite} method does not create any
+necessary directories. Once it computes the pathname \tt{fpath},
+is should create any non-existent directory for all directories
+along the path (except for the last arc, which names the file itself).
+
+\item{\tt{Done on Tue Nov  7 11:24:11 PST 1995 by heydon}}
+Add a \tt{void Copy(T &tbl) throw ()} method to \tt{Table::T}. This
+makes the table object a (shallow) copy of \tt{tbl}. It could be used
+in \tt{VPKFile::CheckPoint} and \tt{VMultiPKFile::ToSCache}, among other
+places. Another possibility is to also add a constructor that
+takes a \tt{(const T *tbl)} argument; this would simply call
+\tt{Copy(*tbl)}.
+
+\item{\tt{Done on Tue Nov  7 09:47:00 PST 1995 by heydon}}
+Provide a "copy constructor" for a \tt{BitVector} that takes a
+\tt{BitVector*} (so it isn't a true copy constructor)? This could
+be used in \tt{SPKFile::Update} (twice).
+
+\item{\tt{Done on Sat Nov  4 17:20:16 PST 1995 by heydon}}
+Change first arg of \tt{SMultiPKFile::OpenRead} from \tt{FP::Tag} to
+\tt{PKPrefix}?
+
+\item{\tt{Done on Tue Oct 10 14:05:06 PDT 1995 by heydon}}
+Currently, the method \tt{CacheEntry::NewEntry} sets the \tt{commonNames}
+to the set of all free variables when the very first entry is added
+under a PK. This violates invariant B2v of the spec, but it makes
+for better testing until we actually have stable PKFiles. There is
+a comment in this method that describes how to change the code to
+make it correct.
+
+\item{\tt{Done on Fri Sep 22 12:49:33 PDT 1995 by heydon}}
+Change \tt{newUncommon} and \tt{newCommon} fields of a \tt{VPKFile} from
+tables to lists. They used to be tables indexed by CI, but that
+aspect of their representation is never exploited. Instead, they are
+only iterated over, so it makes more sense to represent them as linked
+lists.
+
+\item{\tt{Done on Fri Sep  1 16:39:51 PDT 1995 by heydon}}
+Add timestamps as arguments to the Lookup() and AddEntry() calls.
+
+\item{\tt{Done on Thu Aug 31 14:00:40 PDT 1995 by heydon}}
+Change LimService interface so the \tt{handle_failure} callback takes
+an extra (void*) arg. Then, change the cache server so SRPC
+failures at client-disconnect time are only printed when the
+debugging level is sufficiently large.
+
+\item{\tt{Done on Thu Aug 31 11:09:25 PDT 1995 by heydon} (actually earlier)}
+Currently, the implementation of \tt{CacheC} ignores SRPC failures.
+Should they be exposed to the client? Should we attempt to catch SRPC
+failures due to programming errors and crash the program in such
+cases (as is currently done in LimService)?
+
+Solution: We simply relay SRPC::failure exceptions to the client.
+(Actually, we catch them in some cases, but then rethrow them.)
+
+\item{\tt{Done on Thu Aug 31 11:25:20 PDT 1995 by heydon} (actually earlier)}
+When Roy releases new SRPC interface, use the constructor for the
+\tt{failure} class in \tt{LimService} where a new failure is consed
+together and thrown.
+
+\item{\tt{Done on Thu Aug 31 11:39:49 PDT 1995 by heydon} (actually earlier)}
+Currently, \tt{LimService} attempts to distinguish \tt{SRPC::failure}
+exceptions due to programming errors from those due to system
+failures. Roy believes this is not robust; the two classes of
+errors cannot be distinguished by failure code alone.
+
+For now, \tt{LimService} writes an error message and dies if it
+detects a failure due to what it thinks is a programming error.
+Roy says he may want to simply catch programming errors in \tt{SRPC},
+in which case only the failure with code \tt{LSErrorCode} should be
+caught in \tt{LimService} as a fatal programming error (this code is
+used if the SRPC connection is no longer alive after the callback
+procedure has returned -- it can only occur if the programmer of the
+callback routine catches SRPC::failure contrary to the
+requirements of the callback routine spec).
+
+Solution: In LimService, we only catch the failure with internal
+code \tt{LSErrorCode}. All other failures are reported by invoking
+the user-supplied \tt{FailureCallBack}.
+
+\item{\tt{Done on Mon May  1 17:54:19 PDT 1995 by heydon}}
+Change \tt{BitVector} interface to provide iterators. These can be used
+in the \tt{NamesXOR} and \tt{NamesFP} functions in \tt{CacheEntry.C}
+as well as perhaps the \tt{Lookup} and \tt{AddEntry} methods in \tt{PKFile}.
+
+\item{\tt{Done on Mon May  1 17:54:24 PDT 1995 by heydon}}
+It might be a performance win to store the uncommon names in the
+CacheEntries rather than (or in addition to) the set of all names for
+that entry. Storing only the uncommon names might be possible, since
+it can only grow to include new elements. This means that the
+\tt{UpdateTags} method would need to take an extra bit vector of the
+names that were once common that no longer are.
+
+\item{\tt{Done on Mon May  1 17:54:24 PDT 1995 by heydon}}
+The \tt{PKFile::AddEntry} method allocates a new \tt{TextKey} for each
+of the free variables. This seems like a waste, since the \tt{TextKey}
+values that are not inserted into the \tt{nameMap} are deleted
+immediately. However, the creation of each \tt{TextKey} requires that
+space for the string be allocated, and the string characters copied.
+That seems a waste; it would be better to allocate new \tt{TextKey}'s
+only for those names that are new and must be inserted into the
+\tt{nameMap}.
+
+\item{\tt{Done on Tue Jan 31 14:22:10 PST 1995 by heydon}}
+In Marshall.cxx, fix the routines for marshalling and unmarshalling
+lists of fingerprints to use generic sequences, rather than sequences
+of strings. The current implementation breaks if any of the
+fingerprints contains a '\\0' character, since it will be treated as
+a terminator.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{VCacheLocks.7.html}{VCacheLocks(7)},
+\link{VCacheSources.7.html}{VCacheSources(7)}
+
+\section{\anchor{AuthorSect}{Authors}}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+Kenneth C. Schalk
+(\tt{ken@xorian.net})
+
+\begin{verbatim}
+Last modified on Mon Mar 11 22:15:40 EST 2002 by ken@xorian.net
+     modified on Mon Jul  6 09:44:46 PDT 1998 by heydon
+\end{verbatim}

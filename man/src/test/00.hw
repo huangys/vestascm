@@ -1,0 +1,49 @@
+VAR g := 4;
+VAR g1 := 4;
+VAR g2 := 4;
+VAR g12 := 4;
+
+VAR 
+    lbrace := '{',
+    rbrace := '}',
+    lpren := '(',
+    rpren := ')',
+    gets := 'G',
+    semi := ';',
+    comma := ',',
+    arrow := 'A',
+    bar := '|',
+    colon := ':',
+    lt := '<',
+    gt := '>',
+    le := 'L',
+    ge := 'g',
+    equals := '=',
+    differs := '#',
+    or := 'O',
+    and := 'a',
+    not := 'N',
+    minus := '-',
+    plus := '+',
+    times := '*',
+    div := 'D',
+    var := 'V',
+    do := 'd',
+    od := 'o',
+    is := 'I',
+    in := 'i',
+    end := 'E',
+    proc := 'p';
+
+PROC Main() IS
+    P()
+END;
+
+PROC P() IS
+    DO g := 1; FAIL
+     | g := 1; FAIL
+     | g := 1; FAIL
+     | g := 1; FAIL
+    OD;
+    Wr("hello world\n")
+END;

@@ -1,0 +1,411 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmkdir - Create a directory in the Vesta repository}{vmkdir}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vmkdir} - Create a new directory in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vmkdir} [\link{#-q}{-q}] [\link{#-Q}{-Q}]
+[\link{#-v}{-v}]
+[\link{#-aA}{-a}] [\link{#-aA}{-A}]
+[\link{#-p}{-p}] [\link{#-f}{-f}] 
+[\link{#-h}{-h \it{hints}}]
+[\link{#-R}{-R \it{repos}}]
+\it{directory}
+
+In the most common usage, only the \it{directory} argument is given.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section for
+definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vmkdir} command creates a new directory in the Vesta
+repository.  This provides an alternative to creating a directory with
+the normal \bf{mkdir} command through the repository's NFS interface
+(which in some cases doesn't work depending on the quirks of different
+NFS client implementations).  It also makes it possible to create a
+directory in a remote repository and acquire local mastership of it
+with one command.
+
+You must have write access to the directory in which \it{directory} is
+to be placed. The newly created directory is owned by you, but has
+access permissions inherited from its parent directory.
+
+In the presence of replication, the directory creation cannot always
+be carried out in the local repository.  In particular, the local
+repository may not have the master copy of the parent directory.
+Also, the \link{#-aA}{-a/-A} flags control which repository
+\bf{vmkdir} will give mastership of the created directory.  (See
+\link{vrepl.1.html}{\bf{vrepl}(1)} and
+\link{vmaster.1.html}{\bf{vmaster}(1)} for more information about
+replication and mastership.)
+
+If the parent directory is mastered locally, \bf{vmkdir} creates the
+new directory in the local repository (and the \link{#-aA}{-a/-A}
+flags have no effect).
+
+If the parent directory is not mastered locally, \bf{vmkdir} may give
+mastership of \it{directory} to the local repository, if either the
+\link{#-aA}{-a} flag is specified or
+\link{#vmkdir_acquires}{\it{[UserInterface]vmkdir_acquires}} is set to
+true.  In this case, it creates the directory remotely in the master
+copy, replicates it to the local repository, and transfers mastership.
+
+If the \link{#-aA}{-A} flag is specified or
+\link{#vmkdir_acquires}{\it{[UserInterface]vmkdir_acquires}} is set to
+false and the parent directory is mastered remotely, \bf{vmkdir} will
+leave mastership of the new directory with the master repository of
+its parent directory.  It creates the directory remotely in the master
+copy and replicates it to the local repository.
+
+Without the \link{#-f}{-f} flag, \bf{vmkdir} will refuse to create a
+directory anywhere inside a package or branch (that is, in any
+directory whose \tt{type} attribute contains any of the following
+values: \tt{package}, \tt{branch}, \tt{checkout}, \tt{session}).
+
+The \link{#-p}{-p} flag is a convenience feature which causes
+\bf{vmkdir} to give the created directory type "\tt{package-parent}",
+which allows packages to be created as children of the new directory.
+
+Creating a directory that is directly below the repository root
+(\tt{/vesta}) is a special case (as there is \bf{no} master copy of
+the repository root).  To create such a top-level directory, you must
+be the special \it{wizard user}.  Also, all top-level directories must
+be globally unique across all repositories in the universe in the
+past, present, or future.  We strongly recommend that every name you
+create in this directory be an Internet domain name that belongs to
+you (or, failing that, an e-mail address with '@' changed to '_'); if
+everyone follows this convention, uniqueness is guaranteed.  (See the
+\link{vrepl.1.html#Vesta_Replication}{\bf{vrepl}(1)} and
+\link{repository.8.html#Warning}{\bf{repository}(8)} man pages for
+more information.)  Before creating a top-level directory, \bf{vmkdir}
+will remind you of this and ask for confirmation.
+
+\bf{vmkdir} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors.  (Note that if any of the
+\link{#Triggers}{trigger commands} fail, \bf{vmkdir} returns status
+2.)
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+\item{\anchor{-h}{-h} \it{hints}}
+If \bf{vmkdir} fails to find the master copy of the parent directory
+either the local repository or any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-R}{-R} \it{repos}}
+Create the directory in \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-aA}{-a or -A}}
+Do (-a) or do not (-A) acquire mastership of the created directory
+when the local repository doesn't have mastership of the parent
+directory.  The default is controlled by the
+\link{#vmkdir_acquires}{\it{[UserInterface]vmkdir_acquires}}
+configuration setting.  (Note that if the parent directory of
+\it{directory} is mastered in the local repository, these flags have
+no effect.)
+\item{\anchor{-p}{-p}}
+Give the created directory the type "\tt{package-parent}" (that is, a
+\tt{type} attribute with this value).  This allows packages to be
+created as children of the new directory.  (See the
+\link{vcreate.1.html}{\bf{vcreate}(1)} man page for more information.)
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.  If the -f flag is not given, the new
+directory's parent may not be any part of a package or branch (that
+is, a directory with a \tt{type} attribute that contains any of the
+following values: \tt{package}, \tt{branch}, \tt{checkout},
+\tt{session}).
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is optional.  If it is not set,
+\tt{[Repository]realm} is used.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\anchor{vmkdir_acquires}{\it{vmkdir_acquires}}}
+Sets the default policy for which repository should have mastership of
+the created directory when the master repository of the parent
+directory is remote.  If it is equal (witout regard to case) to "yes",
+"on", or "true", or can be parsed as an integer that is non-zero, the
+local repository will acquire mastership (as if the \link{#-aA}{-a}
+flag had been given).  If it is equal (witout regard to case) to "no",
+"off", or "false", or can be parsed as an integer that is zero, the
+master repository of the parent directory will retain mastership of
+the created directory (as if the \link{#-aA}{-A} flag had been given).
+If not set, defaults to "false".
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for the master copy of an object.  Each repository is specified by
+host name and TCP port number in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it defaults to
+\it{[Repository]VestaSourceSRPC_port}.  This setting is optional.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  This setting is only used if \tt{[UserInterface]realm} is
+not set.
+\end{description}
+
+The following value is obtained from the \tt{[Run_Tool]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VolatileRootName}}
+The mount point used for temporary directories used during tool
+invocations.  Attempting to create a directory inside the volatile
+root (which is often below the mutable root) is considered an error.
+\end{description}
+
+Settings in the \tt{[vmkdir pre trigger]} and \tt{[vmkdir post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vmkdir} modifies the repository.  Each setting in the \tt{[vmkdir
+pre trigger]} section specifies a command to be run before any action
+is taken, and each setting in the \tt{[vmkdir post trigger]} section
+specifies a command to be run after all actions are complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vmkdir pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vmkdir /vesta/example.com/...
+Tada:
+Hello,
+World!
+Creating directory /vesta/example.com/...
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vmkdir pre trigger]} section exit
+with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vmkdir} will exit without
+creating a directory.
+
+The commands in the \tt{[vmkdir post trigger]} section will only be
+executed if a new directory is successfully created.  If \bf{vmkdir}
+fails with an error, the commands in the \tt{[vmkdir post trigger]}
+section \it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vmkdir} will not create a directory.  If any of the post trigger
+commands runs forever, \bf{vmkdir} will not complete.  (In other
+words, \it{a trigger command that hangs will cause \bf{vmkdir} to
+hang}.)  If any of the pre or post trigger commands exit with error
+status or are terminated by a signal, \bf{vmkdir} will exit without
+running any more commands from those sections.  (In other words, \it{a
+trigger command that fails will prevent further trigger commands from
+being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given, the trigger commands
+will not actually be run.
+
+Information about what \bf{vmkdir} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vmkdir}, this will always be "vmkdir".)
+\item{VESTA_REPOS}
+The local repository (\it{host}\tt{:}\it{port}) \bf{vmkdir}
+communicates with (either the default from the configuration file or
+the one specified with the \link{#-R}{-R flag}.
+\item{VESTA_MASTER_HINTS}
+Additional repositories which may have been consulted in order to find
+the master copy of the parent directory.  This is the combination of
+the argument to the \link{#-h}{-h flag} (if it was used) and the hints
+from the \link{#Configuration}{\it{[UserInterface]DefaultHints}
+configuration setting} (if set in the configuration file).
+\item{VESTA_MASTER_REMOTE}
+Set to 1 if the parent directory of the directory created by
+\bf{vmkdir} is mastered in a remote repository, set to 0 otherwise.
+If this is set to 1, the directory will be created in the remote
+master ($VESTA_MASTER_REPOS) and replicated to the local repository
+($VESTA_REPOS).
+\item{VESTA_MASTER_REPOS}
+The repository (\it{host}\tt{:}\it{port}) with mastership of the
+parent directory of the directory created by \bf{vmkdir}.  If this is
+different from $VESTA_REPOS, $VESTA_MASTER_REMOTE will be set to 1 and
+the directory is created at the remote master repository.
+\item{VESTA_DIR}
+The directory created by \bf{vmkdir}.
+\item{VESTA_ACQUIRE_MASTERSHIP}
+Set to 1 if \bf{vmkdir} is creating a directory at a remote master
+repository and acquiring mastership of it in the local repository, set
+to 0 otherwise.  (If $VESTA_REPOS is the same as $VESTA_MASTER_REPOS
+this will be 0.)  See \link{#-aA}{the description of the -a/-A flags
+above}.
+\item{VESTA_PACKAGE_PARENT}
+Set to 1 if \link{#-p}{the -p flag was given} and the directory is
+being created under \tt{/vesta}, set to 0 otherwise.  (This will be 0
+if the directory being created is under \tt{/vesta-work}, even if the
+-p flag was given.)
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vmkdir pre trigger]
+// If the user tries to create a directory with type package-parent
+// directly below /vesta, cause vmkdir to fail
+50no_toplevel_pp = if [ "`dirname $VESTA_DIR`" = "/vesta" -a $VESTA_PACKAGE_PARENT -eq 1 ]; then exit 1; fi
+
+[vmkdir post trigger]
+// Add an attribute when a directory is created remotely and has local
+// mastership acquired
+50made_remote = [ $VESTA_ACQUIRE_MASTERSHIP -eq 0 ] || vattrib -R $VESTA_REPOS -s "created-at" $VESTA_MASTER_REPOS $VESTA_DIR
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vmkdir} is atomic if it modifies only the local
+repository.  If a remote repository must be modified, however, the
+action performed at each repository is individually atomic, but
+\bf{vmkdir} can die between the actions on the remote and local
+repositories.  To make this problem less likely to occur, \bf{vmkdir}
+ignores \tt{SIGINT} (the ^C interrupt) during the critical section.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+\link{vcreate.1.html}{\bf{vcreate}(1)}
+\link{vrepl.1.html}{\bf{vrepl}(1)}
+\link{repository.8.html}{\bf{repository}(8)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk <\link{mailto:ken@xorian.net}{\tt{ken@xorian.net}}>
+
+(Derived from \bf{vcreate}, written by Tim Mann.)

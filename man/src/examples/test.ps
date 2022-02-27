@@ -1,0 +1,36 @@
+perfspec NetObjPerf
+
+%% runtime info
+import AllocSpec.StartAlloc, AllocSpec.EndAlloc;
+
+timed event StartAlloc(tid, size); 
+            EndAlloc(tid);         
+interval Alloc =
+    s: StartAlloc, e: EndAlloc where s.tid = e.tid
+  metrics
+    size = s.size,
+    tid = s.tid
+  end Alloc;
+
+%% Surrogates
+
+timed event CreatedSurrogate(wrep1, wrep2, wrep3, wrep4);       
+                                            % Logged from NetObjRT.Find
+            DeletedSurrogate(wrep1, wrep2, wrep3, wrep4);       
+                                            % Logged from NetObjRT.CleanupSrgt
+
+event FoundSurrogate();                     % Logged from NetObjRT.Find
+
+
+interval SurrogateLifeTime =
+    s: CreatedSurrogate,
+    e: DeletedSurrogate where s.wrep1 = e.wrep1 &  s.wrep2 = e.wrep2 &
+                  s.wrep3 = e.wrep3 & s.wrep4 = e.wrep4 
+  metrics
+  end SurrogateLifeTime;
+
+% The following assert is very workload dependent. We expect that
+% FindTarget will have a needed surrogate much more often than not.
+assert {count c: CreatedSurrogate} / {count c: FoundSurrogate} < 0.1
+
+end NetObjPerf

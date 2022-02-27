@@ -1,0 +1,179 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{VCacheLocks(7) man page}{VCacheLocks}{7}
+
+\section{Name}
+
+VCacheLocks - describes the VCache(1) locks and locking levels
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescriptionSect}{Description}
+\item \link{#NotationSect}{Notation}
+\item \link{#LocksSect}{The Locks}
+\item \link{#OrderSect}{Lock Partial Order}
+\item \link{#OrderSummSect}{Lock Partial Order Summary}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescriptionSect}{Description}}
+
+This man page describes the notation used to document locking levels,
+the locks used in the Vesta-2 cache server implementation, what data
+they protect, and their relative locking order. The locks are also
+documented separately in the individual header files.
+
+\section{\anchor{NotationSect}{Notation}}
+
+The set of locks held by a thread is denoted by "LL". There is a
+partial order on locks (see below). Every thread must acquire locks in
+an ascending order, so at any time, the locks in the set "LL" form a
+chain (total order). We use "Sup(LL)" to denote the supremum of the
+locks in the chain "LL".
+
+Every method in the Cache Server should specify its locking
+requirements. For example, in the "CacheS" object, a method may
+specify:
+
+\begin{verbatim}
+  /* REQUIRES Sup(LL) = SELF.mu */
+\end{verbatim}
+
+Here, "SELF" denotes the "CacheS" object, and "mu" denotes its mutex
+field. So this method requires that the calling thread holds the mutex
+"CacheS.mu" (and perhaps some locks ordered before "mu" in the lock
+partial order).
+
+\section{\anchor{LocksSect}{The Locks}}
+
+\begin{description}
+\item{\bf{CacheS.mu} (the main cache server lock)}
+
+Protects all of the cache server's global data, such as its leases,
+volatile cache (the mapping from PK -> VPKFile), the "usedCIs", the
+"hitFilter", the cache's volatile cache, graph, and CI logs, and
+other global data. 
+
+\item{\bf{CacheS.cacheLogMu}, \bf{CacheS.graphLogMu}, \bf{CacheS.ciLogMu}}
+
+Protect the disk operations on the stable cache, graph, and CI logs,
+respectively. These are required because the read/write operations on a
+VestaLog object (used to append to the logs atomically) are unmonitored.
+
+\item{\bf{VPKFile.mu}}
+
+Protects the private data fields of each VPKFile object. This lock
+also synchronizes access to the new cache entries stored under its
+"newCommon" and "newUncommon" fields.
+
+\item{\bf{OS::cio().mu}}
+
+Serializes debugging output. This lock should be held whenever the
+cache server writes debugging output, so that a block of debugging
+lines will appear together, even if multiple threads are writing
+output. The lock is acquired using the "OS::cio().start_out" and
+"OS::cio().start_err" methods and released using the
+"OS::cio().end_out" and "OS::cio().end_err" methods. This lock is
+unrelated to any of the other locks in the locking order, and may be
+acquired so long as the lock is not already held.
+
+Note that this lock is private to an instance of the OS::ThreadIO
+class.  See the files \tt{ThreadIO.H} and \tt{ThreadIO.C} in the
+package \tt{/vesta/vestasys.org/basics/os} for more information.
+
+\end{description}
+
+\section{\anchor{OrderSect}{Lock Partial Order}}
+
+\begin{description}
+\item{\bf{CacheS Locks}}
+
+The server contains only one instantiation of the "CacheS" object.
+Here are the relations on its locks:
+
+\begin{verbatim}
+  CacheS.ciLogMu < CacheS.graphLogMu < CacheS.cacheLogMu < CacheS.mu
+\end{verbatim}
+
+\item{\bf{VPKFile Locks}}
+
+The server has a "VPKFile" object for each PK stored in volatile
+memory. The order on these locks relative to the main cache server
+lock is:
+
+\begin{verbatim}
+  (forall vf: VPKFile :: vf.mu < CacheS.mu)
+\end{verbatim}
+
+By this specification, a thread is not allowed to hold more than one
+VPKFile lock at a time. However, there is one case where this is
+necessary, namely, when a MultiPKFile is rewritten. Since the entire
+MultiPKFile is updated on disk atomically, the thread doing the update
+must acquire all of the locks for any changed VPKFile's within the
+MultiPKFile. Hence, there is a partial order on the VPKFile locks. If
+two VPKFile's "vpkf1" and "vpkf2" are mapped to the same MultiPKFile,
+then "vpkf1.mu < vpkf2.mu" iff "vpkf1" occurs in iteration order
+before "vpkf2" in the table that maps PK's to VPKFile's that have
+changed since the last time the MultiPKFile was rewritten. Even if
+this order weren't defined, deadlock cannot occur, since at most one
+thread can be rewriting a MultiPKFile at a time, and that is the only
+situation in which a single thread must acquire multiple VPKFile locks.
+
+\item{\bf{Debugging Lock}}
+
+The debugging lock exceeds all other locks in the partial order. This
+means the lock can be acquired so long as it is not already held. Once
+held, no other locks may be acquired.
+
+\begin{verbatim}
+  (forall mu: mutex :: mu <= OS::cio().mu)
+\end{verbatim}
+
+The universal quantification is taken over only those locks controlled
+by the cache server.
+\end{description}
+
+\section{\anchor{OrderSummSect}{Lock Partial Order Summary}}
+
+\begin{verbatim}
+  CacheS.ciLogMu < CacheS.graphLogMu < CacheS.cacheLogMu < CacheS.mu
+  (forall vf:  VPKFile :: vf.mu < CacheS.mu)
+  (forall mu:  mutex :: mu <= OS::cio().mu)
+\end{verbatim}
+
+The latter universal quantification is taken over only those locks
+controlled by the cache server.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{VCacheSources.7.html}{VCacheSources(7)},
+\link{VCacheToDo.7.html}{VCacheToDo(7)}
+
+\section{\anchor{AuthorSect}{Author}}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:49:39 PST 1997 by heydon
+\end{verbatim}

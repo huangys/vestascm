@@ -1,0 +1,145 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vsmash - Delete without leaving a ghost}{vsmash}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vsmash} - Delete without leaving a ghost
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vsmash} [\link{#-Q}{-Q}] [\link{#-R}{-R \it{repos}}] \it{target}
+
+In the most common usage, only the \it{target} argument is given.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vsmash} command completely deletes an object from the Vesta
+repository.  Ordinarily, deletion either through the repository's NFS
+interface or using the \bf{vrm} command leaves a \it{ghost} behind to
+prevent the same name from being re-used.  \bf{vsmash} deletes without
+leaving a ghost, and can be used to delete ghosts.
+
+This is a very dangerous operation to perform, as it violates Vesta's
+basic assumption of \it{name immortality}.  For example, if
+\bf{vsmash} is used to delete a checked-in version from a package, a
+new version could be created with the same number but different
+contents.  This can cause a build that references this version to
+produce different results at different points in time, breaking the
+guarantee of build repeatability.
+
+In the presence of replication, \bf{vsmash} can violate the agreement
+invariant.  To avoid this, anything you delete with \bf{vsmash} must
+be deleted from \it{all} repositories.
+
+See the \link{vrepl.1.html#Vesta_Replication}{Vesta Replication}
+section of the \link{vrepl.1.html}{\bf{vrepl}(1)} man page for a
+description of the replication design, including implications for
+deletion.
+
+Because of these dangers, \bf{vsmash} always prints a warning and asks
+for confirmation.
+
+\bf{vsmash} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.
+\item{\anchor{-R}{-R} \it{repos}}
+Delete the object in \it{repos} instead of the default local
+repository.  The repository is specified by host name and TCP port
+number in the format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port}
+portion may be omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]}
+section of the Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.  (Thie setting is optional.  \it{[Repository]realm} is
+used if it's not set.)
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+Global user names are formed by appending \tt{@}\it{realm} to the
+local name.
+\item{\it{vwizard_user}}
+The global name of a user with the ability to perform agreement
+operations.  (Deleting without leaving a ghost is an agreement
+operation.)
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+Because it is an operation that can violate inter-repository
+agreement, only the special "wizard" user can use \bf{vsmash}.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{vrm.1.html}{\bf{vrm}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)}
+
+\section{\anchor{Author}{Author}}
+
+Kenneth C. Schalk
+<\tt{ken at xorian dot net}>
+
+\begin{verbatim}
+Last modified on Sun Jan 25 23:02:52 EST 2004 by ken@xorian.net  
+\end{verbatim}

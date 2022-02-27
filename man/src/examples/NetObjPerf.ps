@@ -1,0 +1,151 @@
+perfspec NetObjPerf
+
+%% runtime info
+import AllocSpec.StartAlloc, AllocSpec.EndAlloc;
+
+timed event StartAlloc(tid, size); 
+            EndAlloc(tid);         
+interval Alloc =
+    s: StartAlloc, e: EndAlloc where s.tid = e.tid
+  metrics
+    size = s.size,
+    tid = s.tid
+  end Alloc;
+
+%% Surrogates
+
+timed event CreatedSurrogate(wrep1, wrep2, wrep3, wrep4);       
+                                            % Logged from NetObjRT.Find
+            DeletedSurrogate(wrep1, wrep2, wrep3, wrep4);       
+                                            % Logged from NetObjRT.CleanupSrgt
+
+event FoundSurrogate();                     % Logged from NetObjRT.Find
+
+
+interval SurrogateLifeTime =
+    s: CreatedSurrogate,
+    e: DeletedSurrogate where s.wrep1 = e.wrep1 &  s.wrep2 = e.wrep2 &
+                  s.wrep3 = e.wrep3 & s.wrep4 = e.wrep4 
+  metrics
+  end SurrogateLifeTime;
+
+% The following assert is very workload dependent. We expect that
+% FindTarget will have a needed surrogate much more often than not.
+assert {count c: CreatedSurrogate} / {count c: FoundSurrogate} < 0.1;
+
+% also interested in elapsed(s) for each s: SurrogateLifeTime
+
+%% Caching
+
+% Cache loc.freeList. These events are logged from TCPNetObj.NewConnection.
+timed event StartNewConnection(tid, foundFree);  
+            EndNewConnection(tid, OK);
+
+% want to know about frequency of foundFree=TRUE, elapsed times in either case
+
+interval NewConnection =
+  s: StartNewConnection, e: EndNewConnection where
+     s.tid = e.tid
+       metrics 
+	foundFree = s.foundFree,
+        OK = e.OK,
+	sts = timestamp(s),
+        tid = s.tid,
+        nAlloc = {count n: Alloc where n.tid = s.tid},
+        bytesAlloc = {+ n: Alloc where n.tid = s.tid: n.size}
+  end NewConnection;
+
+% Cache t.locationTbl. In TCPNetObj.m3, LocationFromEndPoint
+% !!! not clear whether this is interesting for performance reasons
+
+event LocationFromEndpoint(found);   % found=TRUE if endpoint in table
+
+% want to know about percentage with found=TRUE
+
+%% FP-to-TC table
+event AddFPtoTC();                      % Logged from NetObjRT.TowerToSurrogateTC
+
+% interested in number of fp's added to the table
+def maxNFP = 1000;
+assert{count a: AddFPtoTC} <= maxNFP;
+% might also be interested in number of lookups in this table
+event FindFP();                         % Also logged from NetObjRT.TowerToSurrogateTC
+
+
+%% Regression tests for remote calls
+
+timed event StartCall(tid, nargs);
+            EndCall(tid, argbytes, resbytes);
+	    OStartCall(tid, nargs);
+	    OEndCall(tid, argbytes, resbytes);
+
+% instrumented in Stubs
+
+interval NetCall =	% call from client side
+    s: StartCall, e: EndCall where s.tid = e.tid
+  metrics
+    nargs = s.nargs,
+    argbytes = e.argbytes,
+    resbytes = e.resbytes,
+    nAlloc = {count n: Alloc where n.tid = s.tid},
+    bytesAlloc = {+ n: Alloc where n.tid = s.tid: n.size},
+    sts = timestamp(s),
+    surrCreated = {count n: CreatedSurrogate}, 
+    surrFound = {count n: FoundSurrogate},
+    newConnect = {count n: StartNewConnection where n.foundFree = 0
+	          & n.tid = s.tid},
+    timeConnect = {+ n: NewConnection where n.tid = s.tid: elapsed(n)}
+  end NetCall;
+% Should log tid with CreateSurrogate and FoundSurrogate; check
+% in surrCreated surrFound
+
+interval ONetCall =	% call from owner side
+    s: OStartCall, e: OEndCall where s.tid = e.tid
+  metrics
+    nargs = s.nargs,
+    argbytes = e.argbytes,
+    resbytes = e.resbytes
+  end ONetCall;
+
+def MaxElapsed = 10ms; 
+
+assert
+  % null call
+  {& i : NetCall where i.argbytes = 0 & i.resbytes = 0
+       : elapsed(i) <= MaxElapsed};
+
+
+
+
+%% object table contention (NetObjRT.mu)---places to instrument
+%% want ability to disable this monitoring separately from other monitoring
+% FindTarget
+% Find
+% InsertAndPin
+% Unpin
+% SpaceToSpecial
+% TowerToSurrogateTC
+% AgentGetAdr   (probably called infrequently but we don't understand it all now)
+% AgentDirty
+
+% Logged before and after "LOCK mu..." in above routines.
+timed event ObjTabLockRequested(tid);
+      ObjTabLockObtained(tid);
+
+interval ObjTabLockWait =
+    s: ObjTabLockRequested, e: ObjTabLockObtained where s.tid = e.tid
+  metrics
+  end ObjTabLockWait;
+
+% contention for object table lock is low
+def OKLongAcquire = 0.01;
+    maxLockAcquire = 100us;
+assert {count o : ObjTabLockWait where elapsed(o) > maxLockAcquire}
+  / {count o: ObjTabLockWait} < OKLongAcquire
+
+%% Third party transfers---how frequent?
+% talk to Ted about how to find these
+
+
+
+end NetObjPerf

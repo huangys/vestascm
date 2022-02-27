@@ -1,0 +1,91 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{CreateCacheDirs(1) man page}{CreateCacheDirs}{1}
+
+\section{NAME}
+
+CreateCacheDirs - create directories required by the Vesta-2 cache server
+
+\section{SYNOPSIS}
+
+\bf{CreateCacheDirs}
+[ \bf{-n} ]
+
+\section{DESCRIPTION}
+
+If they don't exist, \it{CreateCacheDirs} creates directories
+required by the Vesta-2 cache server in the current directory. If the
+\bf{-n} switch is used, \it{CreateCacheDirs} prints what it would do,
+but does not actually create any directories.
+
+The cache servers's files are stored in directories according to names
+in the Vesta-2 configuration file. In particular, the following
+variables from the \it{CacheServer} section of the configuration file
+name directories created by \it{CreateCacheDirs}:
+
+\begin{verbatim}
+[CacheServer]
+MetaDataRoot     - root of Vesta-2 meta-data
+  MetaDataDir    - root of cache server meta-data sub-tree
+    SVarsDir     - root of stable variables sub-tree
+    SCacheDir    - root of stable cache entries sub-tree
+    WeededLogDir - directory containing log of weeded MPKFiles
+    CacheLogDir  - directory containing the cache log
+    GraphLogDir  - directory containing the graph log
+    CILogDir     - directory containing the used cache index log
+\end{verbatim}
+
+Nesting indicates how the directory tree corresponding to these names
+is structured. If the \it{MetaDataRoot} value is the empty string,
+then the current directory is used.
+
+The following variable from the \it{Weeder} section of the
+configuration file names a directory created by \it{CreateCacheDirs}:
+
+\begin{verbatim}
+[Weeder]
+  MetaDataDir    - directory containing the Weeder's metadata
+\end{verbatim}
+
+The weeder's meta-data directory is iterpretted relative to the cache
+server's meta-data root.
+
+\it{CreateCacheDirs} does not create a directory for
+\it{MetaDataRoot}, but only for those directories named underneath it.
+You should be sure that the directory named by the
+\it{MetaDataRoot} configuration variable already exists. It it is an
+absolute pathname (as is usually the case), then \it{CreateCacheDirs}
+can be run from any directory.
+
+\section{SEE ALSO}
+
+\link{CleanCache.1.html}{CleanCache(1)},
+\link{EraseCache.1.html}{EraseCache(1)},
+\link{ShowCache.1.html}{ShowCache(1)},
+\link{VCache.1.html}{VCache(1)}
+
+\section{AUTHOR}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Mon Jul  7 14:13:03 PDT 1997 by heydon
+\end{verbatim}

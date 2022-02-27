@@ -1,0 +1,80 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vgetconfig - Get a Vesta configuration value}{vgetconfig}{1}
+
+\section{Name}
+
+\bf{vgetconfig} - Get values from the Vesta configuration file
+
+\section{Synopsis}
+
+\bf{vgetconfig} [-l \it{location}] [-L] [-V] [-I] [-i] [-b] [-f] [-s [\it{section}]] [[-w|W] \it{section} \it{name} [\it{section} \it{name} ...]]
+
+\section{Description}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+See the \link{vesta.cfg.5.html}{vesta.cfg} man page for syntax of the Vesta configuration file.
+
+If \it{section} and \it{name} are provided, \bf{vgetconfig} prints the
+value of \it{name} in section \it{section} of the Vesta configuration
+file.  If multiple \it{section} \it{name} pairs are provided, the values
+are printed one per line in order.
+
+The -w -W flags are useful when trying to locate a configuration setting in the set of config files.
+The -s flag is useful when trying to locate a setting or section name.
+The -I flag gives a way to list all the files used to define the configuration, with their include hierarchy.
+
+If the arguments given to \bf{vgetconfig} leave it with nothing to do,
+it prints a usage message.
+
+\section{Flags}
+
+\begin{description}
+\item{-l \it{location}} 
+Use the configuration file named by \it{location}, overriding the default
+search path established by \tt{VestaConfig.H}.
+\item{-L} Print the config file location.
+\item{-V} Print the version of vgetconfig.
+\item{-I} Print the tree of config files processed during parsing by following all include directives.
+\item{-i} Use \tt{VestaConfig::get_int} to read the configuration file,
+thereby insisting that the configuration values be an integer.
+The default is to use \tt{VestaConfig::get_Text}, which allows any value.
+\item{-b} Use \tt{VestaConfig::get_bool} to read the configuration file,
+thereby insisting that the configuration values be a boolean.
+\item{-f} Use \tt{VestaConfig::get_float} to read the configuration
+file, thereby insisting that the configuration values be a
+floating-point value.
+\item{-w} Prefix value with filename and line number that defined it.  (Mnemonic: "\it{\bf{W}here} was this setting assigned?")  If the value is not defined, nothing will be printed.
+\item{-W} Like -w, but print values of \bf{all} settings of [\it{section}]\it{name} found and prefix each with filename and line number that defined it.  If multiple settings are found, the last one printed is the value actually used.
+\item{-s [\it{section}]} Print out all the sections, one per line.  If
+a \it{section} name is given, prints out the names of all variables in
+the section, one per line.
+\end{description}
+
+\section{See Also}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{Author}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

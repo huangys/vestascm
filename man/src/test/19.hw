@@ -1,0 +1,12 @@
+VAR g := 4;
+
+PROC Main() IS
+    VAR l := 5 IN
+        g := 0; FAIL
+      | l := 0; FAIL
+      | g = 4 AND l = 5 -> Wr("hello world\n")
+      | Wr("Oops")
+    END
+END;
+
+    

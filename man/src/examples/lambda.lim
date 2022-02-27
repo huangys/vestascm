@@ -1,0 +1,46 @@
+PROC Main() IS TIL WS(); Eof() DO Term(); WS(); Rd(';'); Wr("\n\n") END END;
+
+PROC Term() IS
+     term(); WS(); { At(')') | At(';') | Eof() }
+  |  VAR n := 2 IN
+      TIL
+        T2(n); WS(); { At(')') | At(';') | Eof() }
+      DO
+      n := n + 1
+      END
+    END
+END;
+
+PROC T2(n) IS
+    n = 1 -> term()
+  | n > 1 ->
+    Wr("(APPLY "); T2(n-1); Wr(' '); term(); Wr(')')
+END;
+
+PROC term() IS
+    LPren(); Term(); RPren()
+  | Wr('('); Lambda(); Id(); Dot(); Wr(' '); Term(); Wr(')')
+  | Id()
+  | Wr("Syntax error\n"); ABORT
+END;
+
+PROC LPren() IS WS(); Rd('(') END;
+
+PROC RPren() IS WS(); Rd(')') END;
+
+PROC Dot() IS WS(); Rd('.') END;
+
+PROC Lambda() IS WS(); Rd("LAMBDA"); Wr("LAMBDA ") END;
+
+PROC Id() IS WS(); Letter(); DO Letter() | Digit() OD END;
+
+PROC WS() IS DO Rd(' ') | Rd('\n') | Rd('\t') OD END;
+
+PROC Letter() IS Echo2('a', 'z') | Echo2('A', 'Z') END;
+
+PROC Digit() IS Echo2('0', '9') END;
+
+PROC Echo2(n, m) IS
+    VAR c := Rd() IN n <= c AND c <= m -> Wr(c) END
+END;
+

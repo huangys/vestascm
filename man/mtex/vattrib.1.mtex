@@ -1,0 +1,255 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vattrib - Manipulate Vesta attributes}{vattrib}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vattrib} - Read or modify attributes of a source in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vattrib} [\link{#Flags}{options}] [\it{source...}] [\link{#Flags}{options} [\it{source...}] ...]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vattrib} command reads or modifies the mutable attributes of a
+source in the Vesta repository.
+
+If \it{source} is omitted, it defaults to "\tt{.}".  If \it{source} is
+unqualified (does not have "\tt{/}", "\tt{.}", or
+"\tt{..}"  as its first arc), it is interpreted
+relative to "\tt{.}".  If \it{source} is a symbolic link, \bf{vattrib}
+does not follow the link.  If no flags are given,
+the default is "-m -T -l": print the master status, type tag, and all
+attribute names and values.  If the -t flag is not given and a
+timestamp is required, the timestamp defaults to the current time.
+
+A source has attributes if its parent directory is appendable or
+mutable.  In addition, /vesta and /vesta-work have attributes.  Other
+sources do not.  In all cases below except -x, -m, and -T, if the specified
+source does not have attributes, \bf{vattrib} prints an error message
+on standard error and exits with status 2.  In all cases,
+if the specified source does not exist in the Vesta repository,
+\bf{vattrib} prints a message on standard error and exits with status
+2.  For parameter syntax errors, \bf{vattrib} prints a usage summary
+on standard error and exits with status 3.
+
+To modify most attributes requires only write access.  To modify an
+attribute whose name begins with "#", you must have owner access.  In
+addition, to add a user name to the #setuid attribute, you must be either
+root or the named user; to add a group name to the #setgid
+attribute, you must be either root or a member of the named group.
+Reading attributes is unrestricted.  For access control errors,
+\bf{vattrib} prints a message on standard error and exits with status
+2.
+
+A single \bf{vattrib} invocation can examine/modify multiple objects.
+Both multiple sources for one operation and multiple different
+operations can be combined in one \bf{vattrib} call.  The -R, -M, and
+-H flags affect all sources appearing after them until the end of the
+command line or until the next -R or -H flag accordingly.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{-R \it{repos}}
+This flag may be used in any of the command forms shown below.
+It causes \bf{vattrib} to operate on \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{-M}
+This flag may be used in any of the command forms shown below.  It
+causes \bf{vattrib} to locate the repository with the master copy of
+\it{source} and operate on it instead of the local repository.  (Note
+that this option doesn't work if \it{source} starts with
+"\tt{/vesta-work}".)
+\item{-H \it{hints}}
+This flag may be used in any of the command forms shown below, but is
+only used with the -M flag. If \bf{vattrib} fails to find the master
+copy of an object in either the local repository or any of those
+repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}}, you can
+suggest additional repositories for it to look in using this
+option. The \it{hints} argument is a comma- or space-separated list of
+repositories, specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\bf{vattrib} [-q] -x [\it{source}]}
+Print \tt{true} and exit with status 0 if \it{source} has attributes.
+Print \tt{false} and exit with status 1 if it does not.
+If -q is given, the \tt{true} or \tt{false} output is suppressed.
+\item{\bf{vattrib} -m [\it{source}]} 
+Print the master status of \it{source}, either \tt{master} or
+\tt{nonmaster}.  This flag can be used alone or in combination with
+the other flags listed below.  If -m and -T are used together, both
+values are printed on the same line.
+\item{\bf{vattrib} -q -m [\it{source}]}
+Exit with status 0 if \it{source} is master and 1, otherwise. Can not 
+be used with other flags except for -R, -M and -H flags.
+\item{\bf{vattrib} -T [\it{source}]} 
+Print the type tag of \it{source}, normally one of the following:
+\tt{immutableFile}, \tt{mutableFile}, \tt{immutableDirectory},
+\tt{appendableDirectory}, \tt{mutableDirectory}, \tt{ghost},
+\tt{stub}.  This flag can be used alone or in combination with the
+other flags listed below.  If -m and -T are used together, both
+values are printed on the same line.
+\item{\bf{vattrib} [-q] -C \it{value} [\it{source}]}
+Compare the type tag of \it{source} to \it{value}.  Print \tt{true} if
+they are equal and exit with status 0.  Otherwise print \tt{false} and
+exit with status 1.  If -q is given, the output is suppressed.  If
+\it{value} is not one of the valid type strings (\tt{immutableFile},
+\tt{mutableFile}, \tt{immutableDirectory}, \tt{appendableDirectory},
+\tt{mutableDirectory}, \tt{ghost} or \tt{stub}), print \tt{invalid
+type} and exit with status 2.
+\item{\bf{vattrib} -L [\it{source}]}
+Print last-modified time of \it{source} if it is not stub or ghost.
+\item{\bf{vattrib} [-q] -i \it{attrib} \it{value} [\it{source}]}
+Print \tt{true} and exit with status 0 if \it{value} is a member of
+the set bound to \it{attrib} of \it{source}.  Print \tt{false} and exit with
+status 1 if not.  If -q is given, the \tt{true} or \tt{false} output is
+suppressed.
+\item{\bf{vattrib} -g \it{attrib} [\it{source}]}
+Print the set of values for \it{attrib} of \it{source}, one per line.
+\item{\bf{vattrib} [-q] -G \it{attrib} [\it{source}]}
+Print one value for \it{attrib} of \it{source}.  If \it{attrib} has an empty
+value set, exit with status 1, and print an error message on
+stderr unless -q is given.
+\item{\bf{vattrib} -n [\it{source}]}
+Print each attribute name of \it{source} that has a nonempty value set,
+one per line.
+\item{\bf{vattrib} -l [\it{source}]}
+For each attribute of \it{source} that has a nonempty value set,
+print the attribute name, followed by the set of values.  Each
+attribute name and each value appears on a new line, and values
+are indented by one tab character.
+\item{\bf{vattrib} -h [\it{source}]}
+Print the recorded attribute history of \it{source} (see
+\tt{VestaSource.H}).
+\item{\bf{vattrib} [-t \it{timestamp}] -s \it{attrib} \it{value} [\it{source}]}
+Bind \it{attrib} of \it{source} to the singleton set \{\it{value}\}.  If
+present, \it{timestamp} is a time_t in decimal (or hexadecimal if it
+begins with 0x, or octal if it begins with 0).
+\item{\bf{vattrib} [-t \it{timestamp}] -c \it{attrib} [\it{source}]}
+Bind \it{attrib} of \it{source} to the empty set; i.e., unbind it.  If
+present, \it{timestamp} is a time_t in decimal (or hexadecimal if it
+begins with 0x, or octal if it begins with 0).
+\item{\bf{vattrib} [-t \it{timestamp}] -a \it{attrib} \it{value} [\it{source}]}
+Add \it{value} to the set that is bound to \it{attrib} of \it{source}.  If
+present, \it{timestamp} is a time_t in decimal (or hexadecimal if it
+begins with 0x, or octal if it begins with 0).
+\item{\bf{vattrib} [-t \it{timestamp}] -r \it{attrib} \it{value} [\it{source}]}
+Remove \it{value} from the set that is bound to \it{attrib} of \it{source}.
+It is not an error for \it{value} not to have been in the set.  If
+present, \it{timestamp} is a time_t in decimal (or hexadecimal if it
+begins with 0x, or octal if it begins with 0).
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending
+\tt{@}\it{realm} to the local name.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\it{DefaultHints}}
+A comma- or space-separated list of additional repositories to search
+for the master copy of an object.  Each repository is specified by
+host name and TCP port number in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it defaults to
+\it{[Repository]VestaSourceSRPC_port}.  This setting is optional.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+Flags which affect the exit status of \bf{vattrib} cannot be used with
+multiple sources: -x, -i, -C and -q -m.
+
+If you wish to perform multiple attribute changes to the same source,
+you will have to explicitly list the path to the source, once for each
+change.  For example:
+
+\begin{verbatim}
+vattrib -r \it{attrib} \it{old-value} /vesta/example.com -a \it{attrib} \it{new-value} /vesta/example.com
+\end{verbatim}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+
+See the \tt{VestaSource}
+class for a full explanation of mutable attributes.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Mon Nov 22 17:26:46 EST 2004 by ken@xorian.net         
+     modified on Tue Nov 16 16:33:57 EST 2004 by irina.furman@intel.com 
+     modified on Tue Apr 29 23:59:52 PDT 2003 by mann
+\end{verbatim}

@@ -1,0 +1,496 @@
+% Copyright (C) 2008, Vesta free software project
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintCallGraph - print call graphs from the Vesta cache server}{PrintCallGraph}{1}
+
+\section{\anchor{Name}{Name}}
+
+PrintCallGraph - search for call graphs stored by the Vesta cache server using different criteria and print them out
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{PrintCallGraph}
+[ \link{#--indent}{\bf{--indent}} \it{indentation-string} ]
+( \link{#--model}{\bf{--model}} \it{immutable-top-level-model} |
+  \link{#--ci}{\bf{--ci}} \it{cache-index} |
+  \link{#--reverse-ci}{\bf{--reverse-ci}} \it{cache-index} |
+  \link{#--derived-file}{\bf{--derived-file}} \it{derived-file-shortid} )
+[ \link{#--print-deriveds}{\bf{--print-deriveds}} ]
+[ \link{#--mem}{\bf{--mem}} ]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Examples}{Examples}
+\item \link{#Exit_Status}{Exit Status}
+\item \link{#Memory}{Memory Usage}
+\item \link{#Configuration}{Configuration Variables}
+\item \link{#Files}{Files}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+Understanding the call graph of a build or a function call within a
+build can be a bit difficult.  Even if you have a cache index (aka
+"ci") and primary key (aka "pk") to start with, finding the call graph
+relationships between different entries requires searching through the
+Vesta cache's graph log.  While this can be done with the output of
+\link{PrintGraphLog.1.html}{\bf{PrintGraphLog}}, it's time-consuming
+and difficult to understand because the graph log contains no
+human-readable information about what a cache entry represents.
+
+\bf{PrintCallGraph} is a utility that makes searching through the call
+graph stored in the cache easier.  There are three ways it allows you
+to search the graph log:
+
+\begin{itemize}
+\item By top-level model.  If the build has been completed it will
+print its entire call tree.  If the build was stopped before it
+completed (even if it failed with a problem like a compilation error)
+or is still on-going, partial call trees for the portions which have
+been completed and added to the cache will be printed.
+\item By cache index. It will print the entire call tree below a cache
+entry identified by cache index.
+\item By derived file shortid.  It will find any cache entries which
+include the specified derived file in their result and print partial
+call trees for those entries.
+\end{itemize}
+
+To make the entries it prints more understandable, \bf{PrintCallGraph}
+retrieves the "sourceFunc" text annotation for each primary key from
+its PKFile.  (These are provided by the evaluator when adding cache
+entries and describe the function call giving SDL code locations in
+most cases.)  It prints these along with the information about each
+entry in the call trees it displays.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+
+\item{\anchor{--model}{--model | -m} \it{immutable-top-level-model}}
+
+Print the calls preformed when evaluating a particular model.  The
+path should be to an immtuable top-level model file under \tt{/vesta}.
+(Note that you must specify the initial model that the evaluator
+starts from, not a model file used internally during a build.)
+Several partial call trees may be printed if the build was stopped
+before it completed (even by an error) or is still on-going.
+
+\item{\anchor{--ci}{--ci | -i} \it{cache-index}}
+
+Print the call tree below a particular cache entry, identified by its
+decimal integer cache index.  (Note that this finds everything that
+this cache entry \it{called}, \bf{not} what it was called by.)
+
+One convenient way to get a cache index is to use
+\link{vesta.1.html#-trace}{the evaluator's -trace command-line
+option}.  There are a variety of other ways to obtain a cache index,
+mostly from other cache debug and inspection tools.
+
+\item{\anchor{--reverse-ci}{--reverse-ci | -r} \it{cache-index}}
+
+Print the call tree \it{above} a particular cache entry, identified by
+its decimal integer cache index.  This finds the hierarchy of function
+calls that \it{called} this cache entry, \bf{not} the other functions
+which it called.
+
+The printed call tree shows only the paths from root entries
+(top-level models) to this cache entry.  All other entries in the
+larger call tree are omitted.  (One could then use any of the printed
+CIs with \link{#--ci}{--ci} to view other related parts of the call
+tree.)
+
+\item{\anchor{--derived-file}{--derived-file | -d} \it{derived-file-shortid}}
+
+Print any function calls, grouped into partial call trees, whose
+result value includes a particular derived file, identified by its
+shortid.  The shortid should be given in hex (i.e. \tt{0x97a4f121})
+which is how shortids are often printed.  Any child cache entries
+which don't involve the specified derived file will be printed, but
+the call tree beneath them will not.
+
+\item{\anchor{--print-deriveds}{--print-deriveds | -D}}
+
+When printing informaiton about function calls, also print information
+the derived files that each result includes.  These are printed as
+lists of hexadecimal shortids between curly braces after the word
+"refs" (similar to the way
+\link{PrintGraphLog.1.html}{\bf{PrintGraphLog}} prints them).  This is
+usally more information than is needed and can produce a large amount
+of output, so this feature must be specifically requested.
+
+Note that enabling this feature will use more memory.
+
+\item{\anchor{--mem}{--mem | -M}}
+
+Before exiting, print the amount of memory being used.  (See
+\link{#Memory}{"Memory Usage"} below.)  Note that memory usage
+information is only printed on successful completion.
+
+\item{\anchor{--help}{--help | -h}}
+
+Print a short usage message and exit.
+
+\item{\anchor{--indent}{--indent | -I} \it{indentation-string}}
+
+The default output format uses two spaces to indent each level of
+function call.  You can change this by providing an alternative string
+to use for each level of indentation.  For eample you might use:
+
+\begin{verbatim}
+--indent "|   "
+\end{verbatim}
+
+Note that this must be placed on the command line given \bf{before}
+any of the options specifying a search (\link{#--model}{--model},
+\link{#--ci}{--ci}, \link{#--reverse-ci}{--reverse-ci}, or
+\link{#--derived-file}{--derived-file}).
+
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Here's an example using \link{#--model}{--model} that shows an
+incomplete build:
+
+\begin{verbatim}
+% PrintCallGraph --model /vesta/vestasys.org/vesta/release/12.pre13/10/linux_x86_64_deb_sarge.main.ves
+/vesta/vestasys.org/vesta/release/12.pre13/10/linux_x86_64_deb_sarge.main.ves
+Evaluated at: Sun Aug 19 13:56:18 EDT 2007
+Build was incomplete
+12 call tree(s) follow
+
+ci = 13256
+pk = ab6ec2cfbf411716 a5ef62bd5cfba296
+sourceFunc = /vesta/vestasys.org/vesta/release/12.pre13/10/pkg_ovs.ves() (special)
+
+ci = 9460
+pk = c1e87063c94ed68d 94cfc49b62d899a0
+sourceFunc = /vesta/vestasys.org/platforms/linux/debian/amd64/std_env/4/build.ves() (special)
+
+  ci = 9459
+  pk = ad116a598e8bd4de 8e77fc7b54a92931
+  sourceFunc = /vesta/vestasys.org/bridges/env_build/1/build.ves() (special)
+
+ci = 9498
+pk = f7b8f8beb1b9be2d f1ec13105dd75afc
+sourceFunc = /vesta/vestasys.org/bridges/env_build/1/build.ves/env_build(), line 180, col 12
+
+  ci = 8
+  pk = b0314e147bd9fd75 f739ab9665d4007d
+  sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves() (special)
+
+  ci = 9474
+  pk = 7f2ae7dd8df40812 fb88077256867a62
+  sourceFunc = /vesta/vestasys.org/bridges/env_build/1/build.ves/eval_addons(), line 221, col 18
+
+  ...
+\end{verbatim}
+
+Here's an example using \link{#--ci}{--ci}:
+
+\begin{verbatim}
+% PrintCallGraph --ci 13904
+ci = 13904
+pk = 6b06deffca3f3980 ad3fc5b3081782c1
+sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves/compile(), line 379, col 12
+
+  ci = 13903
+  pk = 8dae46c66b775e7c 4c7a354f8e046cae
+  sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves/inner_map(), line 327, col 12
+
+    ci = 9783
+    pk = 228541f1998dccd8 dd2e4dcf2bd049e3
+    sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves/compileOne(), line 413, col 12
+
+      ci = 9782
+      pk = 729a94628263b814 a235acdaef608262
+      sourceFunc = _run_tool, command line: /usr/bin/g++-3.4 -c -I -I/usr/include -I/usr/include/c++/3.4 -pipe -O0 -g2 -D_FILE_OFFSET_BITS=64 -D_REENTRANT Basics.C
+
+    ci = 13902
+    pk = 9137a08f1babdbda e39345d11c86c6c3
+    sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves/compileOne(), line 413, col 12
+
+      ci = 13901
+      pk = 867c01c35a90e465 a443d6b8d3adc25e
+      sourceFunc = _run_tool, command line: /usr/bin/g++-3.4 -c -I -I/usr/include -I/usr/include/c++/3.4 -pipe -O0 -g2 -D_FILE_OFFSET_BITS=64 -D_REENTRANT Thread.C
+
+    ci = 9785
+    pk = 84006aff0cafe8c9 898e169c089a115b
+    sourceFunc = /vesta/vestasys.org/bridges/generics/8/build.ves/compileOne(), line 413, col 12
+
+      ci = 9784
+      pk = cdc26a48b5554b88 e7d527c62a17770a
+      sourceFunc = _run_tool, command line: /usr/bin/g++-3.4 -c -I -I/usr/include -I/usr/include/c++/3.4 -pipe -O0 -g2 -D_FILE_OFFSET_BITS=64 -D_REENTRANT SizeAssert.C
+
+    ...
+\end{verbatim}
+
+Here's an example using \link{#--derived-file}{--derived-file}:
+
+\begin{verbatim}
+% PrintCallGraph --derived-file 0xb9859851
+Found 34 call trees referring to derived file 0xb9859851
+
+ci = 11545
+pk = 49c6edcc07dd614a 6a6e749ca2be4ec7
+sourceFunc = /vesta/vestasys.org/vesta/cache/checkout/64.ken_xorian.net.4/7/src/docs.ves() (special)
+
+  ci = 957
+  [No reference to derived 0xb9859851]
+
+  ci = 11357
+  [No reference to derived 0xb9859851]
+
+  ci = 11378
+  [No reference to derived 0xb9859851]
+
+  ci = 11544
+  pk = 2404f30a886aef53 1a851effbb1e2bd2
+  sourceFunc = /vesta/vestasys.org/vesta/cache/checkout/64.ken_xorian.net.4/7/src/server/docs.ves() (special)
+
+    ci = 11543
+    pk = 7fe6ba32bb4bc34e dd8c9169a6cfa5fb
+    sourceFunc = /vesta/vestasys.org/bridges/mtex/1/build.ves/mtex(), line 83, col 9
+
+      ci = 11262
+      [No reference to derived 0xb9859851]
+
+      ci = 11542
+      pk = 2c8f3695172b80a3 b344d44f939fd060
+      sourceFunc = /vesta/vestasys.org/bridges/mtex/1/build.ves/mtex(), line 83, col 9
+
+        ci = 11262
+        [No reference to derived 0xb9859851]
+
+        ci = 11508
+        [No reference to derived 0xb9859851]
+
+        ci = 11541
+        pk = f20d4c257767c26f 1aa28b1f05fe072e
+        sourceFunc = /vesta/vestasys.org/bridges/mtex/1/build.ves/mtex(), line 83, col 9
+
+          ci = 11262
+          [No reference to derived 0xb9859851]
+
+          ci = 11421
+          pk = 37434e39a4f08e0f aa26b89dd8ca32be
+          sourceFunc = /vesta/vestasys.org/bridges/mtex/1/build.ves/run_both(), line 25, col 13
+
+            ci = 11399
+            pk = bac7223dad8bf05d 6d2d9e8d4b2b7678
+            sourceFunc = /vesta/vestasys.org/bridges/lim/2/build.ves/lim(), line 18, col 8
+
+              ci = 11262
+              [No reference to derived 0xb9859851]
+
+              ci = 11398
+              pk = 5f6d94a10c3c3100 d6aae1e475ed8f5f
+              sourceFunc = _run_tool, command line: lim mtex2html.lim
+
+            ci = 11420
+            [No reference to derived 0xb9859851]
+
+          ci = 11462
+          [No reference to derived 0xb9859851]
+
+          ci = 11492
+          [No reference to derived 0xb9859851]
+
+          ci = 11516
+          [No reference to derived 0xb9859851]
+
+          ci = 11540
+          [No reference to derived 0xb9859851]
+
+      ci = 11529
+      [No reference to derived 0xb9859851]
+
+...
+\end{verbatim}
+
+\section{\anchor{Exit_Status}{Exit Status}}
+
+The following exit values are returned:
+
+\begin{itemize} 
+\item \bf{0} : Successful completion (including when no work is done because \link{#--help}{--help} is used)
+\item \bf{1} : Command line parsing error (including when no search is specified)
+\item \bf{2} : Error reading the cache's graph log
+\item \bf{3} : Configuration error (e.g. trouble reading configuration file or missing settings)
+\item \bf{4} : Any other fatal errors
+\end{itemize}
+
+\section{\anchor{Memory}{Memory Usage}}
+
+Unfortunately, \bf{PrintCallGraph} can use a lot of memory.
+
+In general, the Vesta cache is designed to efficiently determine
+whether a previous build result can be re-used.  It is not designed to
+efficiently answer user queries about past builds.
+
+In particular, \bf{PrintCallGraph} must read the cache's graph log.
+Each entry in the cache represents one function call.  The graph log
+has information on which other cache entries were the functions called
+by each function.  (These are normally called "child cache entries" or
+just "children.")  As new entries are added to the cache, information
+on their children are appeneded to the graph log.  So each entry in
+the graph log can refer to any earlier entry in the graph log.
+
+\bf{PrintCallGraph} needs to essentially read the entire graph log
+into memory (unlike \link{PrintGraphLog.1.html}{\bf{PrintGraphLog}}
+which simply prints each entry after reading it).  For that reason it
+provides a feature to tell you how much memory it used.  Add
+\link{#--mem}{--mem} to the command line and just before it exits it
+will tell you how much virtual memory it was using:
+
+\begin{verbatim}
+---------- Memory usage at exit ----------
+Total    : 15M
+Resident : 7.4M
+\end{verbatim}
+
+The amount of memory used to hold the graph log in memory will be
+proportional to the size of the graph log on disk.  You may want to
+check the size of that to get an idea about how much memory may be
+used:
+
+\begin{verbatim}
+% (cd `vgetconfig CacheServer MetaDataRoot` ; \
+   cd `vgetconfig CacheServer MetaDataDir` ; \
+   du -sh `vgetconfig CacheServer GraphLogDir`)
+16M     graphLog
+\end{verbatim}
+
+Note that using \link{#--print-deriveds}{\bf{--print-deriveds}}
+increases memory usage.  It forces \bf{PrintCallGraph} to keep
+additional information from the graph log in memory.
+
+\section{\anchor{Configuration}{Configuration Variables}}
+
+\bf{PrintCallGraph} locates the graphLog file by reading site-specific
+configuration information from a Vesta \it{configuration file} named
+\it{vesta.cfg}.  (See \link{vesta.cfg.5.html}{the vesta.cfg(5) man
+page} for an overview.)
+
+The variables used by the \bf{PrintCallGraph} are in the section
+denoted by \tt{[CacheServer]}.  Here are the variables it uses and
+their meanings; the types of the variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{GraphLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores its graph log.
+
+\item{\tt{SCacheDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+function cache stores cache entries.
+\end{description}
+
+\section{\anchor{Files}{Files}}
+
+\begin{description}
+\item{\tt{$MetaDataRoot/$MetatDataDir/$GraphLogDir/*.log}}
+GraphLog files.  The graph log records elements of the cache entry
+graph for use by the Vesta-2 weeder.
+\item{\tt{$MetaDataRoot/$MetatDataDir/$SCacheDir/}}
+The root of the sub-tree in which stable cache entry files (also known
+as MultiPKFiles) are stored.  The files are stored under a pathname
+formed from their respective primary keys. (See
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)}.)  These files contain the
+"sourceFunc" annotations which are used to describe what each cache
+entry represents.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{PrintCallGraph} only accesses information that the
+\link{VCache.1.html}{\bf{VCache}} daemon has comitted to disk.  You
+may need to use \link{FlushCache.1.html}{\bf{FlushCache}} to get new
+entries comitted to disk before running \bf{PrintCallGraph},
+especially if you're interested in recent builds.  In some cases,
+\bf{PrintCallGraph} will be able to find the function call
+relationships (because the graph log entries have been written to
+disk) but not the "sourceFunc" text annotations describing each
+function call (because the PKFiles containing them \it{haven't} been
+written to disk) unless \link{FlushCache.1.html}{\bf{FlushCache}} is
+run first.
+
+There are a variety of call graph searches which one might want to do
+but which \bf{PrintCallGraph} doesn't implement.  A few possibilites
+are:
+
+\begin{itemize}
+\item Searching for the callers of a particular cache entry rather
+than its callees
+\item Searching for entries by primary key
+\item Searching for the top-level build referencing particular cache
+entries or particular derived files
+\end{itemize}
+
+As described above under \link{#Memory}{"Memory Usage"},
+\bf{PrintCallGraph} uses memory proportional to the size of the
+cache's complete graph log.
+
+There are some kinds of information the user would find useful about
+individual calls that \bf{PrintCallGraph} can't provide.  One example
+is function call parameter values, which are not recorded in a way
+that they can be retrieved from the cache.
+
+It can be difficult to keep track of the calling function when reading
+the output of \bf{PrintCallGraph}.  Some sort of richer user interface
+like a GUI or a web-based view would that allowed collapsing and
+expanding portions of the call trees would make it easier to
+understand the results.  An output format that can be more easily
+consumed by other programs like XML could be added to facilitate this.
+
+There are some obscure error conditions which should never come up in
+practice that can result in warning messages about problems reading
+files while trying to retrieve the "sourceFunc" text annotations.
+These problems have no effect other than preventing retrieval of the
+"sourceFunc" annotations and can be ignored, but might indicate that
+something is wrong with the cache's on-disk data files.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{VCache.1.html}{VCache(1)},
+\link{PrintGraphLog.1.html}{PrintGraphLog(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{FlushCache.1.html}{FlushCache(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{MultiPKFile.5.html}{MultiPKFile(5)}
+
+\section{\anchor{Author}{Author}}
+
+Kenneth C. Schalk <\tt{ken AT xorian DOT net}>

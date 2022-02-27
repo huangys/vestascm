@@ -1,0 +1,369 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmeasure(8) man page}{vmeasure}{8}
+
+\section{Name}
+
+vmeasure - Measure objects in the repository
+
+\section{Synopsis}
+
+\bf{vmeasure}
+[\link{#-b}{-b} |
+ \link{#-c}{-c} | 
+ \link{#-C}{-C} | 
+ \link{#-s}{-s} | 
+ \link{#-S}{-S} | 
+ \link{#-r}{-r} | 
+ \link{#-d}{-d} | 
+ \link{#-t}{-t}]
+[\link{#-R}{-R \it{host[:port]}}]
+\it{path [path...]}
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Examples}{Examples}
+\item \link{#Limitations}{Limitations}
+\item \link{#See Also}{See Also}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+\bf{vmeasure} is a tool for measuring objects in the repository.  It
+can be userd to determine the amount of space consumed by an
+individual version or the import tree of an entire build.  It can also
+be used to get statistics about the repository's internal directory
+representation of one or more directories.  (The information it
+provides is probably most interesting to developers and
+administrators.)
+
+By default, it will measure the complete contents of the version (when
+given a directory) or all versions in the import tree of a model (when
+given an SDL model file).  The different statistics returned are:
+
+\begin{description}
+\item{\it{total files}}
+The total number of files encountered.
+\item{\it{unique files}}
+The total number of unique files encountered.  This will always be
+less than or equal to the total number of files.  You can have
+multiple instances of the same file in a number of ways, such as
+having two different file names with identical contents or importing
+multiple versions of the same package with some files being the same
+between the different versions.
+\item{\it{unique file size}}
+The total on-disk size of the unique files encountered.  This is
+useful for gauging how much disk space will be needed when replicating
+a version or the imports of a build.
+\item{\it{total directories}}
+The total number of directories encountered.
+\item{\it{directory size}}
+The total size of the repository's representation of all directories
+encountered.  Because the repository server keeps all directories in
+memory, this represents the amount of virtual memory space in the
+server consumed by the directories.
+\end{description}
+
+If multiple paths are given, each one is measured separately.  This
+means that simply adding the numbers given for each path won't give an
+accurate total.  You can instead request either a single grand total
+after processing all arguments together (with the \link{#-t}{-t flag})
+or that each path after the first only count those files and
+directories not part of the earlier arguments (with the \link{#-d}{-d
+flag}).
+
+The different statistics \bf{vmeasure} can display about the
+repository's internal directory representation are:
+
+\begin{description}
+\item{\it{base chain length}}
+Both mutable and immutable directories in the repository can be
+represented as a delta over some other immutable directory.  For
+example, version 2 of a package is usually a delta over version 1 of
+the same package.  The base chain length is the total number of
+directories in this delta encoding going back to some initial version.
+\item{\it{total entry count}}
+The total number of directory entries in the specified directory and
+every directory along its base chain.  This includes directory entries
+for objects replaced or deleted in later versions.
+\item{\it{used entry count}}
+The number of directory entries from this directory and directories
+along its base chain which make up the directory.  This includes only
+those directory entries that show up when listing the directory.
+\item{\it{total entry size}}
+The total size of the in-memory representation of the specified
+directory and every directory along its base chain.
+\item{\it{used entry size}}
+The size of the in-memory representation of the directory entries from
+this directory and directories along its base chain which make up the
+directory.
+\end{description}
+
+The \link{#-d}{-r flag} will display all of these statistics.  A
+single statistic can be selected by using one of these command-line
+flags:\link{#-b}{-b}, \link{#-c}{-c}, \link{#-C}{-C}, \link{#-s}{-s},
+\link{#-S}{-S}.
+
+Directories with long base chains or high amounts of unused directory
+entries can have a performance impact on the repository.  Listing a
+directory and lookups within a directory require iterating through the
+entire base chain, and is proportional to the total representation of
+all those directories.
+
+You can reduce a directory's base chain length (and improve the
+efficiency of operations within it) with
+\link{vcollapsebase.8.html}{\bf{vcollapsebase}(8)}.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-d}{-d}}
+Rather than measuring each argument separately, measure each as a
+\it{delta} over the previous arguments.  That is, measure the space
+required to replicate each argument if all previous arguments had
+already been replicated.
+\item{\anchor{-t}{-t}}
+Rather than measuring each argument separately, measure them all
+together and print a grand \it{total}.  That is, measure the space
+required to replicate all of them.
+\item{\anchor{-r}{-r}}
+Print all the \it{raw} statistics about the repository's internal
+directory representation.
+\item{\anchor{-b}{-b}}
+Only print the base chain length.
+\item{\anchor{-c}{-c}}
+Only print the used entry count.
+\item{\anchor{-C}{-C}}
+Only print the total entry count.
+\item{\anchor{-s}{-s}}
+Only print the used entry size.
+\item{\anchor{-S}{-S}}
+Only print the total entry size.
+\item{\anchor{-R}{-R} \it{repos}}
+Measure in \it{repos} instead of the default local repository.  The
+repository is specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\end{description}
+
+\section{\anchor{Examples}{Examples}}
+
+Here's an example of the output of \bf{vmeasure} used on several Vesta
+release top-level models:
+
+\begin{verbatim}
+% vmeasure /vesta/vestasys.org/vesta/release/1?/linux_i386.main.ves  
+/vesta/vestasys.org/vesta/release/10/linux_i386.main.ves
+        total files       = 2.7k
+        unique files      = 2.6k
+        unique file size  = 33M
+        total directories = 182
+        directory size    = 97K
+/vesta/vestasys.org/vesta/release/11/linux_i386.main.ves
+        total files       = 2.7k
+        unique files      = 2.6k
+        unique file size  = 33M
+        total directories = 182
+        directory size    = 97K
+/vesta/vestasys.org/vesta/release/12/linux_i386.main.ves
+        total files       = 2.8k
+        unique files      = 2.7k
+        unique file size  = 35M
+        total directories = 186
+        directory size    = 102K
+\end{verbatim}
+
+What does this output tell us about the changes between \tt{release/10}
+and \tt{release/12}?
+
+\begin{itemize}
+\item The number of source files increased by about 100
+\item The amount of on-disk storage space for all the source files
+increased by about 2 megabytes
+\item The amount of repository server virutal memory space used to
+hold the all the source directories increased by about 5 kilobytes
+\end{itemize}
+
+Let's try that again with \link{#-d}{the -d flag}:
+
+\begin{verbatim}
+% vmeasure -d /vesta/vestasys.org/vesta/release/1?/linux_i386.main.ves  
+/vesta/vestasys.org/vesta/release/10/linux_i386.main.ves
+        total files       = 2.7k
+        unique files      = 2.6k
+        unique file size  = 33M
+        total directories = 182
+        directory size    = 97K
+/vesta/vestasys.org/vesta/release/11/linux_i386.main.ves (delta)
+        total files       = 521
+        unique files      = 123
+        unique file size  = 1.3M
+        total directories = 32
+        directory size    = 20K
+/vesta/vestasys.org/vesta/release/12/linux_i386.main.ves (delta)
+        total files       = 830
+        unique files      = 353
+        unique file size  = 4.5M
+        total directories = 44
+        directory size    = 31K
+\end{verbatim}
+
+The numbers displayed for \tt{release/10} are the same because it's
+the first argument.  The numbers displayed for \tt{release/11}
+represent only those files and directories which were not also in the
+import three of \tt{release/10}:
+
+\begin{itemize}
+\item 123 files were modified or added
+\item The added/modified files take up 1.3 megabytes of disk space
+\item 32 directories were modified (including having a file within
+them modified) or added
+\end{itemize}
+
+The numbers displayed for \tt{release/12} represent only those files
+and directories which were not also in the import three of either
+\tt{release/10} or \tt{release/11}.  Essentially, the numbers for each
+argument show the resources that would be used if you replicated that
+build if the previous arguments had already been replicated.
+
+To get a grand total we can use \link{#-t}{the -t flag}:
+
+\begin{verbatim}
+% vmeasure -t /vesta/vestasys.org/vesta/release/1?/linux_i386.main.ves  
+Total:
+        total files       = 4.0k
+        unique files      = 3.1k
+        unique file size  = 39M
+        total directories = 258
+        directory size    = 148K
+\end{verbatim}
+
+This gives an approximation of the total resources used by all three
+builds.
+
+Here's an example of the output of \bf{vmeasure} used to get
+information about the repository's internal directory representation
+of several versions of the Vesta release:
+
+\begin{verbatim}
+% vmeasure -r /vesta/vestasys.org/vesta/release/[0123]
+/vesta/vestasys.org/vesta/release/0:
+        base chain length = 0
+        used entry count  = 3
+        total entry count = 3
+        used entry size   = 104
+        total entry size  = 104
+/vesta/vestasys.org/vesta/release/1:
+        base chain length = 1
+        used entry count  = 3
+        total entry count = 5
+        used entry size   = 104
+        total entry size  = 174
+/vesta/vestasys.org/vesta/release/2:
+        base chain length = 2
+        used entry count  = 4
+        total entry count = 8
+        used entry size   = 137
+        total entry size  = 277
+/vesta/vestasys.org/vesta/release/3:
+        base chain length = 3
+        used entry count  = 7
+        total entry count = 14
+        used entry size   = 277
+        total entry size  = 506
+\end{verbatim}
+
+What does this output tell us?
+
+\begin{itemize}
+\item Each directory has a base chain length identical to its version
+number.  Though we don't know this for sure without looking at other
+information, it's a good bet that version 3 is based on version 2,
+version 2 is based on version 1, and version 1 is based on version 0.
+
+\item Version 1 has the same number of directory entries as version 0:
+3.  However there are two unused entries along the base chain, so 2 of
+the 3 files must have been changed.  From the difference in size,
+those two shadowed entries seem to take up 70 bytes.
+
+\item Version 2 has one more directory entry but has 3 more total
+directory entries.  The difference in the total directory entries (8 -
+5) tells us that one object was added and two of the existing ones
+were changed.  From the difference in the used entry size (137 - 104),
+it looks like the new directory entry takes up 33 bytes.  The
+remaining difference in the total over version 1 (277 - 174 - 33) is
+70 bytes.  (Probably the same two directory entries were changed in
+version 2 as in version 1.)
+
+\item Version 3 adds 3 more new directory entries for a total of 7.
+The difference in the total directory entries (14 - 8) tells us that 3
+were changed in addition to the three new objects added.  The
+difference in the used entry size (277 - 137) tells us that the three
+new directory entries take up 140 bytes.  The remaining difference in
+the total over version 2 (506 - 277 - 140) tells us that the entries
+changed over version 2 consume 89 bytes.
+\end{itemize}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+The "directory size" values printed can be an over-estimate of the
+amount of space required.  The repository uses a delta encoding for
+directories, but when replicating this only provides savings in the
+destination repository if the previous version is already present at
+the destination.  If not, a complete copy of the directory structure
+is replicated rather than just a delta.  (Note that this has nothing
+to do with file contents.)  The "directory size" values printed by
+\bf{vmeasure} represent the full size needed not the delta size.
+Fixing this requires an update to the repository's
+\tt{measureDirectory} call to return information about the size of
+just the directory delta.
+
+When given an appendable directory, no measurements are taken in the
+default mode.  (The raw statistics do return information on the size
+of the directory representation.)  It could instead recurse down to
+versions contained within that appendable directory and measure their
+total size.
+
+\section{\anchor{See Also}{See Also}}
+
+\link{repository.8.html}{\bf{repository}(8)},
+\link{vcollapsebase.8.html}{\bf{vcollapsebase}(8)},
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{Author}
+
+Ken Schalk (\tt{ken@xorian.net}) and
+\link{http://www.tim-mann.org/}{Tim Mann}

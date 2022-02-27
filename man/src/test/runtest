@@ -1,0 +1,49 @@
+: ${lim=../`machine`/lim}
+
+nl="
+"
+
+for x in *.hw
+do
+	output=`echo hello world | $lim $x` || echo "$x failed, exit status: $?$nl" >&2
+	case "$output" in
+	"hello world")	;;
+	*)		echo "$x failed: output=$output$nl" >&2;;
+	esac
+done
+
+echo "Expecting 'Four queens: 2413'" >&2
+$lim 4queens.ok || echo "4queens.ok failed, exit status: $?" >&2
+
+echo
+
+echo "Expecting 'empty.fail: No procedure Main'" >&2
+$lim empty.fail
+
+echo
+
+echo "Expecting 'hello world'
+'abort.fail aborted at line 2, read 0 chars, wrote 12 chars'" >&2
+$lim abort.fail
+
+echo
+
+echo "Expecting 'bad_string.fail: Illegal string constant near line 2'" >&2
+$lim bad_string.fail
+
+echo
+
+echo "Expecting no output" >&2
+echo a | $lim -debug=1 erropt.ok 2>&1
+
+echo 
+
+echo "Expecting 'hello world'" >&2
+echo a | $lim erropt.ok 2>&1
+
+echo
+
+echo "Expecting 'badnum.fail: number too large near line 1'" >&2
+$lim badnum.fail 2>&1
+
+echo 

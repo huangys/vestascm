@@ -1,0 +1,112 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{mountrepos - Mount the Vesta repository}{mountrepos}{8}
+
+\section{Name}
+
+\bf{mountrepos} - Mount the Vesta repository
+
+\section{Synopsis}
+
+\bf{mountrepos}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+
+The \bf{mountrepos} command is
+a simple shell script to mount the Vesta repository on the local host.
+It assumes the repository server is already running on the host specified
+in the active vesta.cfg file.  
+
+To run mountrepos on Linux, you need to be root.
+
+To run mountrepos on Tru64 Unix, it is sufficient to be either the
+owner of the mount point directories specified in vesta.cfg for the
+repository (normally /vesta and /vesta-work), or root.  It can be
+convenient for these directories to be owned by the Vesta
+administrator account so that root access is not required to mount
+them.  
+
+If the mount point directories do not already exist, mountrepos
+attempts to create them, but this is likely to fail unless you are
+root.
+
+\section{Configuration}
+
+The following values are obtained from the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{[Repository]NFS_host}}
+Host name of the repository NFS server.
+\item{\it{[Repository]NFS_port}}
+UDP port of the repository NFS server.
+\item{\it{[UserInterface]AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{[UserInterface]MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{[Run_Tool]VolatileRootName}}
+The filename under which the local tree of volatile directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work/.volatile}.
+\item{\it{[Repository]MountFlags}}
+Flags to pass to \link{vmount.8.html}{\bf{vmount}(8)} when mounting
+the appendable and mutable roots.  Default: -S -I (soft, interruptable).
+\item{\it{[Run_Tool]VolatileMountFlags}}
+Flags to pass to \link{vmount.8.html}{\bf{vmount}(8)} when mounting
+the volatile root.  Default: -I (hard, interruptable).
+\end{description}
+
+\section{Diagnostics}
+
+Here are the most common error messages you are likely to see and what
+they generally mean.
+
+\it{Not owner}:  You are neither the owner
+of the mount point directories nor root.
+
+\it{Device busy}: Either the repository is already mounted, or some
+process on your machine is cd'ed into one of the mount point
+directories.
+
+\it{mkdir: cannot write directory}: One of the mount point
+directories did not exist, and mountrepos tried to create it, but it failed
+because you do not have write permission to the parent directory (usually "/").
+
+\it{Timed out}: The repository is down.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repository.8.html}{\bf{repository}(8)},
+\link{umountrepos.8.html}{\bf{umountrepos}(8)},
+\link{vmount.8.html}{\bf{vmount}(8)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Tue Apr 29 23:18:47 PDT 2003 by mann
+     modified on Mon Nov 12 18:37:13 EST 2001 by ken@xorian.net
+\end{verbatim}

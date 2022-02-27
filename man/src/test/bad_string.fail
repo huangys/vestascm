@@ -1,0 +1,8 @@
+PROC Main() IS
+    P("foo")
+END;
+
+PROC  P(a) IS
+  a := 10
+END;
+

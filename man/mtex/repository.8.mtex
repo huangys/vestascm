@@ -1,0 +1,1694 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{repository - Vesta repository server}{repository}{8}
+
+\section{Name}
+
+\bf{repository} - Vesta repository server
+
+\section{Synopsis}
+
+\bf{repository} [\link{#-h}{-h}] [\link{#-d}{-d \it{level}}] [\link{#-f}{-f \it{first-ckp}}] [\link{#-D}{-D \it{dump-file-name}}]
+
+In the most common usage, all arguments are defaulted.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#NFSInterface}{NFS Interface}
+\item \link{#SRPCInterface}{SRPC Interface}
+\item \link{#AccessControl}{Access Control}
+\begin{itemize}
+\item \link{#Principal identification and authentication}{Principal identification and authentication}
+\item \link{#Access controls}{Access controls}
+\item \link{#Access checking}{Access checking}
+\item \link{#Export file}{Export file}
+\item \link{#Group file}{Group file}
+\item \link{#Aliases and the alias file}{Aliases and the alias file}
+\item \link{#Limitations}{Limitations}
+\end{itemize}
+\item \link{#Performance Tuning}{Performance Tuning}
+\begin{itemize}
+\item \link{#File Descriptor Caching}{File Descriptor Caching}
+\item \link{#File Descriptor Cache Locking}{File Descriptor Cache Locking}
+\item \link{#NFS Threads}{NFS Threads}
+\item \link{#NFS Buffering}{NFS Buffering}
+\item \link{#NFS Duplicate Suppression}{NFS Duplicate Suppression}
+\item \link{#NFS Duplicate Suppression Locking}{NFS Duplicate Suppression Locking}
+\item \link{#Copy-on-Write Limits}{Copy-on-Write Limits}
+\item \link{#SRPC Threads}{SRPC Threads}
+\item \link{#SRPC Timeouts}{SRPC Timeouts}
+\end{itemize}
+\item \link{#Transaction Log Directory}{Transaction Log Directory}
+\item \link{#Flags}{Flags}
+\item \link{#Weeding Hooks}{Weeding Hooks}
+\item \link{#Configuration}{Configuration}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+
+The \bf{repository} program is the Vesta repository server.  It
+provides stable storage for immutable, versioned Vesta sources in
+a tree of \it{appendable and immutable directories},
+for working sources that are still being
+edited in a tree of \it{mutable directories}, and for Vesta \it{derived files}.
+The server also provides a tree of \it{volatile directories}, which allow tools
+started by the evaluator to view Vesta bindings as
+filesystem directories, with the changes the tools make recorded by
+the repository and available to the evaluator.
+
+\section{\anchor{NFSInterface}{NFS Interface}}
+
+The repository's NFS interface makes the trees of appendable and immutable,
+mutable, and volatile directories visible as a part of the ordinary file system
+name space.  The appendable/immutable tree is conventionally mounted under
+\tt{/vesta}, the mutable tree under \tt{/vesta-work}, and the volatile
+tree under \tt{/vesta-work/.volatile}.  These
+names can be customized with the \it{[UserInterface]AppendableRootName} and
+\it{[UserInterface]MutableRootName} settings in the
+Vesta configuration file (vesta.cfg).
+
+The NFS interface provides a mildly distorted view of the repository's
+contents.  All types of Vesta directories are
+manifested as NFS directories, and both mutable and immutable files
+are manifested as NFS files.  Stubs and ghosts are normally manifested
+as empty files with unusual access permissions.  On a master stub, the
+read and execute permissions are turned off, but the setuid bit is
+turned on.  The write permissions are meaningful, so they are allowed
+to show through.  Thus a master stub will typically appear in an "ls
+-l" listing with mode \tt{--wS------} or \tt{--wS-w----}.  On a
+non-master stub, all permissions are turned off, but the setgid bit is
+turned on, so "ls -l" will show \tt{------S---}.  On a ghost, all
+permissions are turned off, but the sticky bit is turned on, so "ls
+-l" will show \tt{---------T}.  
+
+Exception: If a stub or ghost has a nonempty value for its
+\tt{symlink-to} attribute, it is manifested as a symbolic link.  The
+attribute should have a singleton value; the results are unspecified
+if it is multivalued.  Normally, the attribute's value gives the
+symlink's value.  However, if the attribute's value is the special
+token "$LAST", the symlink's value is the arc in the current directory
+that consists entirely of decimal digits, has no extra leading zeroes, is
+not bound to a ghost or stub, and has the largest numeric value of all
+such arcs.  If there are no such arcs, the value is -1.
+
+The NFS interface is exported on a nonstandard UDP port and is not
+registered with the portmapper or mount daemon.  Instead, the host and
+port number must be obtained from the Vesta configuration file,
+settings \it{NFS_host} and \it{NFS_port} in the \it{[Repository]} section.
+A special program \link{vmount.8.html}{\bf{vmount}(8)} is available for
+mounting the repository.  A pair of shell scripts provides a more
+convenient front-end to this program; see
+\link{mountrepos.8.html}{\bf{mountrepos}(8)}, and
+\link{umountrepos.8.html}{\bf{umountrepos}(8)}.
+
+\section{\anchor{SRPCInterface}{SRPC Interface}}
+
+The repository also has a remote procedure call interface.  This
+interface provides access to functions that do not map naturally onto
+the NFS interface, such as atomic checkin/checkout of packages,
+replication, etc.  The interface is implemented using the
+Vesta-specific SRPC (simple remote procedure call) protocol, but this
+detail is not important to client programs; they use the interface by
+linking with a C++ library provided by the repository.  This library
+layers a convenient set of classes and functions atop the raw SRPC
+calls.
+
+The repository library's VDirSurrogate class provides access to
+all kinds of Vesta source objects, including all forms of directory,
+files, ghosts, and stubs.  It is a subclass of VestaSource that
+implements its operations as SRPC calls to the repository server.
+Many operations that are not available through the NFS interface are
+provided in VDirSurrogate.  Operations on the LongId class and
+most of the operations on the AccessControl class are also
+available.
+
+The VestaSourceAtomic class provides a way to group several
+VDirSurrogate operations into an atomic unit.  The repository user
+interface tools (see \link{repos-ui.1.html}{\bf{repos-ui}(1)}) are
+built on top of VDirSurrogate and VestaSourceAtomic, and the Vesta
+evaluator also makes use of VDirSurrogate.
+
+Access to lower-level repository functions is provided through the
+SourceOrDerived
+class.  These functions are used by the Vesta 
+\link{vesta.1.html}{evaluator} and 
+\link{VestaWeed.1.html}{weeder}.
+The class gets its name from the fact that the repository stores both
+the files that hold sources and those that hold deriveds in one
+unified pool.  The class contains methods for creating and/or opening
+files in the pool (used by the evaluator), for triggering the
+repository's part of the weeding process (used by the weeder), and for
+triggering a repository checkpoint to speed up crash recovery
+(also used by the weeder).
+
+For low-level debugging and other sorts of wizardry, the
+\link{TestVDirSurrogate.8.html}{\bf{TestVDirSurrogate}(8)} program is
+a test driver that can invoke most functions in VDirSurrogate and
+LongId, while the \link{TestShortId.8.html}{\bf{TestShortId}(8)}
+program can invoke most functions in SourceOrDerived.
+
+\section{\anchor{AccessControl}{Access Control}}
+
+The repository supports replication and remote access between sites
+under different administrations (called \it{realms}), with different
+sets of authorized users and groups.  Therefore, the repository does
+access control based on a global (worldwide) namespace of principals,
+not simply the local Unix users and groups.  The access controls that
+can be placed on sources in the repository are similar to ordinary
+Unix access controls, but written in terms of global principal names
+and slightly generalized.
+
+\bf{\anchor{Principal identification and authentication}{Principal identification and authentication}}
+
+Principals are identified by character string names of the form
+\tt{user@realm} or \tt{^group@realm}.  A calling process attempting to
+access the repository can claim and authenticate its identity as a
+principal in several ways, described in this subsection.  An export
+file read by the repository at startup controls which forms of
+identification and authentication are accepted from which client
+hosts.  The syntax of the export file is given in a later subsection.
+
+First, a principal can identify itself to the repository using numeric
+Unix user and group identifiers.  This form of identification is
+primarily for use by local NFS clients, and corresponds to the
+AUTH_UNIX authentication flavor of the NFS protocol.  When the
+repository receives a Unix uid or gid, it uses the local operating
+system's user and group databases to translate the identifier to a
+character-string user or group name, prepends \tt{^} for groups, then
+appends \tt{@}\it{realm} to obtain a global name.  Here \it{realm} is
+the local realm name, specified as \it{[Repository]realm} in the Vesta
+configuration file.
+
+Unix identities are authenticated only by origin: if the repository's
+export table specifies that a particular client host is trusted for
+Unix identities, then any request coming from that host with a Unix
+identity is accepted as being from the identified principal.
+(A host is identified by its IP address.)  This form of authentication
+obviously offers poor security, but it is by far the most common form
+used by NFS clients and thus must be supported.  The repository currently
+does not check what port number an NFS request originates from.
+
+Second, a principal can identify itself by directly giving a global
+user name, with the \tt{user@realm} syntax.  This form of
+identification is primarily for use by Vesta tools that communicate
+with the repository through its SRPC interface, such as the
+\link{repos-ui.1.html}{\bf{repos-ui}(1)} tools,
+\link{vrepl.1.html}{\bf{vrepl}(1)}, and
+\link{vmaster.1.html}{\bf{vmaster}(1)}.  The current version of the
+repository client-side libraries uses global identities automatically.
+Older versions used Unix identities, so for compatibility the
+repository will still accept them.
+
+Calling processes that identify themselves using global names do not
+supply and authenticate their group memberships.  Instead, the
+repository has a table of global group memberships for global users,
+and it looks up a caller's user name in this table to determine which
+groups the caller belongs to.  The repository's group table comes from
+two sources.  First, group memberships for all locally-known users are
+obtained from the local operating system's user and group databases.
+Each uid and gid in these databases is translated into a global name
+as described above, and the results are entered into the repository's
+group membership table.  Second, the repository reads a file of
+additional group memberships; the syntax of this file is given in a
+later subsection.
+
+Currently global user names are also authenticated only by origin.
+The export file can specify that a particular host is trusted to give
+any global name, or that it is trusted only for global names with a
+specified \tt{@realm} suffix.
+
+Finally, in the future a principal may be able to identify and
+authenticate itself using GSS-API.  The repository's export file can
+specify which hosts GSS-API authentication will be accepted from, and
+can optionally limit which realms the names can be from.  We
+anticipate that GSS-API will most likely be used as an interface to
+Kerberos.  Since Kerberos realm names are conventionally written in
+upper case, the repository makes case-independent comparisons in its
+access checking.  Thus a Kerberos principal named "fred@EXAMPLE.COM"
+will match the Vesta global name "fred@example.com".
+
+When authenticating itself to other processes, the repository
+determines which flavor to use from the
+\it{[Repository]default_flavor} configuration setting.  NFS clients
+always use the \tt{unix} flavor.  Other clients use the
+\it{[UserInterface]default_flavor} configuration setting by default;
+this is normally \tt{global}.
+
+\bf{\anchor{Access controls}{Access controls}}
+
+The access control on a file or directory in the repository has an
+owner, a group, and mode bits, similar to ordinary Unix access
+controls, but there are some differences.  
+
+The owner and group are both sets, not singletons.  They are
+represented as the mutable attributes \tt{#owner} and \tt{#group},
+which are set-valued.  Any global user in the owner set has
+ownership access to the object; any user that is a member of a global
+group in the group set has group access.  The main reason we allow
+multiple owners and groups is so that replicated data can have a local
+owner and group in each realm that holds a copy, if desired.
+
+The primary mode bits are represented in the \tt{#mode} attribute, as
+the 3-digit octal number obtained by OR-ing the standard Unix mode
+bits for read, write, and search access by owner, group, or world:
+
+\begin{verbatim}
+S_IRUSR   400   read permission: owner
+S_IWUSR   200   write permission: owner
+S_IXUSR   100   search permission: owner
+S_IRGRP   040   read permission: group
+S_IWGRP   020   write permission: group
+S_IXGRP   010   search permission: group
+S_IROTH   004   read permission: world
+S_IWOTH   002   write permission: world
+S_IXOTH   001   search permission: world
+\end{verbatim}
+
+The setuid and setgid mode bits are represented by the \tt{#setuid}
+and \tt{#setgid} attributes.  If the value of \tt{#owner} that is in
+the local realm (if any) is also a value of \tt{#setuid}, the setuid
+bit is set, otherwise not.  (If more than one value of \tt{#owner} is
+in the local realm, one of the values is chosen arbitrarily.  This is
+the same value that will appear as the file's owner through the NFS
+interface, as described below.)  The setgid bit works the same way,
+using the values of \tt{#group} and \tt{#setgid}.
+
+A source that does not have an \tt{#owner}, \tt{#group}, or \tt{#mode}
+attribute inherits the corresponding value from its parent directory,
+while a missing \tt{#setuid} or \tt{#setgid} attribute defaults to
+empty.  This form of inheritance is needed in order to provide objects
+that do not have their own attributes with an access control.  It is
+also useful to save some space in the repository, since an object
+whose parent has the same value for some access control does not need
+to store its own copy of that attribute.
+
+The repository does not store execute permission bits for files.
+Instead, each file has a single "executable" flag, which is immutable
+for immutable files, mutable for mutable files.  If the executable
+flag is true, the file's execute permission bits are the same as its
+corresponding read bits; if not, they are all off.  The executable
+flag and execute permission bits are implemented in the NFS glue layer
+above the repository proper.  At the VestaSource interface, the 0111
+bits of a \tt{#mode} are always search permissions.  When the Unix chmod()
+function is invoked on a file through the repository's NFS interface,
+the file's executable flag is formed as the logical OR of the three
+executable bits given.  When stat() is invoked, the executable
+permission bits are formed as described above.
+
+A few complications arise when the repository is accessed using the
+NFS protocol, since there is more information in a Vesta access
+control than can be represented by NFS.  To obtain the numeric owner
+uid reported in an object's NFS attributes, we search for a global
+owner \tt{user@realm}, where \tt{@realm} is the local realm name.  If one is
+found, the \tt{user} portion is translated to a numeric id using the
+local operating system's user database.  The group is then translated
+in the same way.  If a locally known user and/or group is not found,
+special values \tt{vforeign_uid} and \tt{vforeign_gid} specified in
+the Vesta configuration file are used.  If more than one locally known
+user or group is present, one of the alternatives is chosen
+arbitrarily.  If the NFS setattr operation is used to change the owner
+of an object (that is, if the Unix chown command is used), we first
+search for all locally known owners and remove them, leaving any other
+owners unchanged, then add the new owner.  Again groups are handled in
+the same way.  Owners and groups that are removed in this way are also
+removed from the \tt{#setuid} and \tt{#setgid} attributes if present.
+
+\bf{\anchor{Access checking}{Access checking}}
+
+Checking whether a calling process has access permission works as follows.
+
+First, the requested operation is classified by type: unrestricted,
+agreement (could potentially violate the replica agreement
+invariant), administrative (restricted to the system administrator),
+ownership (for example changing the access control), read, write,
+search, execute, del, setuid, or setgid.  The classification will
+generally be unsurprising; odd cases are treated specifically below.
+
+If the client host is specified in the export file to have readonly access,
+operations of types administrative, ownership, write, del, setuid, and
+setgid are refused before considering any of the other rules below.
+
+Almost all operation types are permitted if the requesting process is
+a Vesta administrator.  Three Vesta administrators with slightly
+different privileges may be configured in vesta.cfg:
+\it{[Repository]root_user}, \it{[Repository]vadmin_user}, and
+\it{[Repository]vwizard_user}.  The vadmin user is provided as a
+convenience, so that users can be authorized to administer Vesta
+without being given the root password.  The root user has the same
+privileges as vadmin, except that root is granted granted blanket
+permission for setuid and setgid type operations.  The vwizard user
+has the same privileges as vadmin, but is also allowed to perform
+agreement operations, such as deleting children of master appendable
+directories without leaving a ghost, creating children in nonmaster
+appendable directories, etc.  Except for the initial creation of a
+globally unique name under /vesta for packages that originate at your
+site (see \link{#Warning}{warning} below), the vwizard feature should
+be used only in emergencies, since it can create inconsistencies
+between replicas.  Typically the administrative user names will be
+\tt{root@realm} (where realm is the local realm name),
+\tt{vadmin@realm}, and \tt{vwizard@realm}.
+
+An unrestricted operation is always permitted, with no checking.
+
+An administrative operation is permitted only if the requestor is a Vesta
+administrator.
+
+An ownership operation is permitted if the requestor's principal name
+(or one of its aliases) matches one of the owner names in the access
+control.
+
+Read, write, search, and execute operations are checked as follows: If
+the corresponding world permission bit is set, access is granted.  If
+the requestor's principal name (or an alias) matches one of the owner
+names in the access control, and the corresponding owner permission
+bit is set, then access is granted.  If one of the requestor's group
+names matches one of the group names in the access control, and the
+corresponding group permission bit is set, then access is granted.
+Otherwise access is denied.  This algorithm is intentionally slightly
+more liberal than that used in Unix, but matches it in the common cases.
+
+Operations on attributes are classified as follows: Reading attributes
+is unrestricted.  Changing an attribute whose name does not begin with
+\tt{#} is a write operation.  With a few exceptions noted below, changing
+an attribute whose name begins with \tt{#} is an ownership operation.
+
+Changing \tt{#owner} is normally an ownership operation; that is, as
+in Unix System V, users are allowed to "give away" their files.  Some
+Vesta tools (such as \bf{vrepl} with the -a flag) need this ability.
+However, if \it{[Repository]chown_semantics} is set to "BSD", changing
+\tt{#owner} through the NFS interface is an administrative operation.
+Some Unix programs expect BSD semantics and may behave oddly with
+System V semantics.
+
+Clearing or removing a value from the \tt{#setuid} or \tt{#setgid}
+attribute is an ownership operation, but setting or adding a value to
+\tt{#setuid} is a setuid operation, to \tt{#setgid} a setgid
+operation.  A setuid operation is permitted if the requestor is root,
+or if the requestor is the owner and the value being added is his own
+name (including aliases).  A setgid operation is permitted if the
+requestor is root, or if the requestor is the owner and the value
+being added is a group that he is a member of.
+
+Deletion from an appendable directory, leaving a ghost, is a del
+operation.  If \it{[Repository]restrict_delete} is set to 1, del
+operations have the same permission checking as administrative
+operations.  If it is set to 0, del operations have the same
+permission checking as write operations on the directory.
+
+When an object is created, if the caller's user name (not including
+aliases) is one of the owners of the new object's parent, then the new
+object's \tt{#owner} attribute is not automatically set, allowing the
+object to inherit its parent's owner list.  Otherwise, the caller's
+user name (but not any of its aliases) is automatically set into the
+new object's \tt{#owner} attribute as the sole owner.
+
+Each volatile root is owned by the "runtool" user with mode 755.
+Because sources under a volatile root do not have attributes, these
+permissions are inherited by all their descendents.  Thus, anyone can
+examine the files and directories in the volatile tree, but only the
+special runtool user can make changes.
+
+\bf{\anchor{Export file}{Export file}}
+
+As mentioned above, the repository's export file specifies which
+client hosts may access the repository and what forms of
+identification and authentication they may use.  The file format is as
+follows.
+
+\begin{itemize}
+\item Comments are introduced with "\tt{#}", "\tt{;}", or "\tt{//}" and
+continue to the end of the line.   Blank lines are allowed as well.
+
+\item Another file can be textually included with a line of the
+form:
+\begin{flushleft}
+\tt{.} \it{filename}
+\end{flushleft}
+
+\item Other lines take the following form.  Here "[ ]" around an
+element indicate that it is optional, and "..." indicates that the
+preceding element may be repeated zero or more times.  Where
+whitespace is shown, zero or more spaces or tabs may appear in the
+file.
+\begin{flushleft}
+\it{pattern} [\tt{:}] [\it{level} [\it{flavor} [\it{arg}]]\tt{,}]... [\it{level} [\it{flavor} [\it{arg}]]]
+\end{flushleft}
+\end{itemize}
+
+A \it{pattern} can be an Internet hostname, an Internet hostname
+pattern with "\tt{?}" or "\tt{*}" characters as wildcards, an IP
+address in dotted notation, or an IP subnet in the form
+\it{address}/\it{netmask}, where \it{address} is in dotted notation,
+and \it{netmask} either is in dotted notation, or is a single integer
+indicating how many bits are set from the left (for example, /24 =
+/255.255.255.0) .  The "\tt{?}" wildcard matches any one character
+except a dot ("\tt{.}"), while the "\tt{*}" wildcard matches zero or
+more characters that are not dots.  Ordinary characters match
+regardless of case.
+
+A \it{level} can be one of the following strings, case insensitive:
+\tt{allow}, \tt{readwrite}, \tt{rw}, \tt{readonly}, \tt{ro}, \tt{deny}.  
+The levels \tt{readwrite} and \tt{rw} are
+synonyms for \tt{allow}; \tt{ro} is a synonym for \tt{readonly}.
+
+A \it{flavor} can be one of the following strings, case insensitive:
+\tt{unix}, \tt{global}, \tt{gssapi}, \tt{all}, \tt{any}.  Any is a
+synonym for all.
+
+If no (level, flavor, arg) tuples appear for a given pattern, "allow
+all" is supplied by default.  If the flavor is omitted from a tuple,
+it defaults to \tt{all}.
+
+The optional \it{arg} is an argument to the flavor.  Only "allow
+global", "readonly global", "allow gssapi", and "readonly gssapi"
+take an argument.  This argument is a pattern for the realm
+that the global name must originate from, with "\tt{?}" and "\tt{*}"
+wildcards matched as in hostname patterns.  If this argument is
+omitted, any global name is accepted.
+
+When checking whether a request should be admitted, the repository
+scans the export file looking for the last (pattern: level, flavor,
+arg) tuple whose pattern, flavor, and arg match.  If one is found, its
+level applies to this request.  If not, the request is denied.
+
+Here is an example:
+
+\begin{verbatim}
+; Sample export file
+16.0.0.0/8: readonly global *.example.com 
+*.x.example.com: allow unix, allow global x.example.com
+badguy.x.example.com: deny
+*.z.example.com: allow global y.example.com
+\end{verbatim}
+
+The first line says that any host on network 16.0.0.0 may have
+read-only access to the repository if it supplies a global identity of
+the form \tt{user@*.example.com}.  The second line says that hosts whose
+names match the pattern \tt{*.x.example.com} may have read/write access
+to the repository if they supply either a Unix identity, or a global identity
+of the form \tt{user@x.example.com}.  If a request matches both lines,
+the second one will take precedence.  
+The third line makes the host badguy.x.example.com an exception; it is not 
+granted any access.  The fourth line allows hosts from the 
+domain \tt{*.z.example.com} to use names in the global realm \tt{y.example.com}.
+
+\bf{\anchor{Group file}{Group file}}
+
+As mentioned above, the repository's group file gives a (partial) list
+of which global groups various global principals belong to.
+The file format is as follows.
+
+\begin{itemize}
+\item Comments are introduced with "\tt{#}", "\tt{;}", or "\tt{//}" and
+continue to the end of the line.  Blank lines are allowed as well.
+
+\item Another file can be textually included with a line of the
+form:
+\begin{flushleft}
+\tt{.} \it{filename}
+\end{flushleft}
+
+\item Other lines take the following form.  Here "[ ]" around an
+element indicate that it is optional, and "..." indicates that the
+preceding element may be repeated zero or more times.  Where
+whitespace is shown, zero or more spaces or tabs may appear in the
+file.  
+\begin{flushleft} 
+\it{name} \tt{:} [\it{group} [\tt{,}]]... [\it{group}] 
+\end{flushleft}
+\end{itemize}
+
+Here \it{name} is a global user name (\tt{user@realm}) and each
+\it{group} is a global group name (\tt{^group@realm}).  The line says
+that \it{name} is a member of each group listed.  If the same name
+appears on several lines, the memberships accumulate.
+
+Here is an example:
+
+\begin{verbatim}
+// Vesta repository group file for x.example.com
+tom@x.example.com: ^users@y.example.com ^admins@y.example.com
+dick@x.example.com: ^users@y.example.com
+harry@y.example.com: ^users@y.example.com ^admins@y.example.com
+\end{verbatim}
+
+The first line says that besides the locally-known groups he is a
+member of, \tt{tom@x.example.com} is also a member of some
+\tt{y.example.com} groups.  This could be useful if some sources from
+\tt{y.example.com} are replicated in the \tt{x.example.com} repository and
+\tt{tom} needs access to them.  The situation is similar for
+\tt{dick}.  On the third line, \tt{harry@y.example.com} is indicated to
+be a member of some \tt{y.example.com} groups.  This line could be
+useful if \tt{harry} accesses the \tt{x.example.com} repository remotely
+when logged in at \tt{y.example.com}.  Without it, \tt{harry} would not
+obtain his group memberships when accessing the \tt{x.example.com}
+repository, since this repository does not preload its group table
+with the local user and group database from \tt{y.example.com}.
+
+\bf{\anchor{Aliases and the alias file}{Aliases and the alias file}}
+
+As an added convenience feature, the repository can be told to
+recognize a global user or group name as having one or more \it{aliases}.
+When a client authenticates itself as possessing a name that has some
+aliases, it is given the privileges of the aliases as well as those of
+the authenticated name.  Aliases are applied after the client's
+principal identification is translated to a global name, so they work
+even with Unix identification.  The \it{[Repository]root_user} is not
+allowed as an alias.
+
+For example, if user \tt{mann} has accounts in realms \tt{x.example.com}
+and \tt{y.example.com}, and he sometimes logs in at \tt{x.example.com} and
+remotely accesses the repository at \tt{y.example.com}, it would be
+useful for the \tt{y.example.com} repository to regard
+\tt{mann@x.example.com} as having the alias \tt{mann@y.example.com}.  
+
+The aliasing mechanism is neither symmetric nor transitive by default:
+\begin{itemize}
+\item If \tt{mann@x.example.com} has the alias
+\tt{mann@y.example.com}, that does not automatically give
+\tt{mann@y.example.com} the alias \tt{mann@x.example.com}.  If a
+symmetric alias is desired, both directions of aliasing must be listed
+explicitly in the alias file.
+
+\item If \tt{mann@x.example.com} has the
+alias \tt{mann@y.example.com} and \tt{mann@y.example.com} has the
+alias \tt{mann@z.example.com}, that does not automatically give
+\tt{mann@x.example.com} the privileges of \tt{mann@z.example.com}.
+If the latter is desired, \tt{mann@x.example.com} must be 
+given the alias \tt{mann@z.example.com} explicitly.
+\end{itemize}
+
+A user alias can be employed as another way to get group-like functionality.
+For instance, if user \tt{manager@x.example.com} should be automatically
+allowed access to files owned by \tt{tom}, \tt{dick}, and
+\tt{harry@x.example.com}, they can be listed as aliases.
+
+Groups can be aliased as well.  For example, if realms
+\tt{x.example.com} and \tt{y.example.com} are working together on the
+Wonka project and both have a local group named \tt{wonka}, it can be
+useful to alias \tt{^wonka@x.example.com} to \tt{^wonka@y.example.com}
+(and vice versa) at both sites.  That way, users at either site can
+obtain group access to a directory replicated from the other site,
+even if only one of the two groups is on the directory's group access
+control list.
+
+The alias file has the same syntax as the group file, except that user
+names may appear in place of group names.  It is meaningless for a
+user name to be aliased to a group name, or vice versa.  When a
+reciprocal alias is needed, both directions must be included
+explicitly.  For the examples above, the aliases file would read:
+
+\begin{verbatim}
+# Sample aliases file
+mann@x.example.com: mann@y.example.com
+mann@y.example.com: mann@x.example.com
+manager@x.example.com: tom@x.example.com, dick@x.example.com, harry@x.example.com
+^wonka@x.example.com: ^wonka@y.example.com
+^wonka@y.example.com: ^wonka@x.example.com
+\end{verbatim}
+
+\bf{\anchor{Limitations}{Limitations}}
+
+Changes to the local passwd and group databases are not all tracked
+automatically by the repository.  This can result in users not getting
+quite the right privileges after a change until the next time the
+repository's access control tables are reloaded.  The addition of a
+new user or new group is handled automatically, but other cases are
+not, such as when a user is added to a group, is removed from a group,
+is given a different uid, or is deleted from the system.  (The
+repository has no way of knowing when such a change has happened, and
+for reasons of efficiency it maintains its own in-memory cache of the
+local passwd and group databases.)
+
+In more detail, whenever the repository encounters a uid or gid that
+is unknown to it (i.e. that has been added since the repository last
+acquired user/group information from the OS), it attempts a complete
+reload of all access control data both from the host OS and from the
+export, alias, and group files.  This can fail if there is a parsing
+error in the export, alias, or group file, in which case an error
+message is logged by the repository.  If that happens, the repository
+simply adds an entry for the new uid/gid after getting information
+from the OS.
+
+The \link{vaccessrefresh.8.html}{\bf{vaccessrefresh}} utility can be
+used to explicitly ask the repository to pick up changes in the OS
+user/group databases and its own group, alias, and export files.  When
+using \bf{vaccessrefresh}, any errors in parsing the export, alias,
+and group files will be reported to the user.  Restarting the
+repository will also cause it to pick up all access control changes,
+but this is no more effective than using \bf{vaccessrefresh}.
+
+Using the Unix newgrp command with a password to dynamically enter a
+new group that you are not a static member of is not supported by the
+repository.  Currently you may get the group's privileges when going
+through the NFS interface, but you will never get them through the
+SRPC interface.  In the future this feature is more likely to be
+disabled entirely than made to work in all cases.
+
+If several different user names map to the same Unix uid, the
+repository will not treat them all as aliases for one another.
+A user logged in as this uid will get the privileges only of the first
+name that maps to it.
+
+Although \tt{gssapi} is recognized as a flavor in the export file,
+GSS-API authentication is not yet implemented, so allowing it has no
+effect.
+
+\section{\anchor{Performance Tuning}{Performance Tuning}}
+
+Optimizing the performance of any server application is a complicated
+process and usually requires trial and error.  This section provides
+some background on different factors affecting the repository's
+performance and the \link{#Configuration}{configuration settings}
+available for controlling those factors.
+
+\bf{\anchor{File Descriptor Caching}{File Descriptor Caching}}
+
+In order to process a read or write to a source or derived file, the
+repository must have an open file descriptor for it.  Since it is
+common for the multiple reads/writes of the same file to occur close
+together in time, the repository keeps opened file descriptors in its
+\it{file descriptor cache}.  This avoids the time cost of opening and
+closing a file descriptor on each read/write operation.
+
+Like all processes, the repository server has a limit on the total
+number of file descriptors it can have open at any point in time.
+This limit can be set before starting the server, or the
+\it{[Repository]descriptor_limit} configuration setting can be used to
+have the repository set the limit when it starts.  (Note that on some
+platforms this setting can cause the repository to make special calls
+to enable larger numbers of file descriptors.)
+
+The repository keeps at most half of its limit of open files in the
+file descriptor cache.  If it already has that many file descriptors
+open and it needs to open another, it will close the least recently
+used file descriptor.  This is called \it{evicting} a cached file
+descriptor.  The repository will also close file descriptors that have
+not been used in the last 10 minutes.  This is called \it{expiring} a
+cached file descriptor.
+
+With the \link{vreposmonitor.8.html}{\bf{vreposmonitor}} utility, you
+can see the number of file descriptors evicted and expired over time.
+If your repository has a high rate of evictions and a low rate of
+expirations, you should probably increase its file descriptor limit.
+You should particularly watch out for short periods of time when the
+number of evictions is significantly larger than the number of file
+descriptors in the cache, as that is a clear indication that the
+repository needs more file descriptors than it has available.
+
+\bf{\anchor{File Descriptor Cache Locking}{File Descriptor Cache Locking}}
+
+The repository stores all source and derived files in a combined pool.
+Individual files in this pool are identified by a 32-bit integer
+called a \it{shortid}.
+
+The file descriptor cache is essentially a large hash table indexed by
+shortid.  Any time a file descriptor is needed, exclusive access to
+the file descriptor cache must be obtained.  This can cause contention
+between different threads and slow down the server.
+
+To alleviate this, the file descriptor cache can be broken up into
+multiple independent tables, each with its own lock.  The file
+descriptor cache table for a given shortid is found using the
+low-order bits of the shortid.  You can control how many of the
+low-order bits are used, and thus how many independent tables there
+are, with the \it{[Repository]fdCache_split_bits} configuration
+setting.  (Note that each additional bit you use multiplies the number
+of independent file descriptor cache tables by 2.)
+
+You should avoid the temptation to use a large number of tables, as
+the number of file descriptors cached in each table is fixed.  The
+total limit on cached file descriptors is divided evenly among the
+independent file descriptor cache tables at startup.  Here's one
+possible way this division could happen:
+
+\begin{itemize}
+\item The repository has a total file descriptor limit of 2048.
+
+\item The repository reserves half these file descriptors (1024) for
+the file descriptor cache.
+
+\item \it{[Repository]fdCache_split_bits} is set to 4, creating 16
+independent file descriptor cache tables.
+
+\item This means that each file descriptor cache table will hold a
+total of 64 file descriptors.
+\end{itemize}
+
+When a new file descriptor is needed in one of these independent
+caches and its limit has already been reached, the least-recently used
+one in that table will be evicted.  If the number of descriptors in
+each independent file descriptor cache is small, this could create a
+"hot spot" where one table has a higher rate of evictions than others.
+
+\bf{\anchor{NFS Threads}{NFS Threads}}
+
+At startup, the repository creates a fixed number of threads to
+process NFS requests.  The number of threads is controlled by the
+\it{[Repository]threads} configuration setting.
+
+More NFS threads can improve repository performance for user
+filesystem operations and tool invocations by allowing greater
+parallelism, but only up to a certain point.  The exact number that
+will work best in a given situation will be dependent on many factors,
+and experimentation is the best way to find a good value.
+
+In recent experience (circa 2003-2005) with 4-CPU servers with
+hundreds of client hosts, we have found that 32 threads works well,
+while doubling the number to 64 threads performs less well.  For
+smaller installations, a lower number of threads will probably work
+fine.
+
+\bf{\anchor{NFS Buffering}{NFS Buffering}}
+
+The NFS protocol uses UDP which lacks guaranteed delivery.  The
+operating system on the server side receives request packets and
+buffers them until the server process consumes them.  If more requests
+arrive than will fit in the available buffer space, they are
+discarded.
+
+This does not cause incorrect behavior, but it can cause a delay in
+processing during periods of high traffic.  When an NFS client doesn't
+receive a response to a request within a certain period of time, it
+retransmits its request.
+
+The \it{[Repository]bufreqs} setting controls how much UDP buffer
+space the repository server asks the operating system to use to hold
+incoming requests.  The setting is an integer, and the server asks the
+operating system for enough space to hold approximately that number of
+the largest expected requests (i.e. write operations that include a
+block of bytes to be written).  Increasing this setting can reduce the
+loss of requests due to insufficient buffer space.
+
+Unfortunately, there is no way to measure whether requests are being
+lost due to insufficient buffer space, so it's difficult to know when
+this setting will improve performance.  Also, the operating system
+will usually only grant UDP buffer requests up to a certain size, and
+experimentation is usually required to determine how much buffer the
+OS will give to the repository.
+
+\bf{\anchor{NFS Duplicate Suppression}{NFS Duplicate Suppression}}
+
+As mentioned \link{#NFS Buffering}{above}, NFS clients retransmit
+requests if they don't receive a response within a certain period of
+time.  Aside from insufficient buffer space at the server, there are
+several other causes:
+
+\begin{itemize}
+\item The request not reaching the server
+
+\item The response not reaching the client
+
+\item The server being too busy to complete the request before the
+client re-transmits it
+\end{itemize}
+
+In some cases it is harmless for the server to repeat a previously
+performed request (such as reading a file), although it wastes time
+and I/O resources.  In other cases (such as creating or deleting a
+file or directory), repeating a previously completed request will give
+a different result.  For this reason, the repository server remembers
+requests that it is currently processing and that it has recently
+completed to suppress duplicate transactions.
+
+When a duplicate of a request currently being processed arrives, the
+server drops it as a response will be sent when the server finishes
+processing it.  When a duplicate of a completed request arrives, the
+server retransmits the result it previously sent to the client.  You
+can observe the rate of duplicate requests with the
+\link{vreposmonitor.8.html}{\bf{vreposmonitor}} utility.
+
+Because it takes memory to store records of duplicate NFS requests,
+the repository only stores a certain number of them.  The number that
+it retains can be controlled with the \it{[Repository]dupe_table_max}
+configuration setting.  When the limit is reached, the oldest one is
+discarded.
+
+If a request comes in that is a duplicate of a request that has been
+discarded from its duplicate suppression table, the repository server
+will not know and will re-perform the operation.  This can cause
+strange errors such as "file/directory already exists" errors when
+trying to create files/directories.  If you encounter such errors, you
+should try increasing \it{[Repository]dupe_table_max}.
+
+\bf{\anchor{NFS Duplicate Suppression Locking}{NFS Duplicate Suppression Locking}}
+
+When checking for a duplicate, or adding entries to the duplicate
+suppression tables when starting or completing the processing of a new
+call, exclusive access to the table must be acquired.  This locking is
+another possible point of contention between different threads in the
+repository.
+
+Similar to the file descriptor cache, it is possible to break up the
+duplicate suppression table into multiple independent tables each with
+its own lock.  There are two configuration settings which control the
+number of tables and the hashing of NFS requests into the different
+tables:
+
+\begin{itemize}
+\item \it{[Repository]dupe_hash_xid_bits} controls the number of bits of
+the NFS RPC transaction ID (or XID) used in the hash.  (XIDs are
+identifying numbers assigned by the NFS client.)
+
+\item \it{[Repository]dupe_hash_ip_bits} controls the number of bits in the
+client host IP address used in the hash.  This setting is most useful
+for repositories with multiple client hosts.  Single-host
+installations should use the default of zero.
+\end{itemize}
+
+The total number of duplicate suppression tables is 2 to the power of
+the sum of these two settings, so increasing either setting by 1
+doubles the number of independent duplicate suppression tables.  Note
+that each independent table holds \it{[Repository]dupe_table_max}
+entries.  If memory is a concern, you may wish to decrease that
+setting when increasing the number of duplicate suppression tables.
+
+\bf{\anchor{Copy-on-Write Limits}{Copy-on-Write Limits}}
+
+In certain cases, a write performed through the repository's NFS
+interface will cause a copy to be made first.  This happens because
+files which appear writable may refer to an underlying file which is
+actually immutable.  For example, when you check out a package, the
+files in the working directory initially use the same storage as the
+immutable files in the old version.  Before a write to such a file can
+be processed, it must be copied.
+
+The repository limits the number of threads concurrently performing
+copy-on-write operations to the number specified in the
+\it{[Repository]cow_max} setting, which defaults to 4.  If this many are
+already in progress, new threads that need to perform a copy-on-write
+will wait.
+
+\bf{\anchor{SRPC Threads}{SRPC Threads}}
+
+Most non-NFS operations to the repository (e.g. checkout, checkin,
+replication) go through the VestaSource SRPC interface.  The
+\it{[Repository]VestaSourceSRPC_max_running} configuration setting
+controls the number of threads allowed to be concurrently processing
+requests.  The number of threads specified by the setting is created
+on server startup.
+
+There is also s separate SRPC interface used by the evaluator and
+weeder which has a separate configuration setting:
+\it{[Repository]ShortIdSRPC_max_running}.
+
+Both of these SRPC interfaces default to 32 running.  Increasing the
+number of concurrent requests allowed may increase performance when
+there are a large number of client machines.  However, many operations
+contend with each other for internal locks and other resources so
+allowing more concurrent requests will not necessarily result in
+higher overall throughput.
+
+\bf{\anchor{SRPC Timeouts}{SRPC Timeouts}}
+
+There are three ways that the repository server may need wait to
+receive data from a client:
+
+\begin{itemize}
+\item A VestaSource SRPC client (e.g. repository tools like
+\link{vcheckout.1.html}{\bf{vcheckout}}) may start a call and the
+repository server will wait for it to send the call argument data.
+
+\item Similarly, a ShortId SRPC client may start a call and the
+repository server will wait for it to send the call argument data.
+
+\item When a tool is running, the repository server acts like a client
+to the evaluator, making calls back to it to request information about
+the contents of the temporary root filesystem used to run the tool.
+(This is how the evaluator is notified of filesystem accesses during
+tool runs, which it then records as dependencies.)
+\end{itemize}
+
+To avoid tying up server resources for an indefinite period of time
+when a client is unresponsive, the repository will close connections
+after waiting to receive data for a certain amount of time.  There are
+three configuration settings which control this:
+
+\begin{itemize}
+\item \it{[Repository]VestaSourceSRPC_read_timeout} specifies the maximum
+number of seconds to wait for data from a VestaSource SRPC client.
+
+\item \it{[Repository]ShortIdSRPC_read_timeout} specifies the maximum
+number of seconds to wait for data from a ShortId SRPC client.
+
+\item \it{[Repository]EvaluatorDirSRPC_read_timeout} specifies the maximum
+number of seconds to wait for a response from the evaluator for
+information about the contents of a temporary filesystem used to run a
+tool.
+\end{itemize}
+
+The default for all of these settings is a generous five minutes (300
+seconds).  If you suspect slow or unresponsive clients are tying up
+server resources, you may wish to decrease these values to a minute or
+less.  (Note that long-running clients from which the server is not
+waiting for data may have open connections that are idle longer than
+these setting.)
+
+\section{\anchor{Transaction Log Directory}{Transaction Log Directory}}
+
+The repository stores its state (including directory structure and
+attributes, but not including file contents) in the directory
+specified by the \it{[Repository]log_dir} configuration setting.
+There are several types files in that directory:
+
+\begin{description}
+\item{\it{N}.ckp}
+Each \it{checkpoint file} is a complete snapshot of the repository's
+state at one instant in time.  When the repository daemon starts up,
+it reads the most recently committed checkpoint file and then replays
+the changes made since then from the subsequent transaction log
+file(s).  The first checkpoint file is named \tt{1.ckp}.
+\item{\it{N}.log}
+Each \it{transaction log file} contains a record of changes made to
+the repository since the corresponding checkpoint.  (For example,
+\tt{123.log} would contain changes made after the time the
+repository's state was recorded in \tt{123.ckp}.)  The first log file
+is named \tt{0.log}, but there is no corresponding \tt{0.ckp}.
+\item{version}
+The file named "version" contains the number of the most recently
+committed checkpoint file.  The repository uses this to determine
+which checkpoint file it should load when starting up.
+\item{pruned}
+A file named "pruned" may be present if old checkpoint and transaction
+log files have been pruned from the directory.  It contains the number
+of the last checkpoint and log files to be deleted, but it's simply a
+record and doesn't affect normal operation.
+\end{description}
+
+The files in the transaction log directory are \it{the \bf{only}
+place} where the directory structure and meta-data is stored.  This is
+obviously critical for repository operation.  Do not confuse these
+files with logs of informational messages for administrators such as
+those typically stored in \tt{/var/log}.  \it{Without these files, the
+repository daemon cannot restore its previous state on startup.}
+
+The transaction log must be frequently written to ensure that the
+repository can restore its full state the next time it starts, even in
+the event of a fault such as a power failure or an OS crash.  Because
+of these frequent writes, there can be some performance benefit to
+placing the transaction log directory on a separate filesystem from
+the repository's file content storage (which is in the directory
+specified by the \it{[Repository]sid_dir} configuration setting).
+
+When the repository daemon starts up, it must read one checkpoint file
+and replay any transaction log files from that point forward.  This
+must be done sequentially, and each replayed transaction has a time
+cost.  The fewer transaction log entries the repository must replay,
+the sooner it can start responding to user requests through the
+virtual filesystem and other Vesta commands.
+
+A new checkpoint file will be written (and a new transaction log file
+started) each time the weeder is run (either
+\link{VestaWeed.1.html}{VestaWeed} or
+\link{QuickWeed.1.html}{QuickWeed}).  Normally that is the only time
+checkpoint files will be written.  Therefore, if you run the weeder
+infrequently your repository daemon may need to replay a larger number
+of transaction log entries and as a result take more time to start up.
+
+After a new checkpoint is written, the repository will prune older
+checkpoint and log files to reclaim disk space.  This behavior is
+controlled by several configuration settings
+(\link{#Configuration}{described in detail below}):
+
+\begin{itemize}
+\item \it{ckpkeep} controls how many checkpoint files will be retained
+\item \it{logkeep} can be used to disable pruning of the \tt{.log} files
+\item \it{prune_log_ckp} can be used to disable pruning altogether
+\end{itemize}
+
+The default behavior is to prune all \tt{.log} and \tt{.ckp} files
+older than the last committed checkpoint and its corresponding
+transaction log.  Most users will have no need to retain more than
+this.  Users that wish to be a little more conservative can set
+\it{[Repository]ckpkeep} to a number higher than the default of 1.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-h}{-h}}
+Print a brief usage message and exit.
+\item{\anchor{-d}{-d \it{level}}}
+Turn on additional debugging output (to standard error) 
+or other debugging modes.
+The default is \it{[Repository]debug_level}.
+The \it{level} is the bitwise \it{or} of the following:
+\begin{itemize}
+\item 0x00001 - SRPC - log a message when a client dies (or the like).
+\item 0x00002 - NFS interface - log arguments and results.
+\item 0x00004 - FdCache - log debugging messages.
+\item 0x00008 - SourceOrDerived::doDeletions - log disposition of each ShortId.
+\item 0x00010 - SourceOrDerived::doDeletions - log debugging messages.
+\item 0x00020 - SourceOrDerived::doDeletions - suppress actual deletion 
+(unlink). 
+\item 0x00040 - VDirEvaluator - log debugging messages.
+\item 0x00080 - Recovery - do not try to finish an incomplete weed.
+\item 0x00100 - VMemPool - log debugging messages.
+\item 0x00200 - Startup - if a file named "core" exists in the current directory, rename it to core.DATE.TIME, where DATE.TIME are the current date and time.
+\item 0x00400 - NFS interface - log references to stale handles.
+\item 0x00800 - Mastership transfer - log debugging messages.
+\item 0x01000 - File copy-on-write - log occurrences.
+\item 0x02000 - Access control - log parsing of tables.
+\item 0x04000 - Replication - log debugging messages.
+\item 0x08000 - Gardener (background thread that prunes away volatile directories from dead evaluators) - log debugging messages.
+\item 0x10000 - Shortid block leases - log debug messages when they are acquired, renewed, and released, plus a summary of current leases after recovery and when checkpointing
+\end{itemize}
+\item{\anchor{-f}{-f} \it{first-ckp}}
+Specifies which checkpoint recovery should begin with.  By default,
+the newest committed checkpoint is used, if any.  Checkpoints are numbered 
+1, 2, 3, etc.  A checkpoint number of 0 means to recover entirely from
+logs, starting at the beginning of time.  Recovery always continues to
+the end of the last log file.
+\item{\anchor{-D}{-D} \it{dump-file-name}}
+Debug capability primarily of interest to developers: after recovery,
+write out a text dump of the contents of the repository's in-memory
+representation of all directories and attributes to a file.  Once the
+dump is complete, the repository exits immediately.  This can be
+useful for comparing the repository's state at two points in time
+(e.g. just before and just after a checkpoint).
+\end{description}
+
+\section{\anchor{Weeding Hooks}{Weeding Hooks}}
+
+The repository manages a large pool of storage used for both source
+files and derived files.  During weeding, the repository is
+responsible for deleting files from that collection.  In some cases,
+external software may want to know the precise details of the files
+that have been kept and deleted or even ask for extra files to be
+kept.  This could be necessary for file caching and distribution
+systems or implementing administrative policies.
+
+The repository daemon provides a small number of \it{hooks} into its
+weeding process.  These are controlled by optional configuration file
+settings.
+
+\begin{itemize}
+
+\item Before preparing the complete list of files to keep, the
+repository will run the command configured in
+\tt{[Repository]also_keep_weed_hook}.  This command can update a file
+with a list of additional files to be kept, even if they would not
+otherwise be kept.
+\item Before starting deletions the repository will run the command
+configured in \tt{[Repository]pre_delete_weed_hook}.
+\item After deletions are complete the repository will run the command
+configured in \tt{[Repository]post_delete_weed_hook}.
+\end{itemize}
+
+The weeding hook commands are executed with "\tt{/bin/sh -c
+\it{command}}", so simple in-line shell scripts can be used.  The
+weeding hook commands are executed as the same user running the
+repository daemon.  The weeding hook commands will have the same
+standard input, output, and error as the repository daemon.  The
+repository daemon waits for each weeding hook command to complete, so
+they should be designed to complete quickly to avoid delaying the
+weeding process.
+
+Information is communicated to the hook commands through the following
+environment variables:
+
+\begin{description}
+\item{VWEED_KEEP_TIME}
+Any files changed after this time will be kept during the deletion
+phase.  This time is chosen by the weeder client program
+(e.g. \link{VestaWeed.1.html}{VestaWeed} or
+\link{QuickWeed.1.html}{QuickWeed}) when it starts.  The time is a
+UNIX timestamp as an integer number of seconds since the epoch.
+\item{VWEED_ALSO_KEEP_SHORTID}
+The shortid in hex of the file which the \tt{also_keep_weed_hook}
+should update with additional files to keep.  The file must contain
+shortids to be kept as an ASCII printed hex number 0-padded to exactly
+8 hex digits each followed by a newline.  Note that \bf{any errors in
+formatting in this file will cause the weeding process to fail without
+performing deletions}.  This environment variable will be available
+for other hook commands (\tt{pre_delete_weed_hook},
+\tt{post_delete_weed_hook}) but the file will be read-only.  If no
+\tt{also_keep_weed_hook} is configured, this variable is set to "0".
+\item{VWEED_ALSO_KEEP_FILE}
+The full filesystem path to the additional keep list file.  This is
+provided as a convenience so hooks need not convert the shortid to a
+path.  If no \tt{also_keep_weed_hook} is configured, this variable is
+set to the empty string.
+\item{VWEED_KEEP_SHORTID}
+The shortid in hex of the file which contains a list of shortids of
+the files to be kept during weeding.  Any file which is either on this
+list or was changed after the keep time will be kept.  All other files
+will be deleted.  The list is not available for
+\tt{also_keep_weed_hook}, so this variable is set to "0" for it.
+This list is the full combined list including derived files
+identified by the weeder client program, source files currently in the
+repository, and any extra files supplied by the
+\tt{also_keep_weed_hook}.  This list is in a sorted order, with each
+shortid to be kept as an ASCII printed hex number followed by a
+newline.  The file should not be modified by the hook command, and
+will have read-only permissions to discourage any modifications.
+\item{VWEED_KEEP_FILE}
+The full filesystem path to the keep list file.  This is provided as a
+convenience so hooks need not convert the shortid to a path.
+\item{VWEED_DELETED_SHORTID}
+The shortid in hex of the file which contains a list of shortids of
+the files which were deleted.  This list is built as the deletions are
+processed.  Obviously this information is unavailable before deletions
+have been performed, so this variable is set to "0" for the pre-delete
+hook.  This list is in a sorted order, with each shortid that was
+deleted as an ASCII printed hex number followed by a newline.  The
+file should not be modified by the hook command, and will have
+read-only permissions to discourage any modifications.
+\item{VWEED_DELETED_FILE}
+The full filesystem path to the delete list file.  This is provided as
+a convenience so hooks need not convert the shortid to a path.  For
+the pre-delete hook this variable is set to the empty string.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \it{[Repository]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{alias_file}}
+The file used to specify equivalent alternative names for global
+users.  See the \link{#AccessControl}{Access Control} section
+above. If set to a relative path, this will be interpreted relative to
+\it{metadata_root}.  Typically set to \tt{repos/alias} or
+\tt{/etc/vesta/repos.alias}.
+\item{\it{allow_symlink}}
+If this parameter is set to 1, symbolic links can be created through the
+NFS interface using the symlink() system call; if 0, they cannot.  Note that 
+symlinks can be created only in appendable directories even with this
+flag turned on, and that the "latest" symlink is created through the
+VestaSource SRPC interface and is unaffected by this flag.
+\item{\it{also_keep_weed_hook}}
+An optional command to run to supply additional files to keep during
+weeding.  See the "\link{#Weeding Hooks}{Weeding Hooks}" section above.
+\item{\it{backup_ckp}}
+If set to 1, and log_dir2 is also set, a backup copy of each checkpoint
+is also stored in metadata_root/log_dir2.
+\item{\it{bufreqs}}
+Sets the size of the buffer associated with the UDP socket on which
+NFS requests are received.  The units are (a generous estimate of) the
+maximum size of an NFS request.
+\item{\it{chown_semantics}}
+If this parameter is set to \tt{BSD}, only an administrator can change
+a source's \tt{#owner} attribute through the NFS interface.
+If it is set to \tt{System-V}, the current
+owner can also change it.  The current owner can always change this
+attribute through the SRPC interface.
+\item{\it{ckpkeep}}
+Optional integer setting which determines how many checkpoint files to
+keep when pruning the repository's
+\link{#Transaction Log Directory}{transaction log directory}.
+Defaults to 1, which will keep only the most recently committed
+checkpoint file.  (The minimum allowed value is 1.)  A more
+conservative setting would be a higher number such as 2 or 10.  Higher
+numbers will consume more disk space by keeping checkpoint files and
+their associated transaction log files longer.  Note that when the
+transaction log directory is pruned, transaction log files older
+than the earliest retained checkpoint file may also be pruned,
+depending on the setting of \it{logkeep}.
+\item{\it{cow_max}}
+Maximum number of file copy-on-write operations in progress at once.
+If not set, the default is 4.
+\item{\it{debug_level}}
+Sets the default value for the \link{#-d}{-d flag} (see above).
+\item{\it{default_flavor}}
+The identity flavor that the repository uses when authenticating
+itself to other processes.  Normally set to \it{global} at present.
+\item{\it{descriptor_limit}}
+An integer.  When the repository starts up, it will attempt to
+increase the limit on the number of file descriptors it can have open
+at once to this number.  On some platforms, this will take additional
+action to enable support for large numbers of file descriptors.  If
+not set, the repository will not attempt to change its open file
+descriptor limit.
+\item{\it{dupe_hash_ip_bits}}
+An integer between 0 and 8.  Controls the distribution of incoming NFS
+RPC calls among independent duplicate suppression tables based on IP
+address.  Specifically, sets the number of low-order bits of the
+source IP address used as part of a hash table key.  The total number
+of duplicate suppression tables will be
+2^(\it{dupe_hash_ip_bits}+\it{dupe_hash_xid_bits}).  As of this
+writing, one of the largest current Vesta installations uses 3.  You
+should use a value less than log2(\it{number of client hosts}) for
+this setting.  If not set, defaults to 0 (on the assumption that most
+installations will have a very small number of client hosts).
+\item{\it{dupe_hash_xid_bits}}
+An integer between 0 and 8.  Controls the distribution of incoming NFS
+RPC calls among independent duplicate suppression tables based on RPC
+transaction ID.  Specifically, sets the number of bits of the RPC
+transaction ID used as part of a hash table key.  The total number of
+duplicate suppression tables will be
+2^(\it{dupe_hash_ip_bits}+\it{dupe_hash_xid_bits}).  As of this
+writing, one of the largest current Vesta installations uses 4.  If
+not set, defaults to 2.
+\item{\it{dupe_table_max}}
+Number of NFS RPC replies to buffer for duplicate suppression.  If a
+client retransmits a request that the server has recently replied to,
+it will be replied to from the buffer instead of being redone.  Note
+that each of the independent suplicate suppression tables will retain
+this many recently completed NFS RPC replies.  If you increase
+\it{dupe_hash_ip_bits} or \it{dupe_hash_xid_bits} by more than 1, you
+may want to also decrease this setting.
+\item{\it{EvaluatorDirSRPC_read_timeout}}
+Maximum number of seconds the server will wait for data from an
+evaluator when calling it for information about the contents of a
+volatile directory to service a request.  This prevents the server
+from waiting indefinitely for a suspended or misbehaving evaluator.
+If it's not set, it defaults to 300 (5 minutes).  (Note that the time
+between individual calls on a connection can be longer than this.)
+\item{\it{export_file}}
+The file used to specify which remote hosts are allowed to access the
+repository and what authentication they must use.  See the
+\link{#AccessControl}{Access Control} section above.  If set to a
+relative path, this will be interpreted relative to
+\it{metadata_root}.  Typically set to \tt{repos/export} or
+\tt{/etc/vesta/repos.export}.
+\item{\it{fdCache_split_bits}}
+An integer between 0 and 31 (recommended values: 2-8).  Controls the
+number of independent file descriptor cache tables the repository
+uses.  Specifically, sets the number of low-order bits of a shortid
+used to select the file descriptor cache table.  There will be
+2^\it{fdCache_split_bits} tables.  More tables means reduces lock
+contention, but has diminishing benefit with higher values.  As of this
+writing, one of the largest current Vesta installations uses 6
+(i.e. 64 tables).  If not set, defaults to 2 (4 tables).
+\item{\it{group_file}}
+The file used to specify (additional) members for global groups.  See
+the \link{#AccessControl}{Access Control} section above.  If set to a
+relative path, this will be interpreted relative to
+\it{metadata_root}.  Typically set to \tt{repos/group} or
+\tt{/etc/vesta/repos.group}.
+\item{\it{honor_client_gids}}
+For authentication, NFS clients send a numeric user ID and a list of
+numeric group IDs.  Each of these maps to some global name (as
+described above under \link{#Principal identification and
+authentication}{"Principal identification and authentication"}).
+Normally the user ID is sufficient as the repository server already
+knows the group memberships of each user.  For this reason, the
+repository by default ignores the group IDs sent by NFS clients.
+However, if a user uses \tt{newgrp(1)} to become a member of a new
+group, the groups IDs sent by the client would be more current than
+the information the repository has.  (\tt{newgrp(1)} probably isn't
+very useful with the repository anyway, as it can't affect the SRPC
+interface used by tools like
+\link{vcheckout.1.html}{\bf{vcheckout}}).)  Also, if the user's groups
+have changed since the last time the repository loaded the user and
+group information from the OS, the NFS client may have a more
+up-to-date list of group memberships.  (A re-load of user and group
+information can be explicitly requested with the
+\link{vaccessrefresh.8.html}{\bf{vaccessrefresh}} utility.)  If it is
+equal (without regard to case) to "yes", "on", or "true", or can be
+parsed as an integer that is non-zero, the repository will honor the
+list of group IDs sent by NFS clients.  If it is equal (without regard
+to case) to "no", "off", or "false", or can be parsed as an integer
+that is zero, the repository will ignore the list of group IDs sent by
+NFS clients.  If not set, defaults to "false".
+\item{\it{Landlord_sleep_max}}
+Some clients use the ShortId SRPC interface to acquire leases on
+blocks of shortids for allocation purposes.  A background thread
+called the Landlord thread is responsible for releasing expired
+leases.  This setting determines the default length of time it sleeps
+between expirations.  If not set, defaults to 3600 seconds (1 hour).
+It can be set lower but not higher.  Normally there's no reason to
+change this setting.
+\item{\it{Landlord_sleep_min}}
+Related to the previous setting.  If the Landlord thread find itself
+with too much work to do, it will dynamically decrease the amount of
+time it sleeps between expirations.  This setting controls the minimum
+length of time it sleeps.  If not set, defaults to 60 seconds.  It
+cannot be set higher than 1/2 of \it{Landlord_sleep_max}.  Normally
+there's no reason to change this setting.
+\item{\it{Landlord_worklist_size}}
+Related to the previous two settings.  This setting controls the
+maximum number of shortid block leases the Landlord thread will expire
+each time it wakes up.  If there are more leases to expire than this,
+it will try to sleep for a shorter period next time.  If there are
+less leases to expire than this, it will try to sleep for a longer
+period next time.  If not set, defaults to 128 leases.  Normally
+there's no reason to change this setting.
+\item{\it{log_dir}}
+The recovery log and checkpoints go in metadata_root/log_dir.  The
+log_dir must end with "/" (or be empty).
+\item{\it{log_dir2}}
+If set to a nonempty string, a backup copy of the recovery log
+goes in metadata_root/log_dir2.  The log_dir2 must end with "/"
+if not empty.
+\item{\it{logkeep}}
+Optional boolean setting which controls whether transaction log files
+which are older than the earliest retained checkpoint file should be
+kept when pruning the repository's
+\link{#Transaction Log Directory}{transaction log directory}.
+Defaults to "false" which will cause the old transaction log files to
+be deleted.  If set to "true" and all transaction log files starting
+with \tt{0.log} are retained, it is possible to replay a repository's
+history entirely from transaction logs with no checkpoints (at a
+significant time cost).  Old transaction logs can also be used for
+investigating a sequence of events in the repository's history
+(e.g. to find out when a user deleted a working directory).
+\item{\it{master_hint}}
+Specifies the "hint" to be placed in the "master-repository" attribute
+for objects mastered in the local repository.  (You can think of this
+as the "public address" of the repository, which may be different than
+the address local clients use to contact the repository.)  This string
+can either be empty (in which case "master-repository" attributes will
+not be set) or a host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.
+\item{\it{metadata_root}}
+All files and directories in the underlying filesystem that are
+needed by the repository server are named relative to metadata_root.
+This value must begin and end with "/".  The repository server does a
+\it{chdir()} to this directory.
+\item{\it{min_auto_access_refresh_delay}}
+The repository keeps information in memory about all known UNIX
+user/group ids and their mappings to global names. (See
+\link{#Principal identification and authentication}{"Principal
+identification and authentication"} above.)  If the repository
+receives an NFS request with a user/group id which is unknown to it,
+it will attempt to automatically reload the user/group information
+from the host operating system.  (This can happen if a new user has
+been added to the system since the repository server was started.)
+Reloading this information can be expensive, so there is a limit on
+how often it will be done automatically.  This setting specifies the
+minimum time between such automatic refresh attempts in seconds.  If
+not set, it defaults to 3600 (1 hour).  This setting does not affect
+refreshes explicitly requested with the
+\link{vaccessrefresh.8.html}{\bf{vaccessrefresh}} utility.
+\item{\it{mutable_sid_refcount_paranoia}}
+Option for repository developers to turn on extra consistency checking
+of the reference counts used to track mutable files within the mutable
+root (\tt{/vesta-work}).  The two possible settings are "abort" and
+"correct".  If set to "abort", the repository will die immediately
+with a fatal error if any inconsistency is detected.  If set to
+"correct", the repository will print an error message and correct the
+inconsistency.
+\item{\it{NFS_host}}
+Host from which NFS service is exported.  This must be the host on
+which the \bf{repository} process is running.
+\item{\it{NFS_port}}
+UDP port on which NFS service is exported.
+\item{\it{post_delete_weed_hook}}
+An optional command to run after files are deleted by weeding.  See
+the "\link{#Weeding Hooks}{Weeding Hooks}" section above.
+\item{\it{pre_delete_weed_hook}}
+An optional command to run before files are deleted by weeding.  See
+the "\link{#Weeding Hooks}{Weeding Hooks}" section above.
+\item{\it{prune_log_ckp}}
+Optional boolean setting which controls whether the repository's
+\link{#Transaction Log Directory}{transaction log directory} will be
+pruned after writing a new checkpoint.  Defaults to "true".  Note that
+the settings \it{ckpkeep} and \it{logkeep} control aspects of the
+pruning process.  Very conservative users or developers actively
+working on modifying the repository might want to set this to "false".
+\item{\it{realm}}
+Name of the local access control realm.
+When translating numeric Unix user and group identifiers received 
+through the NFS interface into global names,
+the repository first converts the numeric id to a name using values
+from the local /etc/passwd and /etc/group files (or equivalent),
+then appends \tt{@}\it{realm} to the local name.
+In addition, the character "^" is used as a prefix for global group names
+to distinguish them more clearly from user names.
+\item{\it{restrict_delete}}
+If this parameter is set to 1, 
+the NFS interface restricts the delete and rename operations in
+an appendable directory to the system administrator; if 0, they are
+available to the directory's owner.
+\item{\it{root_user}}
+The user with this global name has system administrator access
+permission to the repository.  The root user has complete access
+permission to all files and directories in the repository, but cannot
+violate their defined properties; for example, even he cannot modify
+immutable files and directories.  This value is normally set to
+\tt{root@}\it{realm}.
+\item{\it{runtool_user}}
+This user owns the roots of all volatile directory trees.  In fact,
+because children of volatile and evaluator directories do not have
+attributes, they always inherit this user as their owner.  This user
+should not be made the owner of anything in the appendable and mutable
+directory trees.  A typical setting for this value would be
+\tt{vruntool@}\it{realm}.
+\item{\it{ShortIdBlock_lease_period}}
+One of the functions provided by the ShortId SRPC interface is the
+right to allocate shortids out of a block of 256 shortids.  When a
+client (the evaluator or weeder) acquires a shortid block, it has
+exclusive rights to allocate unused shortids from that block for a
+period of time which can be controlled by this setting.  If set it
+must be a number of seconds that new shortid block leases will be
+valid. If not set it defaults to 7200 seconds (2 hours).  It has a
+hard minimum of 120 seconds (2 minutes). Normally there is no reason
+to change this setting.
+\item{\it{ShortIdSRPC_host}}
+Host from which ShortIdSRPC is exported.  This must be the host on
+which the \bf{repository} process is running.
+\item{\it{ShortIdSRPC_max_running}}
+Maximum number of ShortId SRPC requests being serviced at
+once. This parameter is optional.  If it's not set, it defaults to 32.
+\item{\it{ShortIdSRPC_port}}
+UDP port on which the SRPC interface that supports SourceOrDerived is
+exported.
+\item{\it{ShortIdSRPC_read_timeout}}
+Maximum number of seconds the server will wait for data from a client
+during a ShortId SRPC requests.  This prevents the server from
+waiting indefinitely for suspended or misbehaving clients.  If it's
+not set, it defaults to 300 (5 minutes).  (Note that the time between
+individual calls on a connection can be longer than this.)
+\item{\it{sid_dir}}
+The directory tree rooted at metadata_root/sid_dir is used to store
+source and derived files, with names derived from their ShortIds.
+The sid_dir must end with "/" (or be empty).
+\item{\it{threads}}
+Sets the number of threads to be forked by the NFS server.
+Zero means to use the process's main thread only.
+\item{\it{umask}}
+The repository sets its file mode creation mask (umask) to the given
+value.  The default is 022.
+\item{\it{vadmin_user}}
+The user with this global name has system administrator access
+permission to the repository.  Also, this user owns the appendable
+root and mutable root unless they have explicit \tt{#owner}
+attributes.  The vadmin user has the same permissions as root, except
+that (1) vadmin cannot create setuid or setgid files that are owned by
+other users or groups, and (2) through the NFS interface, vadmin
+cannot read or write files or directories that he does not have
+permission for according to the ordinary permission bits, but he can
+freely chmod or chown any file or directory to grant himself access.
+The conventional setting for this value is \tt{vadmin@}\it{realm}.
+\item{\it{vadmin_group}}
+This global group is the owning group of the appendable root,
+mutable root, and the roots of all volatile directory trees unless
+they have explicit \tt{#group} attributes.
+A typical setting for this value might be \tt{^vadmin@}\it{realm}.
+\item{\it{VestaSourceSRPC_host}}
+Host from which VestaSourceSRPC is exported.  This must be the host on
+which the \bf{repository} process is running.
+\item{\it{VestaSourceSRPC_max_running}}
+Maximum number of VestaSource SRPC requests being serviced at
+once. This parameter is optional.  If it's not set, it defaults to 32.
+\item{\it{VestaSourceSRPC_port}}
+UDP port on which the SRPC interface that supports VDirSurrogate and
+related classes is exported.
+\item{\it{VestaSourceSRPC_read_timeout}}
+Maximum number of seconds the server will wait for data from a client
+during a VestaSource SRPC requests.  This prevents the server from
+waiting indefinitely for suspended or misbehaving clients.  If it's
+not set, it defaults to 300 (5 minutes).  (Note that the time between
+individual calls on a connection can be longer than this.)
+\item{\it{vforeign_uid}}
+A numeric Unix user id.
+If none of the values of a source's \tt{#owner} attribute is
+of the form \it{user}\tt{@}\it{realm}, where \it{realm} is the
+local realm as defined above and \it{user} is a locally known user,
+then when viewed through the NFS interface, the source's owner 
+appears to be \it{vforeign_uid}.
+Typically, one would define a special local Unix user named \tt{vforeign}
+for this purpose, and set this value to that user's uid.
+\item{\it{vforeign_gid}}
+A numeric Unix group id.
+If none of the values of a source's \tt{#group} attribute is
+of the form \tt{^}\it{group}\tt{@}\it{realm}, where \it{realm} is the
+local realm as defined above and \it{group} is a locally known group,
+then when viewed through the NFS interface, the source's group
+appears to be \it{vforeign_gid}.
+Typically, one would define a special local Unix group named \tt{vforeign}
+for this purpose, and set this value to that group's gid.
+\item{\it{VMemPool_base}}
+Address where the memory pool should be mmap'ed.  This memory must
+remain contiguous as the pool grows, so a large address should be
+chosen, well above any other memory that may be allocated.  A typical
+choice would be 0x26600000000.  The default is to pass NULL to mmap
+and let it choose an address, but this does not work well; mmap does
+not guarantee it will be able to extend the resulting block contiguously.
+\item{\it{VMemPool_minGrowBy}}
+Minimum amount to grow the memory pool when it fills.
+The default is one machine page.  A larger size is preferable, say
+0x80000 (1/2 megabyte).
+\item{\it{VMemPool_size}}
+Initial size of the repository's internal memory pool.
+The default is one machine page.  A larger size is preferable, say
+0x100000 (one megabyte).
+\item{\it{VMemPool_size_soft_limit}}
+The repository's internal memory pool has a hard maximum size of
+2^32-1 (0xffffffff) bytes.  If that limit is reached it could be
+difficult to recover.  For that reason a lower soft limit is placed on
+the maximum size to call attention when the hard limit is not far off.
+The soft limit can then be raised, the repository can be brought back
+up, deletions can be performed, and the weeder can be run to reclaim
+space.  This setting controls the soft limit and defaults to 3.8 GB
+(0xf0000000 bytes).
+\item{\it{vwizard_user}}
+The user with this global name has the same privileges as vadmin, but
+is also allowed to perform agreement operations, such as deleting
+children of master appendable directories without leaving a ghost,
+creating children in nonmaster appendable directories, etc.  Except
+for the initial creation of a globally unique name under /vesta for
+packages that originate at your site (see \link{#Warning}{warning}
+below), the vwizard feature should be used only in emergencies, since
+it can create inconsistencies between replicas.  A typical setting for
+this value would be \tt{vwizard@}\it{realm}.
+\end{description}
+
+The following users, groups, files, and directories must be present to
+run the repository.
+
+Users \it{[Repository]root_user}, \it{[Repository]vadmin_user},
+\it{[Repository]runtool_user}, and \it{[Repository]vforeign_uid} must
+exist and must all be distinct.  User root_user should be root,
+vadmin_user should be a special account for vesta administration, and
+everyone_user should be a dummy account with logins disabled.  User
+vforeign_uid should probably also have logins disabled. Users who need
+access to sources replicated from a repository in another realm and
+with no local owner defined could be allowed to su to it, but it's
+probably better to add a local owner to the owner access control list
+of such sources.
+
+Groups \it{[Repository]vadmin_group} and \it{[Repository]vforeign_gid}
+must exist and must be distinct.  Group vadmin_group may be a special
+group for vesta administration, or some standard system group (such as
+group 0) may be used.  Users who need privileged access to sources
+replicated from a repository in another realm could be made members of
+vforeign_group, but it's probably better to add a local group to the
+group access control list of such sources.
+
+The filenames 
+\it{[Repository]group_file},
+\it{[Repository]alias_file}, and
+\it{[Repository]export_file} must all be defined, but they need not
+all exist.  However, if the export file is empty or does not exist,
+no client hosts will have permission to access the repository.
+
+The repository server must not be run by root!  User 
+\it{[Repository]vadmin_user} can
+run it, or another user can be chosen.
+
+The directory configured as \it{[Repository]metadata_root} must exist
+and must be writable by the user who will be running the repository
+server.  So must its subdirectories \it{[Repository]log_dir} and
+\it{[Repository]sid_dir}.  This directory tree must be used by only
+one repository process at a time; the repository uses file locking
+on its log to ensure this.
+
+The directories configured as
+\it{[UserInterface]AppendableRootName} and 
+\it{[UserInterface]MutableRootName} must exist and must be owned
+by the user who will be mounting the repository
+(if root will not be mounting it).
+Normally these directories must be created separately on every
+Vesta client machine because they are on a non-shared filesystem ("/").
+
+After the repository is started and mounted for the first
+time, the following directories must be created, with access permissions
+as described.  
+You create these directories and set their permissions in the
+ordinary way with "mkdir" and "chmod";
+you may of course need to "su" to root or to
+Vesta administrator (\it{[Repository]vadmin_user}) to be able to do this.
+\begin{description}
+\item{\it{[UserInterface]DefaultPackageParent}}
+The default directory to put new packages in. 
+Ordinarily a subdirectory of the appendable root, named with an Internet 
+domain name belonging to the repository's owner.
+See the warning below about creating new names under the appendable root.
+Must be writable by
+users who will be creating packages here.  After creating this
+directory, you should also "cd" to it and type
+the command "vattrib -s type package-parent", which tells
+\link{vcreate.1.html}{\bf{vcreate}(1)} 
+that it is okay to create packages in it.
+\item{\it{[UserInterface]DefaultWorkParent}}
+The default parent directory for mutable working directory trees
+belonging to individual users.  Typically the same 
+as \it{[UserInterface]MutableRootName} (that is, /vesta-work), 
+in which case it already exists.
+If you choose to make this directory writable by all Vesta users, 
+\link{vcheckout.1.html}{\bf{vcheckout}(1)} will
+automatically create a subdirectory under it for each user when that
+user first checks out a package; if not, you will have to create those
+subdirectories by hand.
+\item{\it{[UserInterface]TempDir}} A temporary directory used by the
+repository tools.  Typically \tt{/vesta-work/.tmp}.  Must
+be writable by all Vesta users.
+\item{\it{[Run_Tool]VolatileRootName}} A directory used as the mount
+point for the repository's volatile directory tree.
+Typically \tt{/vesta-work/.volatile}.
+Must be readable and writable by the user(s) who will be mounting the
+repository.
+\end{description}
+
+\anchor{Warning}{Warning}:
+Every name created directly under /vesta (more precisely,
+directly under \it{[UserInterface]AppendableRootName}) must be
+globally unique across all repositories in the universe in the past,
+present, or future.  If you break this rule, your repository will have
+problems participating in the replication protocol with those
+repositories that have conflicting names.  We strongly recommend that
+every name you create in this directory be an Internet domain name
+that belongs to you; if everyone does so, uniqueness is guaranteed.
+Do not reuse a name unless you are certain that the previous use of
+the name has been permanently deleted in all repository replicas,
+including replicas that might be recreated from backup media or the like.
+
+Note: If you do not have a registered domain name of your own, a good
+alternative is to use a working email address that you intend to keep
+permanently.  Change the "\tt{@}" to "\tt{_}" so that the name will not
+have to be quoted when used in the \tt{import} section of a Vesta
+model.  For example, if you are an ACM member and have registered the
+address \tt{johnsmith@acm.org}, you could create the Vesta name
+\tt{/vesta/johnsmith_acm.org} without fear of causing a naming conflict.
+This works because "\tt{_}" is not a legal character in domain names.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)},
+\link{mountrepos.8.html}{\bf{mountrepos}(8)},
+\link{umountrepos.8.html}{\bf{umountrepos}(8)},
+\link{vmount.8.html}{\bf{vmount}(8)},
+\link{vaccessrefresh.8.html}{\bf{vaccessrefresh}(8)},
+\link{vreposmonitor.8.html}{\bf{vreposmonitor}(8)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

@@ -1,0 +1,602 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vupdate(1) man page}{vupdate}{1}
+
+\section{Name}
+
+vupdate - update the imports of a Vesta model
+
+\section{Synopsis}
+
+\bf{vupdate}
+[ \link{#OptionsSect}{\it{options}} ]
+[ \it{model} ]
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescriptionSect}{Description}
+\item \link{#OptionsSect}{Options}
+\item \link{#RestrictionsSect}{Restrictions}
+\item \link{#ContinuationsSect}{Continuations}
+\item \link{#ExamplesSect}{Examples}
+\item \link{#ConfigurationSect}{Configuration}
+\item \link{#BugsSect}{Bugs}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescriptionSect}{Description}}
+
+\it{vupdate} updates the imports of the named \it{model} so that all
+imports are to the latest package versions. Only those imports of
+models outside the local directory are updated. If no \it{model} is
+specified, it defaults to ``.main.ves''.
+
+Ordinarily, \it{vupdate} replaces the existing model with the updated
+version.  If \link{#NoActionOpt}{\bf{-no-action}} is specified, if the
+updated model is identical to the existing one, or if errors occur,
+the existing model (and its parent directory) are left untouched.
+
+To prevent the import of a model from being considered for
+updating, precede the model's pathname by a \tt{/**noupdate**/}
+or \tt{/**NOUPDATE**/} pragma.
+
+When the import being updated is to a model in a checkout session, the
+import is updated to point to the latest main version within the
+package (or branch) if such a version exists, or to the latest version
+in the checkout session otherwise. This behavior can be overridden
+using to \link{#ToCheckoutOpt}{\bf{-to-checkout}} switch below.  Also
+see the \link{#AdvanceCheckoutOpt}{\bf{-advance-checkout}} switch if
+you would like checkout sessions to be advanced.
+
+For more complicated version histories (e.g. divergent lines of
+development that later re-converge), \it{vupdate} can follow
+\link{#ContinuationsSect}{continuations} with the
+\link{#-follow-continuations}{\bf{-follow-continuations}} switch.
+
+The \it{model} argument is resolved according to the rules for
+\tt{import} clauses as specified in
+\link{http://www.vestasys.org/doc/sdl-spec/}
+{\it{The Vesta-2 Software Description Language}}. In particular, if
+\it{model} is not an absolute path, it is interpreted relative to the
+current working directory. If \it{model} names a directory, the string
+``\tt{/build.ves}'' is appended to it; otherwise, if it does not end
+in ``\tt{.ves}'', that extension is appened to it.
+
+\bf{vupdate} returns status:
+
+\begin{itemize}
+\item 0 for success
+\item 1 for command-line argument syntax errors
+\item 2 for various more serious errors
+\item 3 if any \link{vadvance.1.html}{vadvance(1)} commands invoked
+when using the \link{#AdvanceCheckoutOpt}{\bf{-advance-checkout}} flag
+fail (e.g. with a lack of permission or because of very large files in
+the working directory).
+\end{itemize}
+
+\section{\anchor{OptionsSect}{Options}}
+
+\it{vupdate} accepts the following command-line options:
+
+\begin{description}
+\item{\anchor{NoActionOpt}{\bf{-no-action}} or \bf{-n}}
+No action. Do not rewrite \it{model}, but print out what imports would
+be updated. Do not advance any checkout sessions.
+A warning is printed at the end of the output indicating
+that no action was taken. This option is mutually exclusive with
+the \link{#QueryOpt}{\bf{-query}} and \link{#SilentOpt}{\bf{-silent}} options.
+
+\item{\anchor{QueryOpt}{\bf{-query}} or \bf{-q}}
+Query mode. You will be queried on each potential update. To accept
+the update, type "y" and hit <ENTER>. If any other input is supplied,
+the import is not updated. This option is mutually exclusive with
+the \link{#NoActionOpt}{\bf{-no-action}} 
+and \link{#SilentOpt}{\bf{-silent}} options.
+
+\item{\anchor{SilentOpt}{\bf{-silent}} or \bf{-s}}
+Silent mode. By default, the name of each model requiring changes
+and the old and new versions of all updated imports are printed. This
+option supresses that output. This option is mutually exclusive with
+the \link{#NoActionOpt}{\bf{-no-action}}, \link{#QueryOpt}{\bf{-query}}, and
+\link{#VerboseOpt}{\bf{-verbose}} options.
+
+\item{\anchor{UpdateLocalOpt}{\bf{-update-local}} or \bf{-r}}
+Update local models recursively. By default, \it{vupdate} revises only
+the named \it{model}. If \bf{-update-local} is specified, then any local models
+imported directly or indirectly by \it{model} are updated
+recursively. An imported model is considered to be local if it is
+specified by a relative pathname.
+
+\item{\anchor{AdvanceCheckoutOpt}{\bf{-advance-checkout}} or \bf{-a}}
+Advance your imported checkout sessions.  If \bf{-advance-checkout} is
+specified, then whenever the model imports from a checkout session
+that belongs to you (including new checkout imports created by the
+\link{#ToCheckoutOpt}{\bf{-to-checkout}} option), \it{vupdate} will invoke
+\link{vadvance.1.html}{vadvance(1)} to attempt to advance the session
+before searching for the session's highest version.
+
+\item{\anchor{UpdateCheckoutOpt}{\bf{-update-checkout}} or \bf{-c}}
+Update models in your imported checkout sessions recursively.  If
+\bf{-update-checkout} is specified, then any models imported directly
+or indirectly from checkout sessions that belong to you are updated
+recursively (including new checkout imports created by the
+\link{#ToCheckoutOpt}{\bf{-to-checkout}} option).  The sessions are
+then advanced as with the
+\link{#AdvanceCheckoutOpt}{\bf{-advance-checkout}} option.
+
+\item{\anchor{UpdateAllOpt}{\bf{-update-all}} or \bf{-u}}
+Sets both the \link{#UpdateLocalOpt}{\bf{-update-local}} 
+and \link{#UpdateCheckout}{\bf{-update-checkout}} options.
+
+\item{\anchor{VerboseOpt}{\bf{-verbose}} or \bf{-v}}
+Verbose mode. By default, if a model would not require any changes,
+its name is not printed. If \bf{-verbose} is specified, the names of all
+processed models are printed. This option is mutually
+exclusive with the \link{#SilentOpt}{\bf{-silent}} option.
+
+\item{\anchor{LimitOpt}{\bf{-limit} \it{name}} or \bf{-l} \it{name}}
+Limit which imports will be updated. Only imports with a full pathname
+containing \it{name} will be updated. If multiple \bf{-limit} clauses
+are specified, only those pathnames containing \it{all} specified
+names are updated. (For example, combining \bf{-limit}
+\it{src.dec.com} with \bf{-limit} \it{repos} would cause only imports
+containing both \it{src.dec.com} and \it{repos} to be updated.)
+
+\item{\anchor{LimitCheckoutOpt}{\bf{-limit-checkout}} or \bf{-L}}
+Only update imports for checkout sessions.  Equivalent to
+\link{#LimitOpt}{\bf{-limit}} \it{/checkout/}.
+
+\item{\anchor{ToCheckoutOpt}{\bf{-to-checkout}} or \bf{-t}}
+Allow imports to be updated to point to models in new checkout
+sessions. This both allows checked in versions to be updated to
+checked out versions, and allows old checkout session references to be
+updated to refer to new checkout sessions. This option is mutually
+exclusive with the \link{#AttrOpt}{\bf{-attr}} option.
+
+When combined with \link{#-follow-continuations}{the
+\bf{-follow-continuations} option}, \it{vupdate} will not update into
+a new exclusive checkout until \it{after} following continuations.
+For example, if an import points into branch \bf{A} which is continued
+in branch \bf{B} \it{vupdate} may update into an active checkout in
+branch \bf{B} but will not update into an active checkout in branch
+\bf{A}.  See \link{#ContinuationsSect}{"Continuations"} below for more
+information.
+
+\item{\anchor{MineOpt}{\bf{-only-mine}} or \bf{-m}}
+Limit updating involving checkout sessions belonging to other users.
+Don't modify an import to point into a checkout session belonging to
+another user.  Don't modify an import if it currently points into a
+checkout session belonging to another user.  An import may still be
+updated within a checkout session owned by the user running
+\it{vupdate}.  An import may still be updated from an exclusive
+checkout session owned by the user running \it{vupdate} to a newer
+checked in version (even a newer version created by a different user).
+An import may be modified to point into an exclusive checkout session
+belonging to the user running \it{vupdate} when using the
+\link{#ToCheckoutOpt}{\bf{-to-checkout}} option.
+
+When combined with \link{#-follow-continuations}{the
+\bf{-follow-continuations} option}, \it{vupdate} will not follow
+continuations into or through checkout sessions belonging to other
+users.
+
+\item{\anchor{AttrOpt}{\bf{-attr} \it{attr-spec}} or \bf{-A} \it{attr-spec}}
+Selective update. By default, \it{vupdate} updates each import to
+the latest relevant version. If \bf{-attr} is specified, each import
+is updated to the latest version whose attributes match
+\it{attr-spec}. This option is mutually exclusive with the
+\link{#ToCheckoutOpt}{\bf{-to-checkout}} option.
+
+The \it{attr-spec} should be a string according
+to the following grammar:
+
+\begin{verbatim}
+attr-spec  ::= attr-name [ val-select val-list ]
+attr-name  ::= String
+val-select ::= `:' | `^'
+val-list   ::= String | String `,' val-list
+\end{verbatim}
+
+There are three cases:
+
+\begin{enumerate}
+\item
+When \it{attr-spec} is simply an \it{attr-name}, a given package
+version matches the spec if it simply defines the attribute named
+\it{attr-name}.
+
+\item
+If \it{attr-spec} takes the form
+\it{attr-name}:\it{attr-list}, then a given package version matches
+the spec if it binds the attribute \it{attr-name} to a set of
+values \it{at least one} of which is named in \it{attr-list}.
+
+\item
+If \it{attr-spec} takes the form \it{attr-name}^\it{attr-list}, then a
+given package version matches the spec if it does not define the
+attribute \it{attr-name}, or if it binds the attribute
+\it{attr-name} to a set of values \it{none} of which is named in
+\it{attr-list}.
+\end{enumerate}
+
+\item{\anchor{ParseErrorOpt}{\bf{-parse-errors-stop}} or \bf{-e}}
+Any trouble understanding the version imported or choosing a new
+version will be treated as a fatal error, causing \it{vupdate} to stop
+and leaving \it{model} unmodified.  \it{vupdate} can always understand
+simple integer versions which are the norm, but can have difficulty
+with non-integer versions.  Without this option, \it{vupdate} will
+issue a warning about each import it can't understand and leave it
+unmodified in \it{model}, proceeding on to update subsequent imports.
+
+\item{\anchor{-follow-continuations}{\bf{-follow-continuations}} or \bf{-f}}
+When updating an import, if the enclosing directory (a session
+directory, a branch, or a package) has a "continued-in" attribute
+indicating that it is logically continued in a different directory,
+attempt to follow the continuation.  See
+\link{#ContinuationsSect}{"Continuations"} below.
+
+Note that \link{#MineOpt}{the \bf{-only-mine} option} will prevent
+following continuations into or through checkout sessions belonging to
+other users.
+
+Note that updating into a new exclusive checkout enabled by the
+\link{#ToCheckoutOpt}{\bf{-to-checkout}} option happens \it{after}
+following continuations.  For example, if an import points into branch
+\bf{A} which is continued in branch \bf{B} \it{vupdate} may update
+into an active checkout in branch \bf{B} but will not update into an
+active checkout in branch \bf{A}.
+
+\end{description}
+
+\section{\anchor{RestrictionsSect}{Restrictions}}
+
+\it{vupdate} assumes that packages and models are structured in
+certain ways. Most of these restrictions are enforced by the
+\link{repos-ui.1.html}{repository tools}. In addition to the obvious
+requirement that the models are syntactically legal according to the
+\link{ftp://ftp.digital.com/pub/DEC/SRC/technical-notes/SRC-1997-005a.html}
+{Vesta-2 Software Description Language}, \it{vupdate} also makes the
+following assumptions:
+
+\begin{itemize}
+\item
+A path containing an arc named ``checkout'' is assumed to be a
+checkout session. The path of a checkout session is assumed to contain
+two numeric arcs after the ``checkout'' arc.
+
+\item
+No part of a session name other than the package version or the
+sub-version within a checkout session consists entirely of base-ten
+digits. Conversely, every package version (whether a checkout version
+or a top-level package version) is assumed to consist entirely of
+base-ten digits (with no extra leading zeros).
+
+\item
+In an import clause of the form ``\tt{from} \it{path} \tt{import} ...'',
+the package version number is assumed \it{not} to appear in \it{path}.
+\end{itemize}
+
+\section{\anchor{ContinuationsSect}{Continuations}}
+
+By default, \it{vupdate} assumes that the development of versions
+forms a strict tree as is typical when using
+\link{repos-ui.1.html}{the repository tools}.  Versions in a package
+proceed in a numerically linear fashion, taking brief side trips into
+the session directories of exclusive checkouts.  Branches and
+non-exclusive checkouts form divergences.  Once an import points into
+such a diverged line of development, \it{vupdate} by default won't
+move it back to the main trunk of the package versions.
+
+Real development involves parallel work with lines of development
+diverging and re-converging.  It's desirable to have \it{vupdate}
+follow the user's mental model of the logical progression of
+development even when that progression isn't strictly linear.
+
+\it{Continuations} are an optional feature which allows \it{vupdate}
+to change imports more freely.  They allow the user to inform
+\it{vupdate} about the logical progression of development.  When
+setting a continuation, the user is saying "\it{When you run out of
+versions \bf{here}, update to \bf{there}}."  To put it another way,
+continuations change \it{vupdate}'s treatment of version history from
+a \it{tree} to a more general \it{directed acyclic graph}.
+
+To use continuations, users must add "continued-in" attributes and run
+\it{vupdate} with \link{#-follow-continuations}{the
+\bf{-follow-continuations} option}.  The "continued-in" attribute must
+be placed on an appendable directory that contains versions, such as a
+session directory, a branch, or a package.  The value of the
+"continued-in" attribute can be either a specific version or an
+appendable directory which contains versions.  If the value of the
+"continued-in" attribute is a specific version, \it{vupdate} will
+update an import to that version or higher in the enclosing directory.
+(If the version that the attribute points to is not present,
+\it{vupdate} will not follow the continuation.)  If the value of the
+"continued-in" attribute is an appendable directory which contains
+versions (e.g. a session directory or a branch), \it{vupdate} will
+update an import to the highest numbered version in that directory,
+even if that's version 0.
+
+The "\link{#ExamplesSect}{Examples}" section below
+\link{#ContinuationsExamples}{includes some detailed examples of how
+continuations work in practice}.
+
+\section{\anchor{ExamplesSect}{Examples}}
+
+One typical use is to test what imports would be updated using
+\link{#NoActionOpt}{the \bf{-n} option}, like this:
+
+\begin{verbatim}
+$ vupdate -n -r -v
+/vesta-work/heydon/vimports/.main.ves
+     /vesta/src.dec.com/common/std_env/42/build.ves
+  -> /vesta/src.dec.com/common/std_env/49/build.ves
+
+/vesta-work/heydon/vimports/build.ves
+/vesta-work/heydon/vimports/src/progs.ves
+/vesta-work/heydon/vimports/src/docs.ves
+/vesta-work/heydon/vimports/src/lib.ves
+WARNING: Nothing updated at your request!
+\end{verbatim}
+
+The package can then be updated normally:
+
+\begin{verbatim}
+$ vupdate
+/vesta-work/heydon/vimports/.main.ves
+     /vesta/src.dec.com/common/std_env/42/build.ves
+  -> /vesta/src.dec.com/common/std_env/49/build.ves
+\end{verbatim}
+
+\link{#QueryOpt}{Query mode} can be used to selectively update a model's
+imports:
+
+\begin{verbatim}
+$ vupdate -q
+/vesta-work/heydon/release/.main.ves
+     /vesta/src.dec.com/common/cxx/checkout/14/82/build.ves
+  -> /vesta/src.dec.com/common/cxx/checkout/14/83/build.ves
+  Update this import (y/n)? y
+
+     /vesta/src.dec.com/common/std_env/48/build.ves
+  -> /vesta/src.dec.com/common/std_env/49/build.ves
+  Update this import (y/n)? n
+\end{verbatim}
+
+The following example shows a case where a checkout session has
+been updated to refer to a checked-in version of the package:
+
+\begin{verbatim}
+$ vupdate
+/vesta-work/heydon/basics/.main.ves
+     /vesta/src.dec.com/c/libc/checkout/4/1/build.ves
+  -> /vesta/src.dec.com/c/libc/7/build.ves
+\end{verbatim}
+
+By adding the \link{#ToCheckoutOpt}{\bf{-to-checkout}} option, a checked
+in version can be updated to a current checkout session:
+
+\begin{verbatim}
+$ vupdate -to-checkout
+/vesta-work/schalk/std_env/.main.ves
+     /vesta/shr.dec.com/common/cxx/4/build.ves
+  -> /vesta/shr.dec.com/common/cxx/checkout/5/6/build.ves
+\end{verbatim}
+
+The following example will update imports only to package versions
+that define an ``approved'' attribute:
+
+\begin{verbatim}
+$ vupdate -attr approved
+\end{verbatim}
+
+The following example will update imports only to package versions
+that define a ``status'' attribute to have a value of either
+``passed'' or ``released'':
+
+\begin{verbatim}
+$ vupdate -attr status:passed,released
+\end{verbatim}
+
+The following example will update imports only to package versions
+that do \it{not} define a ``status'' attribute whose value is ``buggy'':
+
+\begin{verbatim}
+$ vupdate -attr status^buggy
+\end{verbatim}
+
+\anchor{ContinuationsExamples}{A few examples of how
+\link{#ContinuationsSect}{continuations} can be used in practice
+follow.}
+
+Suppose a user started a non-exclusive checkout for a change, perhaps
+because they didn't want to hold up other users who might be making
+changes to the same package.  Now they're preparing to check in their
+changes and have moved their work to a later exclusive checkout.  To
+allow \it{vupdate} to follow the development into the main line, they
+add a "continued-in" attribute to their non-exclusive session
+directory using \link{vattrib.1.html}{\it{vattrib}}:
+
+\begin{verbatim}
+% vattrib -a continued-in /vesta/example.com/foo/pkg/checkout/15 \
+  /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1
+\end{verbatim}
+
+Now when anyone uses \it{vupdate} with
+\link{#-follow-continuations}{the \bf{-follow-continuations} option}
+on a model with an import pointing into the old non-exclusive session,
+it will be followed into the new exclusive session:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1/31/build.ves
+  -> /vesta/example.com/foo/pkg/checkout/15/3/build.ves
+\end{verbatim}
+
+If the exclusive session had since been checked in and newer versions
+had been checked in after it, \it{vupdate} will continue to move
+forward to those newer versions just as it would if the import had
+originally pointed into the exclusive checkout session:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1/31/build.ves
+  -> /vesta/example.com/foo/pkg/17/build.ves
+\end{verbatim}
+
+Suppose instead of moving right to an exclusive checkout, the user
+chose to use a newer non-exclusive session (perhaps because they knew
+it would take some time to reconcile their changes with intervening
+main-line changes).  They could add a continuation from their first
+non-exclusive session to their second:
+
+\begin{verbatim}
+% vattrib -a continued-in \
+  /vesta/example.com/foo/pkg/checkout/15.jsmith_example.com.1 \
+  /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1
+\end{verbatim}
+
+When they later move their work into an exclusive checkout, they could
+then add a second continuation:
+
+\begin{verbatim}
+% vattrib -a continued-in \
+  /vesta/example.com/foo/pkg/checkout/17 \
+  /vesta/example.com/foo/pkg/checkout/15.jsmith_example.com.1
+\end{verbatim}
+
+\it{vupdate} would then be able to follow the continuations from the
+first non-exclusive session through the second and into the exclusive
+checkout:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1/31/build.ves
+  -> /vesta/example.com/foo/pkg/checkout/17/2/build.ves
+\end{verbatim}
+
+And even to checked in versions past the exclusive session:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1/31/build.ves
+  -> /vesta/example.com/foo/pkg/17/build.ves
+\end{verbatim}
+
+If you find that continuations are a little too hard to understand,
+adding \link{#VerboseOpt}{\bf{-verbose}} will make \it{vupdate} print
+additional messages to help you understand continuations:
+
+\begin{verbatim}
+% vupdate -follow-continuations -verbose foo.ves
+/vesta-work/jsmith/bar/foo.ves
+
+  /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1
+  ...continued in /vesta/example.com/foo/pkg/checkout/15.jsmith_example.com.1
+  ...continued in /vesta/example.com/foo/pkg/checkout/17
+
+     /vesta/example.com/foo/pkg/checkout/12.jsmith_example.com.1/31/build.ves
+  -> /vesta/example.com/foo/pkg/17/build.ves
+\end{verbatim}
+
+Suppose a user has been working on a change in a branch (instead of
+non-exclusive sessions).  They have just finished that work and
+integrated their changes into a new main-line version.  They can add a
+"continued-in" attribute to the branch indicating the version that
+incorporates the changes:
+
+\begin{verbatim}
+% vattrib -a continued-in \
+  /vesta/example.com/foo/pkg/17 \
+  /vesta/example.com/foo/pkg/12.bar
+\end{verbatim}
+
+Then \it{vupdate} would follow the continuation from the branch to the
+specific main-line version and then on to any higher numbered
+versions:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/12.bar/5/build.ves
+  -> /vesta/example.com/foo/pkg/18/build.ves
+\end{verbatim}
+
+Just as with session directories, another options is adding a
+continuation from one branch to another:
+
+\begin{verbatim}
+% vattrib -a continued-in \
+  /vesta/example.com/foo/pkg/17.bar \
+  /vesta/example.com/foo/pkg/12.bar
+\end{verbatim}
+
+Allowing \it{vupdate} to move from one branch to another:
+
+\begin{verbatim}
+% vupdate -follow-continuations foo.ves
+     /vesta/example.com/foo/pkg/12.bar/5/build.ves
+  -> /vesta/example.com/foo/pkg/17.bar/2/build.ves
+\end{verbatim}
+
+Or even into the latest snapshot in an active checkout in the current
+branch (by adding the \link{#ToCheckout}{\bf{-to-checkout}} option):
+
+\begin{verbatim}
+% vupdate -follow-continuations -to-checkout foo.ves
+     /vesta/example.com/foo/pkg/12.bar/5/build.ves
+  -> /vesta/example.com/foo/pkg/17.bar/checkout/3/7/build.ves
+\end{verbatim}
+
+\section{\anchor{ConfigurationSect}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{TempDir}}
+Name of a Vesta mutable directory that can be used for temporary file 
+storage.  Ordinarily set to \tt{/vesta-work/.tmp}.
+\end{description}
+
+\section{\anchor{BugsSect}{Bugs}}
+
+\begin{itemize}
+\item
+Back-slashes are not supported as pathname delimiters.
+\item
+It would be nice if there were a switch
+that alerted users of imported models outside the package that 
+require updates and are not already checked out.
+\end{itemize}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{repos-ui.1.html}{repos-ui(1)},
+\link{vimports.1.html}{vimports(1)},
+\link{vlatest.1.html}{vlatest(1)},
+\link{vattrib.1.html}{vattrib(1)}
+
+\section{Author}
+
+\link{http://src-www.pa.dec.com/~heydon/home.html}{Allan Heydon}
+(\tt{heydon@src.dec.com})
+
+\begin{verbatim}
+Created on Tue Jul 15 17:01:30 PDT 1997 by heydon
+\end{verbatim}

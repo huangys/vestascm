@@ -1,0 +1,110 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{TestShortId - test program for repository}{TestShortId}{8}
+
+\section{Name}
+
+\bf{TestShortId} - test program for repository
+
+\section{Synopsis}
+
+\bf{TestShortId}
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+
+\bf{TestShortId} is a test program for the Vesta repository.
+It provides a way to exercise most of the functions of the 
+\tt{SourceOrDerived} interface.
+A portion of the \tt{SourceOrDerived} interface is
+implemented in library code, but the code also makes SRPC calls to the
+repository server, using the underlying
+\tt{ShortIdSRPC} interface.
+
+After starting the program, type "?" for a list of available commands.
+Most commands relate directly to a similarly-named method of 
+\tt{SourceOrDerived}.
+
+For some of the commands to work, you must be running under the user
+id that is permitted to read and write directly to files named by
+ShortId.  This is normally \tt{vadmin}.  Affected commands include
+create, open, and touch.
+
+\section{\anchor{Flags}{Flags}}
+
+None.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \it{[Repository]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{metadata_root}}
+All files and directories in the underlying filesystem that are
+needed by the repository server are named relative to metadata_root.
+This value must begin and end with "/".  The repository server does a
+\it{chdir()} to this directory.
+\item{\it{sid_dir}}
+The directory tree rooted at metadata_root/sid_dir is used to store
+source and derived files, with names derived from their ShortIds.
+The sid_dir must end with "/" (or be empty).
+\item{\it{ShortIdSRPC_port}}
+UDP port on which the SRPC interface that supports SourceOrDerived is
+exported.  The SRPC interface itself is described in \tt{ShortIdSRPC.H};
+hence the name.
+\item{\it{ShortIdSRPC_host}}
+Host from which ShortIdSRPC is exported.  This must be the host on
+which the \bf{repository} process is running.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{TestShortId} has very rudimentary input error checking.  If you
+type a letter where it wants to see a number, you could easily put it
+into an infinite loop.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repository.8.html}{\bf{repository}}(8),
+\link{TestVDirSurrogate.8.html}{\bf{TestVDirSurrogate}}(8).
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Tue Apr 29 23:15:37 PDT 2003 by mann
+     modified on Mon Nov 12 18:37:13 EST 2001 by ken@xorian.net
+\end{verbatim}

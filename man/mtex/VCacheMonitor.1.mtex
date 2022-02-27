@@ -1,0 +1,212 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{VCacheMonitor(1) man page}{VCacheMonitor}{1}
+
+\section{Name}
+
+VCacheMonitor - monitor the state of the Vesta-2 function cache
+
+\section{Synopsis}
+
+\bf{VCacheMonitor}
+[ \link{#UpdateOpt}{\bf{-update} \it{time}} ]
+[ \link{#TsOpt}{\bf{-ts} \it{time}} ]
+[ \link{#NOpt}{\bf{-n} \it{num}} ]
+[ \link{#RowsOpt}{\bf{-rows} \it{num}} ]
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescSect}{Description}
+\item \link{#SwitchesSect}{Switches}
+\item \link{#FieldDescSect}{Fields}
+\item \link{#ConfigSect}{Configuration Variables}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescSect}{Description}}
+
+\it{VCacheMonitor} is a client application for monitoring the state
+of a running Vesta-2 function cache.
+
+The program starts by printing information that identifies the
+function cache, including:
+\begin{itemize}
+\item
+the name of the host on which the function cache is running,
+\item
+the port number on which the function cache is listening for connections,
+\item
+the root directory of the stable cache in which the function cache
+stores cache entries,
+\item
+the version number of the interface implemented by the function cache,
+and
+\item
+the date and time at which the function cache was started.
+\item
+the date and time at which VCacheMonitor was started
+\end{itemize}
+
+The program then prints status lines describing various aspects of the
+cache state. See the \link{#FieldDescSect}{Fields} section below for
+descriptions of each of the fields on a status line.
+
+If \it{VCacheMonitor} is unable to contact the function cache it was
+monitoring, it prints an error message and continues to poll the
+function cache until a connection can be re-established. Once it is
+able to contact the cache again, it resumes monitoring where it left
+off.
+
+\section{\anchor{SwitchesSect}{Switches}}
+
+Prefixes of switch names are recognized. For example, ``-u''
+can be used instead of ``-update''.
+
+\begin{description}
+\item{\anchor{UpdateOpt}{\bf{-update} \it{time}}}
+By default, a new status line is printed every 10 seconds. If
+\bf{-update} is specified, then a new line is printed every
+\it{time} seconds. \it{time} must be a non-negative integer.
+To specify an update time in units other than seconds, \it{time}
+can end with one of the following unit identifiers: \it{m} (minutes),
+\it{h} (hours), and \it{d} (days).
+
+\item{\anchor{TsOpt}{\bf{-ts} \it{time}}}
+If \bf{-ts} is specified, a timestamp is printed every \it{time}
+seconds. By default, timestamps are never printed. To specify a
+timestamp interval in units other than seconds, \it{time}
+can end with one of the following unit identifiers: \it{m} (minutes),
+\it{h} (hours), and \it{d} (days).
+
+\item{\anchor{NOpt}{\bf{-n} \it{num}}}
+By default, VCacheMonitor prints status lines indefinitely. If \bf{-n}
+is specified, then only \it{num} status lines are printed.
+
+\item{\anchor{RowsOpt}{\bf{-rows} \it{num}}}
+By default, \it{VCacheMonitor} prints the column headings once at the
+start of the program. If you specify \bf{-rows} \it{num}, then new
+heading columns are printed every \it{num} status lines.
+
+\item{\anchor{CheckOpt}{\bf{-check}}}
+By default, \it{VCacheMonitor} prints the number of requested status
+lines and then exits with status 0.  If \bf{-check} is specified, it
+will only attempt to print one line.  If it was able to successfully
+contact the cache and print the line it will exit with status 0.  If
+there was an error in reaching the cache or getting its status, it
+will exit with status 1.
+\end{description}
+
+\section{\anchor{FieldDescSect}{Fields}}
+
+Each status line contains the following fields:
+
+\begin{description}
+\item{\tt{SIZE}}
+The size of the function cache image (in bytes).
+
+\item{\tt{RES}}
+The size of the function cache image resident in physical memory (in bytes).
+
+\item{\tt{FREE VARS}}
+\item{\tt{LOOK UP}}
+\item{\tt{ADD ENT}}
+The number of calls to the function cache's \it{FreeVariables},
+\it{Lookup}, and \it{AddEntry} methods since the last status line was
+printed. These values are indicative of the load on the function cache.
+Since the values of these fields are relative to the previous status
+line, no values are printed for them on the first status line.
+
+\item{\tt{NUM VMPK}}
+The number of volatile MultiPKFile objects in memory.
+
+\item{\tt{NUM VPKS}}
+The number of volatile PKFile objects in memory.
+
+\item{\tt{NUM ENTS}}
+The total number of entries in the cache (both in memory and on disk
+in the stable cache).
+
+\item{\tt{NEW ENTS}}
+The number of new cache entries in memory. These entries have not been
+written to the stable cache.
+
+\item{\tt{NEW PKLS}}
+The total size of the pickled values associated with the new entries
+of the previous field.
+
+\item{\tt{OLD ENTS}}
+The number of ``old'' cache entries in memory. These are all entries
+that reside in the stable cache, but have been ``paged in''
+for efficiency.
+
+\item{\tt{OLD PKLS}}
+The total size of the pickled values associated with the ``old'' entries
+of the previous field.
+
+\item{\tt{NUM HF}}
+The number of entries in the function cache's hit filter. These are
+entries that may soon be or are currently being deleted. This value
+is non-zero only if a weed is in progress.
+
+\item{\tt{NUM DEL}}
+The number of cache entries currently being deleted. This value is
+non-zero only if a weed is in progress.
+
+\item{\tt{MPK WEED}}
+The number of MultiPKFiles that must still be processed as part of a
+weed.
+\end{description}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{VCacheMonitor} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. It first looks for this file in the current directory;
+if none is found there, it looks in your home directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{VCacheMonitor} are in the section denoted by \tt{[CacheServer]}.
+Here are the relevant variables and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{Host} (string)}
+The name of the host on which the function cache to be monitored is
+running.
+
+\item{\tt{Port} (integer)}
+The port number on which to contact the function cache.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VCache.1.html}{VCache(1)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Created on Sat May 31 19:09:39 PDT 1997 by heydon
+Last modified on Mon Jan  5 14:20:44 EST 2004 by ken@xorian.net
+     modified on Sun Aug 22 15:06:21 PDT 1999 by heydon
+\end{verbatim}

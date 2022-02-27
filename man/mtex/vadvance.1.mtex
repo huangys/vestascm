@@ -1,0 +1,419 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vadvance - Advance version in a Vesta session}{vadvance}{1}
+
+\section{Name}
+
+\bf{vadvance} - Advance to the next version within a Vesta checkout session
+
+\section{Synopsis}
+
+\bf{vadvance} [\link{#-t}{-t}] [\link{#-q}{-q}] [\link{#-Q}{-Q}] [\link{#-f}{-f}]
+[\link{#-v}{-v}]
+[\link{#-F}{-F \it{fp-content}}]
+[\link{#-j}{-j} \it{junk} | \link{#-J}{-J}]
+[\link{#-z}{-z} \it{maxsize} | \link{#-Z}{-Z}]
+[\link{#-s}{-s \it{session-dir}}]
+[\link{#-a}{-a \it{session-ver-arc}}]
+[\link{#-R}{-R \it{repos}}]
+[\link{#-w}{[-w] \it{work-dir}}] 
+
+In the most common usage, vadvance is invoked from the checkout
+session's working directory, and no arguments are needed.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Triggers}{Triggers}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vadvance} command cleans up and snapshots the contents of a working
+directory to form the next version in a Vesta checkout session.
+
+In more detail: \bf{vadvance}'s cleanup phase walks the directory tree
+rooted at \it{work-dir}.
+If the last arc of any file's name matches one of the patterns in
+\it{junk}, the file is deleted.  Here \it{junk} is a
+space-separated list of \bf{glob}(3) patterns.  If a file 
+added since the last advance is larger
+than \it{maxsize}, \bf{vadvance} exits with an error message upon
+encountering it.  Next, by default, \bf{vadvance} checks whether
+anything under \it{work-dir} has changed since the last advance; if
+not, it exits with an informational message.  Finally, \bf{vadvance}'s
+snapshot phase binds \it{session-dir}\tt{/}\it{session-ver-arc} to a
+new immutable directory that is a copy of the mutable directory
+\it{work-dir}, and then sets the \tt{session-ver-arc} attribute of
+\it{work-dir} to \it{session-ver-arc}.
+
+\begin{html}
+\<IMG SRC="vadvance.gif" ALT="vadvance figure"
+WIDTH=436 HEIGHT=427 BORDER=0\>
+\end{html}
+
+You must have read and write access to \it{work-dir} and 
+write access to \it{session-dir}.
+The newly created snapshot is owned by you, but
+has access permissions inherited from
+\it{session-dir}.
+
+Without the \link{#-t}{-t} flag, \bf{vadvance} returns status 0 if
+the advance was successful or if no advance was performed because
+nothing changed, 1 for parameter syntax errors, or 2 for more serious
+errors.  See the description of \link{#-t}{-t} below for how it affects
+the exit status.  (Note that if any of the \link{#Triggers}{trigger
+commands} fail, \bf{vadvance} returns status 2.)
+
+\anchor{renamed-work-dir}{If \it{work-dir} has been renamed,
+\bf{vadvance} will silently re-connect it to \it{session-dir} and any
+version reservation.  (To be specific, it checks whether \it{work-dir}
+matches the "\tt{work-dir}" attribute on \it{session-dir} and the
+version reservation pointed to by the "\tt{new-version}" attribute of
+\it{work-dir}, if any.  If they don't match, it corrects those
+"\tt{work-dir}" attributes.)  So if you rename a \it{work-dir}, just
+run \bf{vadvance} on it to update the "\tt{work-dir}" attributes which
+link to it from these other objects.  With either the \link{#-t}{-t}
+or \link{#-Q}{-Q} flag, it will \it{not} correct the "\tt{work-dir}"
+attributes.}
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-q}{-q}}
+Quiet; suppress printing out what is being done.
+\item{\anchor{-Q}{-Q}}
+Query; print out what the command would do, but don't do it.  (Note
+that this disables running any \link{#Triggers}{triggers} you have
+configured.)
+\item{\anchor{-t}{-t}}
+Test; exit with 0 status only if no advance would be performed because
+nothing changed.  Exit with 255 if the working directory has been modified.
+Implies -Q.
+\item{\anchor{-w}{-w} \it{work-dir}}
+The mutable working directory to snapshot to produce the new version.
+If you place this option last on the command line, you can omit the -w.
+If the name \it{work-dir} is 
+unqualified (does not have "\tt{/}", "\tt{.}", or "\tt{..}" as its first arc),
+it is interpreted relative
+to \link{#Configuration}{\it{DefaultWorkParent}}\tt{/}\it{user},
+where \it{user} is your local user name.
+Defaults to the current directory, or if \link{#-s}{-s} is not used
+and the current directory has no \tt{session-dir} attribute, the
+nearest parent directory with a non-empty \tt{session-dir} attribute.
+\item{\anchor{-s}{-s} \it{session-dir}}
+The session directory that will hold the new version.
+If the name \it{session-dir} is unqualified,
+it is interpreted relative to the
+site's default directory of packages, 
+\link{#Configuration}{\it{DefaultPackageParent}}.  
+Defaults to the \tt{session-dir}
+attribute of \it{work-dir}, if any.
+\item{\anchor{-a}{-a} \it{session-ver-arc}}
+The new version in the session directory.  Must be a single arc (i.e.,
+must contain no "\tt{/}" characters).
+Defaults to the highest version
+number bound in \it{session-dir} plus 1.  That is, \it{session-dir} is searched
+for arcs consisting entirely of decimal digits, the one with the highest value
+is chosen, and it is incremented by 1 to obtain the default.  
+If no such arcs are found, the default is set to \tt{1}.
+\item{\anchor{-f}{-f}}
+Force; omit sanity checking.
+If the -f flag is not given:
+\begin{itemize}
+\item The directory \it{session-dir} must be of type "session".
+(That is, its \tt{type} attribute must include this value.)
+\item Some file or directory in the tree rooted at the working directory 
+must have changed since the last \bf{vadvance}.
+\end{itemize}
+\item{\anchor{-F}{-F} \it{fp-content}}
+Any new or modified files in the directory that are strictly less than
+\it{fp-content} bytes long are fingerprinted deterministically
+according to their contents.  Longer files are fingerprinted with
+arbitrary unique identifiers.  The cost of fingerprinting a file's
+contents is non-trivial, but doing so allows for cache hits in cases
+where two evaluations depend on files that have identical contents but
+were inserted into the repository separately.  The default value for
+this parameter is determined by the Vesta configuration file; 
+\link{#Configuration}{see below}.
+The special value -1 causes all files to be fingerprinted by
+contents, while 0 causes all files to be fingerprinted by unique
+identifier.
+\item{\anchor{-j}{-j} \it{junk}}
+A space-separated list of \bf{glob}(3) patterns used to delete
+unwanted files from the working directory tree before advancing.
+If the last arc of a file's name matches one of the patterns in
+\it{junk}, and the file was created or modified since the last advance,
+the file is deleted.
+The default value is obtained from the
+Vesta configuration file; \link{#Configuration}{see below}.
+\item{\anchor{-J}{-J}}
+Clears the \it{junk} pattern list; equivalent to \tt{-j ""}.
+\item{\anchor{-z}{-z} \it{maxsize}}
+Size of the largest new file that \bf{vadvance} will advance into the
+repository, in bytes.  \it{maxsize} can be specified with a unit
+multiplier:
+\begin{itemize}
+\item \bf{K} = 2^10
+\item \bf{M} = 2^20
+\item \bf{G} = 2^30
+\item \bf{T} = 2^40
+\end{itemize}
+If a file larger than \it{maxsize} was created or modified since
+the last advance, the new advance will fail with an error message.
+The default value is obtained from the
+Vesta configuration file; \link{#Configuration}{see below}.
+\item{\anchor{-Z}{-Z}}
+Disables the file size limit; equivalent to \tt{-z -1}.
+\item{\anchor{-R}{-R} \it{repos}}
+Advance the package in \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\item{\anchor{-v}{-v}}
+Displays extra information about \link{#Triggers}{triggers}.  Before
+executing any trigger commands, the environment variables used to
+provide information to them are printed.  Also, each trigger setting
+is printed before the command is executed.  This can be used to help
+debug trigger problems.  When used with \link{#-Q}{the query flag
+(-Q)}, the triggers are displayed in their sorted order without
+actually running them.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]}
+section of \link{vesta.cfg.5.html}{the Vesta configuration file
+(vesta.cfg)}.
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{MutableRootName}}
+The filename under which the local tree of mutable directories provided
+by Vesta is mounted.  Ordinarily set to \tt{/vesta-work}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultWorkParent}}
+The default parent directory for mutable working directory trees belonging to
+individual users.  Ordinarily the same as the mutable root.
+\item{\it{realm}}
+Global user names are formed by appending
+\tt{@}\it{realm} to the local name.
+\item{\it{TimeFormat}}
+A format string for \bf{strftime}(3) to produce time strings for Vesta
+attributes.  A common setting is "%a %b %e %T %Z %Y".
+\item{\it{FpContent}}
+The default value for the \link{#-F}{-F} flag.
+\item{\it{vadvance_junk}}
+The default value for the \link{#-j}{-j} flag.  If not set,
+the default is "\tt{*~ .*~ core}".
+\item{\it{vadvance_maxsize}}
+The default value for the \link{#-z}{-z} flag.  If not set,
+the default is 1048576 (1 megabyte).
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+Settings in the \tt{[vadvance pre trigger]} and \tt{[vadvance post
+trigger]} sections of the configuration file are used as commands to
+be run before and after the repository is modified.  See
+\link{#Triggers}{the next section}.
+
+\section{\anchor{Triggers}{Triggers}}
+
+Users can configure commands in \link{vesta.cfg.5.html}{the Vesta
+configuration file (vesta.cfg)} to be executed before and after
+\bf{vadvance} modifies the repository.  Each setting in the
+\tt{[vadvance pre trigger]} section specifies a command to be run
+before any action is taken, and each setting in the \tt{[vadvance post
+trigger]} section specifies a command to be run after all actions are
+complete.
+
+The value of each setting specifies a command to run.  The names of
+the settings define the order in which these commands are run.  The
+setting names are sorted as strings, but comparing embedded sequences
+of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  The suggested naming convention for trigger
+settings is to start with an integer, follow with a descriptive name,
+and follow that with any other text.  (This is based on the convention
+used for System V style init script links typically stored in
+\tt{/etc/rc\it{\bf{N}}.d}.)
+
+Here's a simple example of how we suggest naming trigger settings, and
+how they are ordered for execution:
+
+\begin{verbatim}
+[vadvance pre trigger]
+100world = echo World!
+9tada    = echo Tada:
+50hello  = echo Hello,
+\end{verbatim}
+
+Because these all start with numbers, they will be executed in the
+order "9tada", "50hello", "100world".  The output will look like this:
+
+\begin{verbatim}
+% vadvance
+Tada:
+Hello,
+World!
+Advancing to /vesta/...
+\end{verbatim}
+
+Trigger commands are executed with \tt{system}(3).  On most operating
+systems this means "\tt{/bin/sh -c \it{command}}", so simple in-line
+shell scripts can be used.  (Note that each is executed in its own
+shell process, so environment variables set during one trigger command
+\it{will not propagate to subsequent ones}.)
+
+If any of the commands in the \tt{[vadvance pre trigger]} section exit
+with error (non-zero) status or are terminated by a signal
+(e.g. segmentation fault, abort), \bf{vadvance} will exit without
+taking a new snapshot or deleting junk files from the working
+directory.
+
+The commands in the \tt{[vadvance post trigger]} section will only be
+executed if a new snapshot is taken.  If the working directory hasn't
+been modified since the last snapshot or \bf{vadvance} fails with an
+error, the commands in the \tt{[vadvance post trigger]} section
+\it{will not be executed}.
+
+Note that all the trigger commands (both pre and post) are executed
+sequentially.  Once a trigger command is started, nothing else happens
+until it completes.  If any of the pre trigger commands runs forever,
+\bf{vadvance} will not take a new snapshot.  If any of the post
+trigger commands runs forever, \bf{vadvance} will not complete.  (In
+other words, \it{a trigger command that hangs will cause \bf{vadvance}
+to hang}.)  If any of the pre or post trigger commands exit with error
+status or are terminated by a signal, \bf{vadvance} will exit without
+running any more commands from those sections.  (In other words, \it{a
+trigger command that fails will prevent further trigger commands from
+being run}.)
+
+If the \link{#-Q}{the query flag (-Q)} is given (or \link{#-t}{the
+test flag (-t)}, which implies query), the trigger commands will not
+actually be run.
+
+Information about what \bf{vadvance} is going to do or has just done
+is provided to the trigger commands through the following environment
+variables:
+
+\begin{description}
+
+\item{VESTA_TOOL}
+The name of the Vesta tool the trigger command has been invoked from.
+(For \bf{vadvance}, this will always be "vadvance".)
+\item{VESTA_REPOS}
+The repository (\it{host}\tt{:}\it{port}) \bf{vadvance} communicates
+with (either the default from the configuration file or the one
+specified with the \link{#-R}{-R flag}.
+\item{VESTA_WORK_DIR}
+The working directory of which a new snapshot is taken.
+\item{VESTA_SESSION_DIR}
+The session directory within which the new snapshot version is
+created.
+\item{VESTA_SESSION_VER_ARC}
+The name of the new snapshot version created by \bf{vadvance} inside
+the session directory.
+\item{VESTA_SESSION_VER}
+The full path of the new snapshot version created by \bf{vadvance}.
+(This is the same as "$VESTA_SESSION_DIR/$VESTA_SESSION_VER_ARC".)
+\item{VESTA_PREV_SESSION_VER_ARC}
+The name of the highest version existing in the session directory when
+\bf{vadvance} started.
+\item{VESTA_PREV_SESSION_VER}
+The full path of the highest version existing in the session directory
+when \bf{vadvance} started.  (This is the same as
+"$VESTA_SESSION_DIR/$VESTA_PREV_SESSION_VER_ARC".)
+\item{VESTA_JUNK}
+The pattern of "junk files" removed before taking the snapshot.  Set
+to the empty string if removal of junk files is disabled with
+\link{#-J}{the -J flag}.
+\item{VESTA_MAXSIZE}
+The maximum size of file allowed in the snapshot.
+\item{VESTA_FP_CONTENT}
+The maximum size of file deterministically fingerprinted by content.
+(If set to -1, then all files will be fingerprinted by content,
+regardless of size.)
+\item{VESTA_QUIET}
+Set to 1 if \link{#-q}{the quiet flag (-q) was given}, set to 0
+otherwise.
+\item{VESTA_FORCE}
+Set to 1 if \link{#-f}{the force flag (-f) was given}, set to 0
+otherwise.
+\end{description}
+
+(Note that the environment variables are the same for both the pre and
+post trigger commands.)
+
+Here are some examples using these environment variables:
+
+\begin{verbatim}
+[vadvance pre trigger]
+50print_change = diff -r -u $VESTA_SESSION_VER $VESTA_WORK_DIR | more
+
+[vadvance post trigger]
+50stamp_wd = vattrib -R $VESTA_REPOS_HOST:$VESTA_REPOS_PORT -s "last-advanced-at" "`date`" $VESTA_WORK_DIR
+\end{verbatim}
+
+If the \link{#-v}{verbose trigger flag (-v)} is given, these
+environment variables will be printed, and each trigger command will
+be printed before executing it.  This can be useful for debugging
+trigger problems.  If both \link{#-v}{verbose trigger flag} and the
+\link{#-Q}{the query flag (-Q)} are given, the triggers are displayed
+in their sorted order without actually running them.  This can be used
+to find out what trigger commands are configured without actually
+running them.
+
+\section{\anchor{Limitations}{Limitations}}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

@@ -1,0 +1,47 @@
+PROC Main() IS WriteInt(Eval()); Wr('\n') END;
+
+PROC n := Eval() IS
+   n := Eval1();
+   DO Token('+'); n := n + Eval1() OD
+END;
+
+PROC n := Eval1() IS
+  n := Eval2();
+  DO Token('*'); n := n * Eval2() OD
+END;
+
+PROC n := Eval2() IS
+  n := ReadInt()
+| Token('('); n := Eval(); Token(')')
+END;
+
+PROC n := ReadInt() IS
+  SkipWhite();
+  n := RdDigit();
+  DO n := 10 * n + RdDigit() OD
+END;
+
+PROC n := RdDigit() IS
+  VAR c := Rd() IN
+    '0' <= c AND c <= '9' -> n := c - '0'
+  END
+END;
+
+PROC Token(c) IS SkipWhite(); Rd(c) END;
+
+PROC SkipWhite() IS
+  DO Rd(' ') | Rd('\t') | Rd('\n') OD
+END;
+
+PROC WriteInt(n) IS
+  n = 0 -> Wr('0')
+| n < 0 -> Wr('-'); WI2(-n)
+| WI2(n)
+END;
+
+PROC WI2(n) IS
+  n = 0 -> SKIP
+| WI2(n DIV 10); Wr('0' + (n MOD 10))
+END;
+
+  

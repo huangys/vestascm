@@ -1,0 +1,995 @@
+
+(* This file was created by concatenating the three files: "header.lim",
+   "<output-format>.lim", and "common.lim". *)
+
+(* ----------- OUTPUT-INDEPENDENT HEADER CODE ------------ *)
+   
+(* Last modified on Sun Jan 19 16:49:40 PST 1997 by heydon *)
+
+(* ---------------------- Constants ---------------------- *)
+
+VAR FALSE := 0, TRUE := 1;
+
+VAR LBrace := '{', RBrace := '}', BackSlash := '\\',
+  SingleLQuote := '`', SingleRQuote := '\'', CommentChar := '%';
+
+VAR RomanFace := 0, BoldFace := 1, ItalFace := 2, TypewrFace := 3;
+(* These are different typeface values. *)
+
+VAR HtmlOutput := 0, ManOutput := 1, TexOutput := 2;
+(* These are the different output formats. *)
+
+(* ------------------ Global Variables ------------------- *)
+
+VAR newLine := TRUE;
+(* TRUE iff at the start of an output line. *)
+
+VAR startLine := TRUE;
+(* TRUE iff at the start of an input line. *)
+
+VAR newFormatLine := TRUE;
+(* TRUE iff known to be at the start of a new line in the output
+   format, for example, after a paragraph or line break. For now,
+   this variable is only used (read) in html.lim, so the header
+   files for the other formats do not have to maintain it. *)
+
+(* The output-dependent procedures are responsible for maintaining
+   "newLine", "startLine", and "newFormatLine". That is, if they make
+   any calls to "Wr", they must set "newLine" as the last character
+   written is '\n' or not; if they make any calls to "Rd", they must
+   set "startLine" as the last character read is '\n' or not. *)
+
+(* ---------- Output-dependent Global Variables ---------- *)
+
+(* The output-dependent files must define certain global variables
+   (constants) and procedures. The global variables are described here. *)
+
+(* OutputFormat:
+
+   This variable should be one of the three output formats
+   "HtmlOutput", "ManOutput", or "TexOutput" above. It
+   defines the output format. *)
+
+(* BoldNoNL, ItalNoNL, TypewrNoNL, MPNoNL, SectNoNL:
+
+   The "*NoNL" constants indicate whether newlines should
+   be converted to spaces in the processing of arguments to
+   the "\bf", "\it", "\tt", "\manpage", and "\section"
+   commands. *)
+
+(* ProcessMPTitleArg, ProcessMPOtherArgs,
+   ProcessLinkArg, ProcessAnchorArg:
+
+   The "Process*" constants indicate whether certain command
+   arguments should be processed or silently skipped. *)
+
+(* HandleSpecialInVerb, HandleSpecialInOutputEnv:
+
+   The "HandleSpecialIn*" constants are TRUE iff special
+   characters should be translated in the scope of the
+   verbatim and output-specific environments. Special
+   characters are always translated (via "EchoSpecialChar"
+   below) outside these two environments. *)
+
+(* ---------------------- Procedures --------------------- *)
+
+(* All of these procedures must maintain the "newLine",
+   "startLine", and "newFormatLine" boolean variables
+   described above. "newLine" and "newFormatLine" must
+   be updated if output is written, and "startLine" must
+   be updated if input is read. *)
+
+(* PROC EchoSpecialChar(c);
+     If 'c' is a special character for this output format, write
+     out the translation of 'c'; otherwise, fail. *)
+
+(* PROC c := RdSpecialChar();
+     If the next character on the input is special for this output
+     format, then read it and return it; otherwise, fail. *)
+
+(* PROC DoubleLeftQuoteTxt();
+   PROC DoubleRightQuoteTxt();
+     Write the correct string to represent the named character(s)
+     or format marker for this output format. *)
+
+(* PROC NewParagraphTxt(level);
+     Write the necessary characters to start a new paragraph. *)
+
+(* PROC NoParaAfterListTxt(level);
+     ?? *)
+
+(* PROC NewLineTxt(level);
+     Write the characters necessary to start a new line in the
+     "flushleft" environment. *)
+
+(* PROC StartBoldTxt(level);
+   PROC EndBoldTxt(level, face);
+   PROC StartItalTxt(level);
+   PROC EndItalTxt(level, face);
+   PROC StartTypewrTxt(level);
+   PROC EndTypewrTxt(level, face);
+     Write the necessary characters to start the necessary font
+     face, and restore the font face to the face "face". *)
+(* --------------- OUTPUT-DEPENDENT CODE --------------- *)
+   
+(* Constants *)
+
+VAR OutputFormat := TexOutput;
+
+VAR BoldNoNL := FALSE, ItalNoNL := FALSE, TypewrNoNL := FALSE,
+  MPNoNL := FALSE, SectNoNL := FALSE;
+
+VAR ProcessMPTitleArg := TRUE, ProcessMPOtherArgs := FALSE,
+  ProcessLinkArg := FALSE, ProcessAnchorArg := FALSE;
+
+VAR HandleSpecialInVerb := FALSE, HandleSpecialInOutputEnv := TRUE;
+
+PROC EchoSpecialChar(c) IS
+(* If "c" should be written specially, then do so; fail otherwise. *)
+  c = '$' -> Wr("\\$"); NotAtNewLine()
+| c = '&' -> Wr("\\&"); NotAtewLine()
+| c = '%' -> Wr("\\%"); NotAtNewLine()
+| c = '#' -> Wr("\\#"); NotAtNewLine()
+| c = '_' -> Wr("\\_"); NotAtNewLine()
+| c = '{' -> Wr("\\{"); NotAtNewLine()
+| c = '}' -> Wr("\\}"); NotAtNewLine()
+| c = '~' -> Wr("{\\tt\\symbol{\'176}}"); NotAtNewLine()
+| c = '^' -> Wr("{\\tt\\symbol{\'136}}"); NotAtNewLine()
+| c = BackSlash -> Wr("{\\tt\\symbol{\'134}}"); NotAtNewLine()
+END;
+
+PROC c := RdSpecialChar() IS
+(* If the next character on the input is special for this output
+   format, then read it and return it; otherwise, fail. *)
+  c := Rd();
+  c = '$' OR c = '&' OR c = '%' OR c = '#' OR c = '_' OR c = '{'
+    OR c = '}' OR c = '~' OR c = '^' OR c = BackSlash
+    -> startLine := FALSE
+END;
+
+PROC DoubleLeftQuoteTxt() IS Wr("``"); NotAtNewLine() END;
+PROC DoubleRightQuoteTxt() IS Wr("\'\'"); NotAtNewLine() END;
+
+PROC NewParagraphTxt(level) IS StartLine(); Wr('\n'); AtNewLine() END;
+PROC NoParaAfterListTxt(level) IS SKIP END;
+PROC NewLineTxt(level) IS Wr("\\mbox{}\\\\\n"); AtNewLine() END;
+
+PROC StartBoldTxt(level) IS Wr("{\\bf "); NotAtNewLine() END;
+PROC EndBoldTxt(level, face) IS Wr("}"); NotAtNewLine() END;
+PROC StartItalTxt(level) IS Wr("{\\it "); NotAtNewLine() END;
+PROC EndItalTxt(level, face) IS
+  (* Write "\/" if not at a period or comma. *)
+  { { At('.') | At(',') } | Wr("\\/") };
+  Wr("}"); NotAtNewLine()
+END;
+PROC StartTypewrTxt(level) IS Wr("{\\tt "); NotAtNewLine() END;
+PROC EndTypewrTxt(level, face) IS Wr("}"); NotAtNewLine() END;
+
+PROC StartFileTxt() IS
+  Wr("% This file generated automatically by mtex2tex(1)\n");
+  AtNewLine()
+END;
+PROC EndFileTxt() IS SKIP END;
+
+PROC StartManPageTxt() IS
+  StartLine();
+  Wr("\\section{");
+  NotAtNewLine()
+END;
+PROC EndMPTitleArgTxt() IS Wr("}\n\n"); AtNewLine() END;
+PROC StartMPNameArgTxt() IS SKIP END;
+PROC EndMPNameArgTxt() IS SKIP END;
+PROC EndMPSectArgTxt() IS SKIP END;
+
+PROC StartSectionTxt() IS
+  StartLine(); Wr("\\subsection{"); NotAtNewLine()
+END;
+PROC EndSectionArgTxt() IS Wr("}\n"); AtNewLine() END;
+PROC EndSectionTxt() IS SKIP END;
+
+PROC StartVerbTxt() IS
+  StartLine(); Wr("\\begin{verbatim}\n"); AtNewLine()
+END;
+PROC EndVerbTxt() IS
+  StartLine(); Wr("\\end{verbatim}\n\n"); AtNewLine()
+END;
+
+PROC StartLeftTxt() IS
+  StartLine(); Wr("\\begin{flushleft}\n"); AtNewLine()
+END;
+PROC EndLeftTxt() IS
+  StartLine(); Wr("\\end{flushleft}\n\n"); AtNewLine()
+END;
+
+PROC StartItemizeTxt(level) IS
+  StartLine(); Wr("\\begin{itemize}\n"); NotAtNewLine()
+END;
+PROC EndItemizeTxt(level) IS
+  StartLine(); Wr("\\end{itemize}\n"); AtNewLine()
+END;
+PROC StartDescTxt(level) IS
+  StartLine(); Wr("\\begin{description}\n"); NotAtNewLine()
+END;
+PROC EndDescTxt(level) IS
+  StartLine(); Wr("\\end{description}\n"); AtNewLine()
+END;
+PROC StartEnumTxt(level) IS
+  StartLine(); Wr("\\begin{enumerate}\n"); NotAtNewLine()
+END;
+PROC EndEnumTxt(level) IS
+  StartLine(); Wr("\\end{enumerate}\n"); AtNewLine()
+END;
+
+PROC StartItemItemTxt(level) IS Wr("\\item"); NotAtNewLine() END;
+PROC StartEnumItemTxt(level) IS Wr("\\item"); NotAtNewLine() END;
+PROC StartDescItemTxt(level) IS Wr("\\item["); NotAtNewLine() END;
+PROC EndDescItemArgTxt(level) IS Wr("]"); NotAtNewLine() END;
+
+PROC StartLinkTxt() IS SKIP END;
+PROC EndLinkArgTxt() IS SKIP END;
+PROC EndLinkTxt() IS SKIP END;
+
+PROC StartAnchorTxt() IS SKIP END;
+PROC EndAnchorArgTxt() IS SKIP END;
+PROC EndAnchorTxt() IS SKIP END;
+
+(* -------------- OUTPUT-INDEPENDENT CODE -------------- *)
+
+(* Last modified on Tue Nov 28 15:13:44 PST 2000 by mann   *)
+(*      modified on Sun Jan 19 16:27:07 PST 1997 by heydon *)
+
+(* Constants *)
+
+VAR NoGrp := 0, ArgGrp := 1,
+  VerbGrp := 2, LeftGrp := 3,
+  HtmlGrp := 4, RoffGrp := 5, TexGrp := 6,
+  ItemGrp := 7, DescGrp := 8, EnumGrp := 9;
+(* Some procedures in this module take an argument named
+   "kind", which corresponds to the kind of the current
+   "\begin..\end" group and should be one of the "*Grp"
+   constants. "NoGrp" corresponds to reading token at
+   top-level, and "ArgGrp" corresponds to the case of
+   reading a command argument, which should not contain
+   an environment. *)
+
+VAR NoLevel := -1;
+(* This is the value of the level to pass if a list environment
+   is not expected to occur. *)
+
+(* Global variables *)
+
+VAR noOutput := FALSE;
+(* TRUE iff output should be surpressed. *)
+
+VAR hitSection := FALSE;
+(* TRUE iff a "\section" command has been processed. *)
+
+VAR lineNum := 1;
+(* The current line number. *)
+
+VAR typeface := RomanFace;
+(* The current typeface *)
+
+VAR handleSpecial := TRUE;
+(* TRUE iff special characters for the particular output format should be
+   translated according to the output format. For example, the '<'
+   character has to be translated to "&lt;" in the HTML output format.
+   This may be disabled during some environments that want to pass the
+   special characters through without translation. *)
+
+PROC NotAtNewLine() IS newLine := FALSE; newFormatLine := FALSE END;
+PROC AtNewLine() IS newLine := TRUE; newFormatLine := FALSE END;
+PROC AtNewFormatLine() IS newLine := TRUE; newFormatLine := TRUE END;
+
+PROC AdvanceLine() IS
+  lineNum := lineNum + 1
+END;
+
+PROC StartLine() IS
+(* Start a new line if not at the start of one already. *)
+  newLine -> SKIP | Wr('\n'); newLine := TRUE
+END;
+
+PROC Abort() IS
+  Wr('\n'); ABORT
+END;
+
+PROC AtEndArg() IS
+(* A noop if the standard input is positioned at one
+   of the legal arguments to \end; fails otherwise. *)
+  At("verbatim") | At("html") | At("roff") | At("tex")
+| At("itemize") | At("description") | At("enumerate")
+| At("flushleft")
+END;
+
+PROC ErrGrp(kind) IS
+(* Print the name of the group corresponding to "kind"
+   to the error output. *)
+  kind = VerbGrp -> Err("verbatim")
+| kind = HtmlGrp -> Err("html")
+| kind = RoffGrp -> Err("roff")
+| kind = TexGrp  -> Err("tex")
+| kind = ItemGrp -> Err("itemize")
+| kind = DescGrp -> Err("description")
+| kind = EnumGrp -> Err("enumerate")
+| kind = LeftGrp -> Err("flushleft")
+END;
+
+PROC ErrInt2(x) IS
+(* Print the value of "x" to the error output,
+   unless "x = 0", in which case this is a no-op. *)
+  x = 0 -> SKIP
+| ErrInt2(x DIV 10); Err('0' + x MOD 10)
+END;
+
+PROC ErrInt(x) IS
+(* Print the value of "x" to the error output. *)
+  x = 0 -> Err("0")
+| ErrInt2(x)
+END;
+
+PROC ShowError(ln) IS
+  Err("Error in line ");
+  ErrInt(ln);
+  Err(": ")
+END;
+
+PROC WrInt2(x) IS
+(* Print the value of "x" to the standard output,
+   unless "x = 0", in which case this is a no-op. *)
+  x = 0 -> SKIP
+| WrInt2(x DIV 10); Wr('0' + x MOD 10)
+END;
+
+PROC WrInt(x) IS
+(* Print the value of "x" to the standard output. *)
+  x = 0 -> Wr('0')
+| x < 0 -> Wr('-'); WrInt2(-x)
+| WrInt2(x)
+END;
+
+PROC res := IsWhiteSpaceChar(c) IS
+(* Return TRUE iff "c" is a whitespace character. *)
+  res := (c = '\s' OR c = '\n' OR c = '\t')
+END;
+
+PROC SkipWhiteChar() IS
+(* Skip a non-newline whitespace character; fail otherwise. *)
+  { Rd('\s') | Rd('\t') }; startLine := FALSE
+END;
+
+PROC SkipWhiteChars() IS
+(* Skip 0 or more non-newline consecutive whitespace characters. *)
+  DO SkipWhiteChar() OD
+END;
+
+PROC SkipBlankLine() IS
+(* Skip a single blank line, defined to be a sequence of
+   non-newline whitespace characters ending with newline.
+   Advance the global line counter. Fail otherwise. *)
+  TIL Rd('\n') DO SkipWhiteChar() END;
+  startLine := TRUE; AdvanceLine()
+END;
+
+PROC SkipBlankLines() IS
+(* If the input contains a newline followed by one or more
+   blank lines, succeed and advance the global line
+   counter appropriately. Fail otherwise. *)
+  Rd('\n'); startLine := TRUE; AdvanceLine();
+  SkipBlankLine();
+  DO SkipBlankLine() OD
+END;
+
+PROC SkipWhiteSpace() IS
+(* Skip any consecutive whitespace characters. Increment
+   the global line counter once for each skipped newline. *)
+  SkipWhiteChars();
+  { At('\n'); DO SkipBlankLine() OD; SkipWhiteChars()
+  | SKIP
+  }
+END;
+
+PROC NoTextAllowedErr() IS
+  ShowError(lineNum);
+  Err("no text allowed after command on this line\n");
+  Abort()
+END;
+
+PROC SkipReqdBlankLine(skipBlankLines) IS
+(* Skip whitespace characters, which must be followed by a newline character.
+   If "skipBlankLines" is TRUE, then skip any blank lines after that. *)
+  SkipBlankLine();
+  { skipBlankLines -> DO SkipBlankLine() OD | SKIP }
+| NoTextAllowedErr()
+END;
+
+PROC NewParagraph(level) IS noOutput -> SKIP | NewParagraphTxt(level) END;
+
+PROC NoParaAfterList(level) IS
+  noOutput -> SKIP
+| NoParaAfterListTxt(level)
+END;
+
+PROC SkipReqdWhiteSpace(level, afterList) IS
+(* Skip any whitespace on the rest of the line. If this line is followed by
+   one or more blanklines, generate a new paragraph. Otherwise, the skipped
+   whitespace must be followed by a newline; skip it. *)
+  SkipBlankLines(); NewParagraph(level)
+| SkipBlankLine(); { afterList -> NoParaAfterList(level) | SKIP }
+| NoTextAllowedErr()
+END;
+
+PROC SkipNewPara(level) IS
+(* Skip any whitespace on the rest of the line. If this line is followed by
+   one or more blanklines, generate a new paragraph. Otherwise, if the skipped
+   whitespace is followed by a newline, skip it; if not, this is a noop. *)
+  SkipBlankLines(); NewParagraph(level)
+| SkipBlankLine()
+| SKIP
+END;
+
+PROC AtBreakCommand() IS
+(* A noop if the input is positioned at a command that causes
+   a line break in the output; fail otherwise. *)
+  At("\\section")
+| At("\\begin{verbatim}")
+| Eof()
+END;
+
+PROC FilterNextChar(noNL) IS
+(* If the input is at a comment, then skip it. Otherwise,
+   "Echo" the converted version of the next character
+   on the standard input, or fail if the input is at EOF.
+   If "noNL" is TRUE, convert a newline character to a
+   space. Don't produce any output if the global variable
+   "noOutput" is TRUE. *)
+  VAR c := Rd() IN
+    c = CommentChar AND startLine -> SkipComment()
+  | FilterNonCommentChar(c, noNL)
+  END
+END;
+
+PROC SkipComment() IS
+  TIL Rd('\n') DO EVAL Rd() END;
+  AdvanceLine();
+  startLine := TRUE
+END;
+
+PROC FilterNonCommentChar(c, noNL) IS
+(* "Echo" the converted version of the character "c",
+    or fail if the input is at EOF. If "noNL" is TRUE,
+    convert a newline character to a space. Don't produce
+    any output if the global variable "noOutput" is TRUE. *)
+  { c = '\n' -> AdvanceLine(); startLine := TRUE
+  | startLine := FALSE
+  };
+  { noOutput -> SKIP
+  | c = '\n' ->
+  	 { noNL -> Wr('\s'); NotAtNewLine()
+  	 | Wr(c); newLine := TRUE }
+  | c = SingleLQuote ->
+  	 Rd(SingleLQuote); startLine := FALSE; DoubleLeftQuoteTxt()
+  | c = SingleRQuote ->
+  	 Rd(SingleRQuote); startLine := FALSE; DoubleRightQuoteTxt()
+  | handleSpecial -> EchoSpecialChar(c)
+  | Wr(c); NotAtNewLine()
+  }
+END;
+
+PROC EchoCharNoSpecial(c) IS
+(* Echo the character "c" without translation, even if it is special
+   for the target output format. *)
+  EchoCharSpecialFlag(c, FALSE)
+END;
+
+PROC EchoCharWithSpecial(c) IS
+(* If "c" is special for the target output format and "handleSpecial"
+   is "TRUE", then translate it. Otherwise, simply echo it. *)
+  EchoCharSpecialFlag(c, TRUE)
+END;
+
+PROC EchoCharSpecialFlag(c, flag) IS
+(* Special characters in the input for this particular output format
+   are converted iff "flag" and "handleSpecial" are both "TRUE". *)
+  { c = '\n' -> AdvanceLine(); startLine := TRUE
+  | startLine := FALSE
+  };
+  { noOutput -> SKIP
+  | flag AND handleSpecial -> EchoSpecialChar(c)
+  | Wr(c); { (c = '\n') -> newLine := TRUE | NotAtNewLine() }
+  }
+END;
+
+PROC EchoQuotedChar(kind) IS
+(* If the next character is one of the input characters quotable via '\',
+   then echo it; otherwise, fail. Requires "kind # VerbGrp". In this
+   case, the next character should *not* be translated if it is special
+   for the output format, since it has been quoted. The only
+   exception to this rule is the backslash character, since it usually
+   *must* be escaped to be treated normally (the characters "{", "}",
+   "`", and "'" can appear stand-alone in the input without being
+   quoted). *)
+  Rd(BackSlash); startLine := FALSE; EchoCharWithSpecial(BackSlash)
+| Rd(LBrace); startLine := FALSE; EchoCharNoSpecial(LBrace)
+| Rd(RBrace); startLine := FALSE; EchoCharNoSpecial(RBrace)
+| Rd(SingleLQuote); startLine := FALSE; EchoCharNoSpecial(SingleLQuote)
+| Rd(SingleRQuote); startLine := FALSE; EchoCharNoSpecial(SingleRQuote)
+| VAR c := RdSpecialChar() IN
+    kind = HtmlGrp OR kind = RoffGrp OR kind = TexGrp ->
+      EchoCharNoSpecial(c)
+  | ShowError(lineNum);
+    Err("illegal output-specific quoted character \"\\"); Err(c); Err("\"\n");
+    Abort()
+  END
+END;
+
+PROC NewLine(level) IS noOutput -> SKIP | NewLineTxt(level) END;
+
+PROC NewLineCmd(kind, level) IS
+  kind = LeftGrp ->
+    SkipReqdBlankLine(FALSE);
+    NewLine(level)
+| ShowError(lineNum);
+  Err("\\newline not in flushleft environment\n");
+  Abort()
+END;
+
+PROC StartBold(level) IS noOutput -> SKIP | StartBoldTxt(level) END;
+PROC EndBold(level, face) IS noOutput -> SKIP | EndBoldTxt(level, face) END;
+
+PROC BoldCmd(level) IS
+  StartBold(level);
+  VAR lineNum0 := lineNum, typeface0 := typeface IN
+    typeface := BoldFace;
+    FilterTilRBrace(BoldNoNL);
+    typeface := typeface0
+  | ShowError(lineNum0); Err("no matching right brace for \\bf\n"); Abort()
+  END;
+  EndBold(level, typeface)
+END;
+
+PROC StartItal(level) IS noOutput -> SKIP | StartItalTxt(level) END;
+PROC EndItal(level, face) IS noOutput -> SKIP | EndItalTxt(level, face) END;
+
+PROC ItalicCmd(level) IS
+  StartItal(level);
+  VAR lineNum0 := lineNum, typeface0 := typeface IN
+    typeface := ItalFace;
+    FilterTilRBrace(ItalNoNL);
+    typeface := typeface0
+  | ShowError(lineNum0); Err("no matching right brace for \\it\n"); Abort()
+  END;
+  EndItal(level, typeface)
+END;
+
+PROC StartTypewr(level) IS noOutput -> SKIP | StartTypewrTxt(level) END;
+PROC EndTypewr(level,face) IS noOutput -> SKIP | EndTypewrTxt(level,face) END;
+
+PROC TypewriterCmd(level) IS
+  StartTypewr(level);
+  VAR lineNum0 := lineNum, typeface0 := typeface IN
+    typeface := TypewrFace;
+    FilterTilRBrace(TypewrNoNL);
+    typeface := typeface0
+  | ShowError(lineNum0); Err("no matching right brace for \\tt\n"); Abort()
+  END;
+  EndTypewr(level, typeface)
+END;
+
+PROC RequireZeroLevel(level) IS
+(* If "level <= 0" this is a no-op. Otherwise, print
+   an error message and abort. *)
+  level <= 0 -> SKIP
+| ShowError(lineNum);
+  Err("command illegal in list environment\n");
+  Abort()
+END;
+
+PROC StartManPage() IS noOutput -> SKIP | StartManPageTxt() END;
+PROC EndMPTitleArg() IS noOutput -> SKIP | EndMPTitleArgTxt() END;
+PROC StartMPNameArg() IS noOutput -> SKIP | StartMPNameArgTxt() END;
+PROC EndMPNameArg() IS noOutput -> SKIP | EndMPNameArgTxt() END;
+PROC EndMPSectArg() IS noOutput -> SKIP | EndMPSectArgTxt() END;
+
+PROC ManpageCmd(level) IS
+(* Process a manpage command, assuming the characters
+   "\manpage{" have just been read. The final "}" and
+   any whitespace after it are consumed. The "manpage"
+   command takes the form: \manpage{title}{name}{num}.
+   Non-newline whitespace is allowed between arguments. *)
+  RequireZeroLevel(level);
+  StartManPage();
+  VAR lineNum0 := lineNum IN
+    { ProcessMPTitleArg -> FilterTilRBrace(MPNoNL)
+    | SkipTilRBrace()
+    };
+    EndMPTitleArg();
+    SkipWhiteSpace(); Rd(LBrace); startLine := FALSE;
+    StartMPNameArg();
+    { ProcessMPOtherArgs -> FilterTilRBrace(MPNoNL)
+    | SkipTilRBrace()
+    };
+    EndMPNameArg();
+    SkipWhiteSpace(); Rd(LBrace); startLine := FALSE;
+    { ProcessMPOtherArgs -> FilterTilRBrace(MPNoNL)
+    | SkipTilRBrace()
+    };
+    EndMPSectArg()
+  | ShowError(lineNum0); Err("syntax error in \\manpage\n"); Abort()
+  END;
+  SkipReqdBlankLine(TRUE)
+END;
+
+PROC StartSection() IS noOutput -> SKIP | StartSectionTxt() END;
+PROC EndSectionArg() IS noOutput -> SKIP | EndSectionArgTxt() END;
+PROC EndSection() IS noOutput -> SKIP | EndSectionTxt() END;
+
+PROC SectionCmd(level) IS
+(* Process a section command, assuming the characters
+   "\section{" have just been read. The final "}" and
+   any whitespace after it are consumed. *)
+  RequireZeroLevel(level);
+  EndSectionCmd();
+  StartSection();
+  VAR lineNum0 := lineNum IN
+    FilterTilRBrace(SectNoNL)
+  | ShowError(lineNum0);
+    Err("no matching right brace for \\section\n");
+    Abort()
+  END;
+  EndSectionArg();
+  SkipReqdWhiteSpace(NoLevel, FALSE);
+  hitSection := TRUE
+END;
+
+PROC EndSectionCmd() IS
+(* End the current section if one is outstanding. *)
+  hitSection -> EndSection()
+| SKIP
+END;
+
+PROC StartVerb() IS noOutput -> SKIP | StartVerbTxt() END;
+PROC EndVerb() IS noOutput -> SKIP | EndVerbTxt() END;
+PROC StartItemize(level) IS noOutput -> SKIP | StartItemizeTxt(level) END;
+PROC EndItemize(level) IS noOutput -> SKIP | EndItemizeTxt(level) END;
+PROC StartDesc(level) IS noOutput -> SKIP | StartDescTxt(level) END;
+PROC EndDesc(level) IS noOutput -> SKIP | EndDescTxt(level) END;
+PROC StartEnum(level) IS noOutput -> SKIP | StartEnumTxt(level) END;
+PROC EndEnum(level) IS noOutput -> SKIP | EndEnumTxt(level) END;
+PROC StartLeft() IS noOutput -> SKIP | StartLeftTxt() END;
+PROC EndLeft() IS noOutput -> SKIP | EndLeftTxt() END;
+
+PROC BeginCmd(level) IS
+(* Process the start of a block, assuming "\begin{"
+   has just been read. *)
+  Rd("verbatim}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  StartVerb(); VerbCmd(level)
+| Rd("itemize}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  StartItemize(level+1); FilterTilEndCmd(ItemGrp, level+1)
+| Rd("description}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  StartDesc(level+1); FilterTilEndCmd(DescGrp, level+1)
+| Rd("enumerate}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  StartEnum(level+1); FilterTilEndCmd(EnumGrp, level+1)
+| Rd("flushleft}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  StartLeft(); FilterTilEndCmd(LeftGrp, level)
+| Rd("html}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  HtmlCmd(level)
+| Rd("roff}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  RoffCmd(level)
+| Rd("tex}"); startLine := FALSE; SkipReqdBlankLine(FALSE);
+  TexCmd(level)
+| ShowError(lineNum); Err("unrecognized \\begin argument\n"); Abort()
+END;
+
+PROC VerbCmd(level) IS
+  VAR handleSpecial0 := handleSpecial IN
+    handleSpecial := HandleSpecialInVerb;
+    FilterTilEndCmd(VerbGrp, level);
+    handleSpecial := handleSpecial0
+  END
+END;
+
+PROC HtmlCmd(level) IS
+  OutputFormat = HtmlOutput ->
+    VAR handleSpecial0 := handleSpecial IN
+      handleSpecial := HandleSpecialInOutputEnv;
+      FilterTilEndCmd(HtmlGrp, level);
+      handleSpecial := handleSpecial0
+    END
+| SkipTilEndCmd(HtmlGrp, level)
+END;
+
+PROC RoffCmd(level) IS
+  OutputFormat = ManOutput ->
+    VAR handleSpecial0 := handleSpecial IN
+      handleSpecial := HandleSpecialInOutputEnv;
+      FilterTilEndCmd(RoffGrp, level);
+      handleSpecial := handleSpecial0
+    END
+| SkipTilEndCmd(RoffGrp, level)
+END;
+
+PROC TexCmd(level) IS
+  OutputFormat = TexOutput ->
+    VAR handleSpecial0 := handleSpecial IN
+      handleSpecial := HandleSpecialInOutputEnv;
+      FilterTilEndCmd(TexGrp, level);
+      handleSpecial := handleSpecial0
+    END
+| SkipTilEndCmd(TexGrp, level)
+END;
+
+PROC EndCmd(kind, level) IS
+(* Requires "kind # NoGrp" and "kind # ArgGrp". *)
+  kind = VerbGrp ->
+    Rd("verbatim}"); startLine := FALSE;
+    EndVerb(); SkipReqdBlankLine(TRUE)
+| kind = ItemGrp ->
+    Rd("itemize}"); startLine := FALSE;
+    EndItemize(level); SkipReqdWhiteSpace(level-1, TRUE)
+| kind = DescGrp ->
+    Rd("description}"); startLine := FALSE;
+    EndDesc(level); SkipReqdWhiteSpace(level-1, TRUE)
+| kind = EnumGrp ->
+    Rd("enumerate}"); startLine := FALSE;
+    EndEnum(level); SkipReqdWhiteSpace(level-1, TRUE)
+| kind = LeftGrp ->
+    Rd("flushleft}"); startLine := FALSE;
+    EndLeft(); SkipReqdWhiteSpace(level, FALSE)
+| kind = HtmlGrp ->
+    Rd("html}"); startLine := FALSE;
+    SkipReqdWhiteSpace(level, FALSE)
+| kind = RoffGrp ->
+    Rd("roff}"); startLine := FALSE;
+    SkipReqdWhiteSpace(level, FALSE)
+| kind = TexGrp ->
+    Rd("tex}"); startLine := FALSE;
+    SkipReqdWhiteSpace(level, FALSE)
+| AtEndArg(); ShowError(lineNum);
+  Err("expecting \\end{"); ErrGrp(kind); Err("}\n");
+  Abort()
+| ShowError(lineNum); Err("unrecognized \\end argument\n"); Abort()
+END;
+
+PROC StartItemItem(level) IS noOutput -> SKIP | StartItemItemTxt(level) END;
+PROC StartEnumItem(level) IS noOutput -> SKIP | StartEnumItemTxt(level) END;
+PROC StartDescItem(level) IS noOutput -> SKIP | StartDescItemTxt(level) END;
+PROC EndDescItemArg(level) IS noOutput -> SKIP | EndDescItemArgTxt(level) END;
+
+PROC ItemCmd(kind, level) IS
+  kind = ItemGrp OR kind = EnumGrp ->
+    { At(LBrace);
+      ShowError(lineNum);
+      Err("\\item should not have an argument in ");
+      ErrGrp(kind); Err("environment\n"); Abort()
+    | kind = ItemGrp -> StartItemItem(level)
+    | kind = EnumGrp -> StartEnumItem(level)
+    }
+| kind = DescGrp ->
+    { Rd(LBrace); startLine := FALSE;
+      StartDescItem(level); FilterTilRBrace(TRUE);
+      { SkipWhiteChars(); SkipBlankLines(); NewParagraph(level)
+      | SKIP
+      };
+      EndDescItemArg(level)
+    | ShowError(lineNum); Err("\\item must have an argument in ");
+      ErrGrp(kind); Err("environment\n"); Abort()
+    }
+| ShowError(lineNum); Err("\\item not in list environment\n"); Abort()
+END;
+
+PROC StartLink() IS noOutput -> SKIP | StartLinkTxt() END;
+PROC EndLinkArg() IS noOutput -> SKIP | EndLinkArgTxt() END;
+PROC EndLink() IS noOutput -> SKIP | EndLinkTxt() END;
+
+PROC LinkCmd() IS
+  StartLink();
+  VAR lineNum0 := lineNum IN
+    { ProcessLinkArg -> FilterTilRBrace(FALSE)
+    | SkipTilRBrace()
+    };
+    EndLinkArg();
+    SkipWhiteSpace(); Rd(LBrace); startLine := FALSE;
+    FilterTilRBrace(FALSE);
+    EndLink()
+  | ShowError(lineNum0); Err("syntax error in \\link\n"); Abort()
+  END
+END;
+
+PROC StartAnchor() IS noOutput -> SKIP | StartAnchorTxt() END;
+PROC EndAnchorArg() IS noOutput -> SKIP | EndAnchorArgTxt() END;
+PROC EndAnchor() IS noOutput -> SKIP | EndAnchorTxt() END;
+
+PROC AnchorCmd() IS
+  StartAnchor();
+  VAR lineNum0 := lineNum IN
+    { ProcessAnchorArg -> FilterTilRBrace(FALSE)
+    | SkipTilRBrace()
+    };
+    EndAnchorArg();
+    SkipWhiteSpace(); Rd(LBrace); startLine := FALSE;
+    FilterTilRBrace(FALSE);
+    EndAnchor()
+  | ShowError(lineNum0); Err("syntax error in \\anchor\n"); Abort()
+  END
+END;
+
+PROC AtStartError() IS
+  ShowError(lineNum);
+  Err(" command must appear at start of line\n");
+  Abort()
+END;
+
+PROC ReadLBrace() IS
+(* Read the left brace at the start of a command;
+   print an error message and abort otherwise. *)
+  Rd(LBrace)
+| ShowError(lineNum);
+  Err("command not followed by left brace\n");
+  Abort()
+END;
+
+PROC CheckNotInArg(kind, lineNum0) IS
+  kind # ArgGrp -> SKIP
+| ShowError(lineNum);
+  Err("command illegal in argument begun on line ");
+  ErrInt(lineNum0);
+  Err('\n'); Abort()
+END;
+
+PROC c := RdOrSpace() IS
+(* Sets "c" to the next character on the input, or to
+   the space character if the input is at EOF. *)
+  c := Rd() | c := '\s'
+END;
+
+PROC ErrToCmdEnd() IS
+(* Echo characters on the input to the error output up
+   to but not including the first whitespace character
+   or the left brace character. *)
+  VAR c := RdOrSpace() IN
+    TIL IsWhiteSpaceChar(c) -> SKIP DO Err(c); c := RdOrSpace() END
+  END
+END;
+
+PROC DoCommand(kind, level, startLine0, lineNum0) IS
+(* Process a command, assuming the leading '\' character
+   has just been read. "startLine0" is TRUE iff the leading
+   '\' character was at the start of a line. Requires
+   "kind # VerbGrp". If "kind = ArgGrp", then "lineNum0"
+   is the line number on which the argument began. *)
+  EchoQuotedChar(kind)
+| Rd("item"); startLine := FALSE; CheckNotInArg(kind, lineNum0);
+  { startLine0 -> ItemCmd(kind, level) | AtStartError() }
+| Rd("bf"); ReadLBrace(); startLine := FALSE; BoldCmd(level)
+| Rd("it"); ReadLBrace(); startLine := FALSE; ItalicCmd(level)
+| Rd("tt"); ReadLBrace(); startLine := FALSE; TypewriterCmd(level)
+| Rd("manpage"); ReadLBrace(); startLine := FALSE;
+  CheckNotInArg(kind, lineNum0);
+  { startLine0 -> ManpageCmd(level) | AtStartError() }
+| Rd("section"); ReadLBrace(); startLine := FALSE;
+  CheckNotInArg(kind, lineNum0);
+  { startLine0 -> SectionCmd(level) | AtStartError() }
+| Rd("newline"); startLine := FALSE;
+  CheckNotInArg(kind, lineNum0); NewLineCmd(kind, level)
+| Rd("link"); ReadLBrace(); startLine := FALSE; LinkCmd()
+| Rd("anchor"); ReadLBrace(); startLine := FALSE; AnchorCmd()
+| Rd("begin"); ReadLBrace(); startLine := FALSE;
+  CheckNotInArg(kind, lineNum0);
+  { startLine0 -> BeginCmd(level) | AtStartError() }
+| Rd("end"); ReadLBrace(); startLine := FALSE;
+  CheckNotInArg(kind, lineNum0);
+  ShowError(lineNum); Err("not expecting \\end\n"); Abort()
+| noOutput -> SKIP
+| ShowError(lineNum);
+  Err("unrecognized command or special character \"\\");
+  ErrToCmdEnd(); Err("\"\n"); Abort()
+END;
+
+PROC DoNonCommand(kind, noNL, level) IS
+(* Process the subsequent characters on the input, which
+   are guaranteed to be non-empty and not to start with
+   "BackSlash" or "RBrace". *)
+  kind = VerbGrp -> EchoCharWithSpecial(Rd())
+| { SkipBlankLines();
+    { AtBreakCommand(); { noOutput -> SKIP | Wr('\n'); AtNewFormatLine() }
+    | NewParagraph(level)
+    }
+  }
+| FilterNextChar(noNL)
+END;
+
+PROC FilterNextToken(kind, noNL, level, lineNum0) IS
+(* Process the next command or the next non-command. If "kind = ArgGrp",
+   then "lineNum0" is the line number on which the argument started. *)
+  VAR startLine0 := startLine IN
+    Rd(BackSlash); startLine := FALSE;
+    { kind = VerbGrp ->
+      (* in "verbatim" environment -- only handle \link command *)
+      { VAR linkCmdSeen := FALSE IN
+          { Rd("link{"); linkCmdSeen := TRUE
+          | EchoCharWithSpecial(BackSlash);
+            { Rd("\\link"); Wr("link")
+            | SKIP
+            }
+          };
+          (* FAIL if "linkCmdSeen" *)
+          NOT linkCmdSeen -> SKIP
+        END
+      }
+    | DoCommand(kind, level, startLine0, lineNum0)
+    }
+  END
+| DoNonCommand(kind, noNL, level)
+END;
+
+PROC AtEndCmd() IS
+(* A noop if at the start of a line containing "\\end{";
+   fails otherwise. *)
+  startLine -> Rd("\\end"); ReadLBrace(); startLine := FALSE
+END;
+
+PROC FilterTilEndCmd(kind, level) IS
+(* Filter the input until the next "\end" command, which should be of
+   kind "kind". Print an error message and abort if EOF is encountered
+   before any "\end" or if the next "\end" has an argument of the wrong
+   type. The current list environment depth is "level". Requires
+   "kind # NoGrp" and "kind # ArgGrp". *)
+  VAR lineNum0 := lineNum - 1 IN
+    TIL AtEndCmd() DO FilterNextToken(kind, FALSE, level, 0) END;
+    EndCmd(kind, level)
+  | ShowError(lineNum0); Err("no matching \\end for \\begin\n"); Abort()
+  END
+END;
+
+PROC FilterTilRBrace(noNL) IS
+(* Filter the input until an unmatched right brace is found. *)
+  VAR lineNum0 := lineNum IN
+    TIL Rd(RBrace) DO FilterNextToken(ArgGrp, noNL, NoLevel, lineNum0) END;
+    startLine := FALSE
+  END
+END;
+
+VAR skipTilEndCnt := 0, skipTilBraceCnt := 0;
+
+PROC TryResumeOutput() IS
+  skipTilEndCnt = 0 AND skipTilBraceCnt = 0 ->
+    noOutput := FALSE
+| SKIP
+END;
+
+PROC SkipTilEndCmd(kind, level) IS
+(* Like "FilterTilEndCmd(kind)", but don't produce any output. *)
+  noOutput := TRUE;
+  skipTilEndCnt := skipTilEndCnt + 1;
+  FilterTilEndCmd(kind, level);
+  skipTilEndCnt := skipTilEndCnt - 1;
+  TryResumeOutput()
+END;
+
+PROC SkipTilRBrace() IS
+(* Like "FilterTilRBrace(FALSE)", but don't produce any output. *)
+  noOutput := TRUE;
+  skipTilBraceCnt := skipTilBraceCnt + 1;
+  FilterTilRBrace(FALSE);
+  skipTilBraceCnt := skipTilBraceCnt - 1;
+  TryResumeOutput()
+END;
+
+PROC FilterTilEOF(level) IS
+(* Filter the input until end-of-file. *)
+  TIL Eof() DO FilterNextToken(NoGrp, FALSE, level, 0) END
+END;
+
+PROC StartFile() IS
+  StartFileTxt()
+END;
+
+PROC EndFile() IS
+  EndSectionCmd();
+  EndFileTxt()
+END;
+
+PROC Main() IS
+  StartFile(); FilterTilEOF(0); EndFile()
+END;

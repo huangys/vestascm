@@ -1,0 +1,65 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{umountrepos - Unmount the Vesta repository}{umountrepos}{8}
+
+\section{Name}
+
+\bf{umountrepos} - Unmount the Vesta repository
+
+\section{Synopsis}
+
+\bf{umountrepos}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html#Terminology}{Terminology} section
+of the \link{vesta-intro.1.html}{vesta-intro} man page
+for definitions of terms.
+
+The \bf{umountrepos} command is
+a simple shell script to unmount the Vesta repository from the local host.
+
+\section{Diagnostics}
+
+Here are the most common error messages you are likely to see and what
+they generally mean.
+
+\it{Not owner}:  You are neither the user who mounted the repository
+on this machine nor root.
+
+\it{Device busy}: Some process on your machine is cd'ed into a repository
+directory or has a file in the repository open.  The lsof program is
+sometimes helpful in finding such processes, but in the worst case you
+may be reduced to rebooting to kill them all off.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repository.8.html}{\bf{repository}(8)},
+\link{mountrepos.8.html}{\bf{mountrepos}(8)},
+\link{vmount.8.html}{\bf{vmount}(8)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Tue Apr 29 23:12:57 PDT 2003 by mann
+     modified on Mon Nov 12 18:37:13 EST 2001 by ken@xorian.net
+\end{verbatim}

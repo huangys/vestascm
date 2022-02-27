@@ -1,0 +1,254 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{TestCache(1) man page}{TestCache}{1}
+
+\section{Name}
+
+TestCache - a client for testing the Vesta-2 cache server
+
+\section{Synopsis}
+
+\bf{TestCache}
+[ \bf{-comments} ]
+[ \it{file} ]
+
+\section{Description}
+
+\it{TestCache} reads a description of function arguments and results
+from the file named \it{file}, or from standard input if no \it{file}
+is specified. For each function described in the input, it performs a
+lookup or other function on the cache server running on the Vesta-2
+cache server \link{VCache.1.html}{VCache(1)} named in the user's Vesta
+configuration file, as described \link{#ConfigSect}{below}.
+If the lookup fails, it makes the necessary calls to add a new entry
+to the cache. There are also commands for exercising the cache
+server's weeder interface, to checkpoint the contents of the cache, or
+to pause the \it{TestCache} program until the user presses a key.
+
+If the \bf{-comments} option is specified, all comments in the input
+file are echoed to standard output.
+
+\section{Input File Format}
+
+The input supplied to \it{TestCache} consists of a sequence of
+\it{entries}. There are several kinds of entries: \it{function
+specifications}, \it{checkpoint commands}, \it{renew leases commands},
+\it{pause commands}, and \it{weeder commands}. Comments are indicated
+in the input by lines that start with the percent (%) character; all
+characters from the percent character up to (and including) the next
+newline character are ignored. Blank lines are also ignored.
+
+\begin{description}
+\item{Function Specifications}
+
+A function specification describes a function, its arguments, and its
+result. It takes the following form:
+
+\begin{flushleft}
+\it{primary-key-text}\newline
+\it{name-1} \it{name-2} ... \it{name-n}\newline
+\it{fp-1} \it{fp-2} ... \it{fp-n}\newline
+\it{result-text}
+\end{flushleft}
+
+The test program computes the fingerprint of the
+\it{primary-key-text}, and uses that fingerprint as the function's
+primary key. The \it{name-i} are whitespace-separated strings; they
+are the names of the function's free variables. The \it{fp-i}
+are used to compute the fingerprints of the free variables.
+The \it{fp-i} are texts; the fingerprint of each text
+is computed and used as the fingerprint for the corresponding
+\it{name-i}. Finally, the \it{result-text} is used
+as the function result.
+
+Given a function specification, the \it{TestCache} program performs
+the following steps:
+
+\begin{enumerate}
+\item
+\it{TestCache} computes the fingerprint corresponding to
+\it{primary-key-text} to produce a primary key \it{PK}.
+
+\item
+It then calls the cache server's \it{FreeVariables} method with the
+argument \it{PK}, and receives the list of free
+variables corresponding to \it{PK} from the cache server.
+
+\item
+It then calls the cache server's \it{Lookup} method, supplying the
+fingerprints of the names returned in the previous
+step. For each name in that list that matches one of the names
+\it{name-i}, it gets the fingerprint of that name's
+value from \it{fp-i}. For each requested name that is
+not one of the \it{name-i}, it supplies the fingerprint of the empty
+string.
+
+\item
+If the \it{Lookup} call produces a hit from the cache, the processing
+of this function specification is complete. Otherwise, \it{TestCache}
+makes a call to the cache server's \it{AddEntry} method to add a new
+cache entry.
+\end{enumerate}
+
+\item{Checkpoint Commands}
+
+A checkpoint command consists of a single line of the form:
+
+\begin{verbatim}
+Checkpoint
+\end{verbatim}
+
+or
+
+\begin{verbatim}
+CheckpointOnly
+\end{verbatim}
+
+\it{TestCache} processes a \it{Checkpoint} command by calling
+the cache server's \it{Checkpoint} method with an empty list of cache
+indices, and a \it{done} value of \it{true}. It then calls the cache
+server's \it{FlushAll} method to flush all new, pending cache entries
+to the stable cache.
+
+The \it{CheckpointOnly} command is like the \it{Checkpoint} command
+except that it does not invoke the cache server's \it{FlushAll} method.
+
+\item{Renew Leases Command}
+
+A renew leases command consists of lines of the form:
+
+\begin{flushleft}
+\tt{RenewLeases}\newline
+\it{ci-1} \it{ci-2} ... \it{ci-n}
+\end{flushleft}
+
+This invokes the cache server's \it{RenewLeases} method with the named
+cache indices as arguments.
+
+\item{Pause Commands}
+
+A pause command conists of a single line of the form:
+
+\begin{verbatim}
+Pause
+\end{verbatim}
+
+\it{TestCache} processes a pause command by prompting the user to
+press a key to continue. A pause command is usually used immediately
+after a checkpoint command. While the program is paused, you can check
+that the files written by the cache server are correct before you
+continue the test.
+
+\item{Weeder Commands}
+
+Weeder commands take the following form:
+
+\begin{flushleft}
+\tt{Weed}\newline
+\it{ci-1} \it{ci-2} ... \it{ci-n}\newline
+\it{pfx-1} \it{pfx-2} ... \it{pfx-l}
+\end{flushleft}
+
+These commands actually invoke four separate methods on the cache
+server: \it{StartMark}, \it{SetHitFilter}, \it{ResumeLeaseExp},
+and \it{EndMark}.
+
+The \it{ci} list specifies the indices of the cache entries to delete.
+The \it{pfx} list is a list of texts analogous to the
+\it{primary-key-text}s of the function specifications above. The
+fingerprints of these texts are computed, then a prefix of each
+resulting fingerprint is computed. The set of resulting prefixes
+names the MultiPKFiles that contain all of the entries to delete.
+
+\end{description}
+
+\section{Example}
+
+Here is a sample input file:
+
+\begin{verbatim}
+func1
+name1 name2 name3
+val1  val2  val3
+result1
+
+func1
+name2 name4 name3
+val2  val4  val3
+result2
+
+Checkpoint
+
+func1
+name3 name5 name2
+val4  val5  val3
+result3
+
+func1
+name3 name1 name2
+val3  val1  val2
+dummy-result
+
+Checkpoint
+\end{verbatim}
+
+Only the very last function specification will produce a hit on the
+cache. After processing this file, there will be three cache entries
+for \it{func1}, and its common names will be \it{name2} and
+\it{name3}.
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{TestCache} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The program first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{TestCache} are in the section denoted by \tt{[CacheServer]}.
+Here are the variables and their meanings; the types of the variables
+are shown in parentheses.
+
+\begin{description}
+\item{\tt{Host} (string)}
+The hostname of the machine on which the cache server is running.
+
+\item{\tt{Port} (integer)}
+The port number on the host named by \it{Host} to contact. This allows
+multiple cache servers to be running on the same machine; each one
+listens on a different port for connections.
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{ChkptCache.1.html}{ChkptCache(1)},
+\link{TestCacheRandom.1.html}{TestCacheRandom(1)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:40:15 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:50:43 PST 1997 by heydon
+\end{verbatim}

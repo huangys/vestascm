@@ -1,0 +1,86 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{FlushCache(1) man page}{FlushCache}{1}
+
+\section{Name}
+
+FlushCache - flush volatile Vesta cache entries to the stable cache
+
+\section{Synopsis}
+
+\bf{FlushCache}
+[ \bf{-n} ]
+
+\section{Description}
+
+\it{FlushCache} invokes the \it{FlushAll} method of the Vesta-2
+cache server named in the user's Vesta-2 configuration file.
+
+By default, \it{FlushCache} flushes any cache entries currently stored
+only in the cache server's volatile (in-memory) cache to the cache
+server's stable cache on disk. These entries will then appear in the
+cache's so-called MultiPKFiles, which are read by programs like
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)} and
+\link{VCacheStats.1.html}{VCacheStats(1)}. Since it involves reading
+and writing potentially many files, \it{FlushCache} may take a fair
+amount of time to complete.
+
+If \bf{-n} is specified, the name and port number of the cache that
+would be flushed is printed, but no action is taken.
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{FlushCache} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The program first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{FlushCache} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables and their meanings; the types of the variables are
+shown in parentheses.
+
+\begin{description}
+\item{\tt{Host} (string)}
+The hostname of the machine on which the cache server is running.
+
+\item{\tt{Port} (integer)}
+The port number on host named by \it{Host} to contact. This allows
+multiple cache servers to be running on the same machine; each one
+listens on a different port for connections.
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{ChkptCache.1.html}{ChkptCache(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{VCacheStats.1.html}{VCacheStats(1)}.
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:40:15 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:50:43 PST 1997 by heydon
+\end{verbatim}

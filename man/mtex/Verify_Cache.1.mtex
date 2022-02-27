@@ -1,0 +1,213 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{Verify_Cache(1) man page}{Verify_Cache}{1}
+
+\section{Name}
+
+Verify_Cache - Scan the Vesta-2 cache looking for a variety of
+inconsistencies.
+
+\section{Synopsis}
+
+\bf{Verify_Cache} [\link{#--verbose}{--verbose | -v}]
+
+\section{Description}
+
+\it{Verify_Cache} looks for and reports on a variety of potential
+inconsistencies in the Vesta-2 cache.  These are things which, in
+theory, should never happen but are not necessarily checked for during
+normal operation.
+
+Specifically, the following kinds of potential problems are detected
+and reported:
+
+\begin{itemize}
+
+\item Duplicate cache indecies in the graph log.
+
+\item Cache entries with a cach index for which there is no graph log
+entry.
+
+\item Cache entries which do not match the graph log entry of the same
+cache index.  (The entries are compared on PK, child entries, and
+referenced shortids.)
+
+\item Multiple cache entries with the same cache index.
+
+\item Cache entries with cache indecies not currently marked as
+allocated (not part of the "used" cache indecies).
+
+\item Cache entries and graph log entries with one or more child cache
+indecies that are not currently marked as allocated.
+
+\item Graph log entries for unused cache indecies.
+
+\item Entries with cache indecies in the set of pending deletions that
+are in MultiPKFiles not in the set of MultiPKFiles to be processed
+during deletions (mpksToWeed).
+
+\item Cache entries that use free variable names that are neither in
+the PKFile's set of common names nor in the entry's set of uncommon
+names.
+
+\end{itemize}
+
+With the \link{#--verbose}{--verbose} command-line flag, it will also
+display:
+
+\begin{itemize}
+
+\item The current set of used cache indecies
+
+\item The set of cache indecies to be deleted (if deletions are
+pending)
+
+\item Used cache indecies with no corresponding graph log entry.
+
+\item Graph log entries with no corresponding cache entry.
+
+\end{itemize}
+
+This kind of information would only be of use to someone debugging a
+cache anomaly or modifying the cache.  In the case of an anomaly, it
+should help with identifying what has gone wrong.  When modifying the
+cache, it can be used to help verify the correctness of the changes.
+
+When a potential problem is detected with respect to a particular
+cache entry or graph log entry, a representation of the entry in
+question is printed.  The printed representation of cache entries is
+similar to that produced by
+\it{\link{PrintMPKFile.1.html}{PrintMPKFile} -verbose} and the
+representation of graph log entries is similar to that produced by
+\it{\link{PrintGraphLog.1.html}{PrintGraphLog} -verbose}.  A summary
+of all problems detected is also printed at the end.
+
+Since this tool reads a great deal of information (all the
+MultiPKFiles) and holds quite a bit in memory throughout its run (the
+entire graph log), it can use more that 100 MB of memory.  Also, it
+can take more than 10 minutes to run if you have a sufficiently large
+amount of cache data (50-60 thousand entries).
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{--verbose}{--verbose | -v}}
+Print additional information, including information on things which
+may not represent errors.
+\end{description}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, Verify_Cache reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. It first looks for this file in the current directory;
+if none is found there, it looks in your home directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+Verify_Cache are in the section denoted by \tt{[CacheServer]}. Here
+are the relevant variables and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+Other configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored.
+
+\item{\tt{SCacheDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+cache server stores cache entries.
+
+\item{\tt{CILogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+cache server stores its record of allocated cache indecies.
+
+\item{\tt{GraphLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+cache server stores the graph log.
+\end{description}
+
+\section{Limitations}
+
+\it{Verify_Cache} is not designed to be run against the cache metadata
+of a running cache server.  Before running \it{Verify_Cache}, you
+should run \link{FlushCache.1.html}{FlushCache}, and then shut down
+the cache server.
+
+There are a few tests that \it{Verify_Cache} does not, but probably
+should, perform:
+
+\begin{itemize}
+
+\item It does not check whether the shortids referenced by cache
+entries exist.  (Cache entries referencing non-existent shortids
+indicates that something is amiss.)
+
+\item It does not read the cache log, so any new cache entries
+recorded there but not yet flushed to MultiPKFiles will be go
+un-noticed (probably resulting in "GL entry with no matching CE"
+messages) and any inconsistencies in the cache log will go unreported.
+
+\item It does check the key/value pairs of an entry's \tt{imap} to
+make sure that they are in range.  (The keys should be within the
+range of indecies for the PKFile's \tt{allNames} and the value should
+be within the range of indecies for the entry's \tt{fps}.)
+
+\end{itemize}
+
+With the \link{#--verbose}{--verbose} command-line flag, some of the
+warnings \it{Verify_Cache} produces are not necessarily indications of
+problems.  For example, there is a defined order in which data about a
+new cache entry must be written to disk:
+
+\begin{itemize}
+
+\item First, the allocation of its CI must be written to the CI log,
+
+\item Second, information about the cache entry must be written to the
+graph log.
+
+\item Third, the complete entry must either be written to the cache
+log or to a MultiPKFile in the stable cache.
+
+\end{itemize}
+
+If the cache server goes down between the first and second step, there
+would be a used CI not in the graph log.  If the cache server goes
+down between the second and third steps, there could be a graph log
+entry with no corresponding entry in a MultiPKFile.
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{PrintGraphLog.1.html}{PrintGraphLog(1)},
+\link{VCacheStats.1.html}{VCacheStats(1)},
+\link{MultiPKFile.5.html}{MultiPKFile(5)}
+
+\section{Author}
+
+Kenneth C. Schalk
+(\link{mailto:ken@xorian.net}{\tt{ken@xorian.net}})
+

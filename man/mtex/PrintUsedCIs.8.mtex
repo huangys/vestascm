@@ -1,0 +1,122 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintUsedCIs(8) man page}{PrintUsedCIs}{8}
+
+\section{Name}
+
+PrintUsedCIs - print the current set of allocated cache indecies for
+the Vesta-2 cache daemon
+
+\section{Synopsis}
+
+\bf{PrintUsedCIs} [ \bf{-verbose} ]
+
+\section{Description}
+
+Each cache entry stored by the Vesta-2 cache daemon
+\link{VCache.1.html}{VCache(1)} has a \it{cache index} number (of
+"CI") which uniquely identifies it.  When an entry is added to the
+cache, a new cache index is allocated for it.  Weeding makes the cache
+indecies of deleted entreis available for re-allocation.  This
+inspection utility will display the current set of allocated cache
+indecies.  (This information is primarily of interest to maintainers
+who need to debug the cache daemon's behavior.)
+
+By default, the program displays the full set of currently allocated
+CIs.  If \bf{-verbose} is specified, it prints more details about how
+the used CI set is stored.  Specifically, when CIs are allocated or
+freed an entry recording this is added to a \it{transaction log} (to
+facilitate restoring the current state in the event of a server
+failure).  Using \bf{-verbose} will print the initial state before the
+transaction log, all the transaction log entries for cache index
+allocation/free operations, and the final set of used CIs.
+
+\section{Example}
+
+The following is an example of the output (without using
+\bf{-verbose}):
+
+\begin{verbatim}
+>>>>>> Used CIs <<<<<<
+
+    0-78151, 78463-78700, 78706-78817, 79287-79291, 100103-100104, 
+    100343-100350, 100353, 100355-100367, 101704, 102209, 
+    102225-102226 
+
+  (78535 total)
+\end{verbatim}
+
+Note that the size of the currently allocated CI set (printed at the
+end) corresponds to the "\tt{NUM ENTS}" column in the output of
+\link{VCacheMonitor.1.html}{VCacheMonitor(1)}.
+
+\section{Configuration Variables}
+
+\it{PrintUsedCIs} locates the allocated cache index transaction log by
+reading site-specific configuration information from
+\link{vesta.cfg.5.html}{a Vesta-2 configuration file}.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by the
+\it{PrintCacheLog} are in the section denoted by \tt{[CacheServer]}. Here
+are the variables it uses and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+If defined, this path should end in a slash (/) character. Other
+configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored. This directory should end in a slash (/)
+character.
+
+\item{\tt{CILogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores the cache index transaction log.
+
+\end{description}
+
+\section{Files}
+
+\begin{description}
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$CILogDir/*.ckp}}
+Periodically (currently after the cache daemon finishes processing
+deletions), the complete set of currently allocated CIs is written out
+to a \it{checkpoint file}.
+
+\item{\tt{$MetaDataRoot/$MetatDataDir/$CILogDir/*.log}}
+Where the transactions of cache indecies allocated and freed are
+stored.
+
+\end{description}
+
+\section{See Also}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheImpl.7.html}{VCacheImpl(7)},
+\link{VCacheMonitor.1.html}{VCacheMonitor(1)}
+
+\section{Author}
+
+Kenneth C. Schalk <\tt{ken AT xorian DOT net}>

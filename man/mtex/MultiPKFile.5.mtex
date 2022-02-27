@@ -1,0 +1,515 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{MultiPKFile(5) man page}{MultiPKFile}{5}
+
+\section{Name}
+
+\bf{MultiPKFile} - Vesta-2 cache server stable cache entry file format
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#IntroSect}{Introduction}
+\item \link{#GroupingSect}{Grouping PKFiles into MultiPKFiles}
+\item \link{#GoalsSect}{Design Goals and Assumptions}
+\item \link{#MPKFileSect}{The Structure of MultiPKFiles}
+\item \link{#PKFileSect}{The Structure of PKFiles}
+\item \link{#EntrySect}{The Structure of Cache Entries}
+\item \link{#SyntaxSect}{Syntax Summary}
+\item \link{#AnalysisSect}{Analysis}
+\item \link{#SeeAlsoSect}{See Also}
+\item \link{#AuthorSect}{Author}
+\end{itemize}
+
+\section{\anchor{IntroSect}{Introduction}}
+
+The Vesta-2 cache server's cache entries will be stored persistently
+in the repository. To make the lookup process faster, the cache
+entries with the same primary key (PK) are grouped together in a
+common file. This man page describes the layout of these files
+(the so-called "PKFiles") on disk.
+
+Each PK is a 128-bit fingerprint. The Vesta-2 system is being designed
+with the goal of servicing up to 60 million cache entries or so.
+Hence, the PK space is extremely sparse. Even so, our first
+observation was that the number of expected cache entries is too large
+for us to store the cache entries for a single PK in a single PKFile.
+
+\section{\anchor{GroupingSect}{Grouping PKFiles into MultiPKFiles}}
+
+We plan to group the entries for several different PK's together in
+repository files (the so-called "MultiPKFiles"). Since the PK's are
+fingerprints, and hence (hopefully) random, there is no structure to
+the PK's. Therefore, it doesn't matter how we group them for purposes
+of achieving better locality. Our plan is to pick three (integer)
+values k, k', and m such that (m * k') + k = 128, and divide the bits
+of the PK like this:
+
+\begin{verbatim}
+    k'  k'          k'                 k
+  +---+---+- ... -+---+---------------------------------+
+  |   |   |       |   |                                 |
+  +---+---+- ... -+---+---------------------------------+
+
+  |<---------------------- 128 bits ------------------->|
+\end{verbatim}
+
+The m groups of k' bits (the prefix bits) will be used to form the
+pathname of a file in the repository, with each group of k' bits
+corresponding to an arc of the pathname. Hence, all PK's whose prefix
+bits agree will be stored in the same MultiPKFile.
+
+Thus, the important choice here is the value for k. How to divide up
+the remaining 128 - k bits (the prefix) into pathname arcs depends on
+how the repository implements its directory structures.
+
+We don't have a good analytic way to choose a value for k, since we
+don't have enough (any?) data to indicate how PK's and cache entries
+will be distributed. Most PK's will have only a single cache entry,
+while some will have many. Performance will be best if the
+MultiPKFiles are all roughly the same size. Given our design goal of
+60M entries and a worst-case estimate of only one entry per PK, using
+the values k = 104, k' = 8, and m = 3, we'd expect approximately 4
+PK's per MultiPKFile. A larger value for k might be more appropriate.
+
+Since our first choice for k may be sub-optimal, we need to think some
+more about how to make the design flexible enough that we can change
+the value for k in the future. One possibility would be to use part of
+the MultiPKFile namespace to encode the \it{version} of the k value.
+
+\section{\anchor{GoalsSect}{Design Goals and Assumptions}}
+
+The rest of this note sketches the layout of MultiPKFiles on disk. The
+goal of the design is to minimize the number of different disk read
+operations on a cache Lookup operation, since the disk operations are
+the largest source of latency.
+
+We've made several assumptions in formulating our design. First,
+MultiPKFiles will be rewritten in their entirety by background cache
+server threads. Hence, we haven't focused on designing incremental
+structures. Second, since no time-critical path of the cache server is
+dependent on the writing of MultiPKFiles, we haven't ruled out designs
+that might require fairly large amounts of computation at
+MultiPKFile-write time.
+
+\section{\anchor{MPKFileSect}{The Structure of MultiPKFiles}}
+
+The overall structure of a MultiPKFile is:
+
+\begin{verbatim}
+   <MultiPKFile>    ::= <Header> <PKFile>*
+\end{verbatim}
+
+(We describe the structure of a MultiPKFile by a BNF grammar. In the
+grammar that follows, elements in angle brackets denote non-terminals,
+and \tt{*} denotes Kleene closure.)
+
+Abstractly, the MultiPKFile \tt{<Header>} provides a map from PK's to the
+offsets of the subsequent \tt{<PKFile>}'s in the file.
+
+\begin{verbatim}
+   <Header>         ::= version num totalLen type-code <TypedHeader>
+   <TypedHeader>    ::= <SeqHeader> | <HashHeader>
+\end{verbatim}
+
+The \it{version} is stored in the \tt{<MultiPKFile>} for backward
+compatibility, in case we decide to change some aspect of the
+representation in the future. \it{num} is the number of entries in the
+\tt{<Header>}, as well as the number of \tt{<PKFile>} records
+following the \tt{<Header>} in the overall \tt{<MultiPKFile>}.
+\it{totalLen} is the total length of the \tt{<MultiPKFile>}; it can be
+used to compute the length of the last \tt{<PKFile>} in the
+\tt{<MultiPKFile>}.
+
+We discussed three ways to represent the \tt{<Header>}. Since we may
+want to mix these three schemes, the \tt{<Header>} has an integer
+\it{type-code} to indicate the format of each header. Here are the three
+schemes for representing the \tt{<TypedHeader>}:
+
+\begin{enumerate}
+\item
+If the number of \tt{<PKFile>}'s in a \tt{<MultiPKFile>} is small, we can
+simply list the entries and search them sequentially:
+
+\begin{verbatim}
+   <SeqHeader>      ::= <HeaderEntry>*
+   <HeaderEntry>    ::= <PK> offset
+   <PK>             ::= fingerprint
+\end{verbatim}
+
+For the \tt{<PK>}, we only have to store the last k bits, since all PK's
+in the MultiPKFile will have their first 128 - k bits in common.
+The \it{offset} value is an integer representing the location of the
+corresponding \tt{<PKFile>} relative to the start of the \tt{<MultiPKFile>}.
+
+The PKFile's corresponding to the \tt{<HeaderEntry>} records in a
+\tt{<SeqHeader>} are written out in the order in which they appear in
+the \tt{<SeqHeader>}. As a result, the \it{offset} values are monotonically
+increasing, and the length of a PKFile can be computed as the
+difference of consecutive \it{offset} values. The length of the last
+PKFile can be computed using the \it{totalLen} value of the \tt{<Header>}.
+
+\item
+If there are a large number of \tt{<PKFile>}'s within a \tt{<MultiPKFile>},
+we could use the same \tt{<SeqHeader>} representation as in scheme 1,
+but store the \tt{<HeaderEntry>}'s in sorted order by \it{pk} value. Then
+we could do binary search on the \it{pk} value to find the offset for
+its corresponding \tt{<PKFile>} more quickly.
+
+\item
+We could use a simple hashing scheme. The hashing scheme could be
+parameterized by the table size. If we wanted to get really fancy,
+the hash function itself could be parameterized relative to some
+family of hash functions and chosen so that there were no
+collisions for that table. By our second assumption above, it would
+be okay to spend a fair amount of time searching for a perfect hash
+function when the MultiPKFile has to be rewritten. Here is one way
+to represent the hash table:
+
+\begin{verbatim}
+   <HashHeader>     ::= tblSize hashKey <Bucket>* <BucketEntry>*
+   <Bucket>         ::= 0 | offset
+   <BucketEntry>    ::= bucketSize <HeaderEntry>*
+\end{verbatim}
+
+The \it{tblSize} is the size of the hash table (i.e., the number of
+following \tt{<Bucket>} records), and \it{hashKey} is a value that
+parameterizes the hash function used for this table. The
+\tt{<Bucket>}'s are offsets (relative to the start of the
+\tt{<HashHeader>}) where the \tt{<BucketEntry>}'s for that bucket
+begin, or 0 if the bucket is empty. Each \tt{<BucketEntry>} is some
+number of \tt{<HeaderEntry>}'s, prefixed by the number of such entries
+(if we use perfect hash functions, the the \it{bucketSize} would always
+be 1, and could be omitted).
+\end{enumerate}
+
+We expect that we will probably use scheme 1 or 2 for the MultiPKFile
+\tt{<Header>}.
+
+\section{\anchor{PKFileSect}{The Structure of PKFiles}}
+
+The overall structure of a \tt{<PKFile>} is:
+
+\begin{verbatim}
+   <PKFile>         ::= <PKFHeader> <PKEntries>*
+   <PKEntries>      ::= numEntries <PKEntry>* <PKEntryExtra>*
+\end{verbatim}
+
+The entries in a \tt{<PKFile>} all have the same primary key. They are
+also grouped on the disk by a secondary key. There is one
+\tt{<PKEntries>} record for each secondary key, and the
+\tt{<PKEntry>}'s listed together under a single \tt{<PKEntries>}
+record all have the same secondary key. There is one
+\tt{<PKEntryExtra>} record for each \tt{<PKEntry>}; they contain extra
+values that are not required for the \it{Lookup} operation.
+
+What goes into a \tt{<PKEntries>} record? An (abstract) cache entry
+has the following fields:
+
+\begin{itemize}
+\item \it{ci} - the unique cache index for the entry
+\item \it{pk} - the fingerprint of the cache entry's primary key
+\item \it{freeVars} - the names of the free variables (FV's) for the entry
+\item \it{fps} - the fingerprints of the values of those free variables
+\item \it{cfp} - the combined fingerprint of the \it{common} FV's
+\item \it{ucfp} - the combined fingerprint of the \it{uncommon} FV's
+\item \it{value} - the output value for the cache entry
+\end{itemize}
+
+The \it{fps} values are not needed to perform the \it{Lookup}
+cache operation, but they are required to recompute the \it{cfp} and
+\it{ucfp} values when the set of \it{common} FV's for the \tt{<PKFile>}
+changes (see below).
+
+According to the cache server specification, the cache also stores
+certain information in the \tt{<PKFile>} that applies to all its
+entries. This information is stored in the \tt{<PKFHeader>}:
+
+\begin{itemize}
+\item
+\it{allNames} -
+the union of the FV's for the \tt{<PKFile>}'s entries
+\item
+\it{commonNames} -
+a bit vector (relative to \it{allNames}) representing the
+set of FV's common to all the \tt{<PKFile>}'s entries
+\item
+\it{epoch} -
+an integer representing the "version" of the \it{allNames} list
+\end{itemize}
+
+The \it{freeVars} field within an entry is actually not stored
+explicitly. Instead, the names of each entry's free variables are
+stored implicitly by referencing the \it{allNames} field of the
+\tt{<PKFile>}. The common names need not be stored, since they are
+represented by the \it{commonNames} bit vector in the \tt{<PKFHeader>}.
+The remaining \it{uncommon} names are stored as a bit vector in the
+\tt{<PKEntry>}; this bit vector is also interpreted relative to the
+\it{allNames} field, and differs from one entry to the next.
+
+To check for a cache hit, the cache server computes the combined
+fingerprint of the fingerprints of the \it{common} FV's in the current
+evaluation environment. It compares this computed \it{common}
+fingerprint to the \it{cfp} fields of the entries. For each entry that
+matches, it computes a combined \it{uncommon} fingerprint for each of
+the free variables in the current evaluation environment matching the
+entry's \it{uncommon} names. If both the \it{cfp} and \it{ucfp} tests
+succeed, the corresponding \it{value} is returned.
+
+What's important to notice is that the \it{cfp} test can be made
+without any per-entry computation. Also, the only per-entry data
+required for this test is the value of the entry's \it{cfp} field. By
+contrast, the \it{ucfp} test requires the server to read both the
+\it{uncommonNames} bit vector and the \it{ucfp} values from the entry,
+and to compute a combined \it{uncommon} fingerprint. So the \it{ucfp}
+test is more expensive.
+
+We decided the the entry's \it{cfp} fields should also be stored in the
+\tt{<PKFHeader>}. The \it{cfp} computed for the \it{common} free variables
+in the current evaluation environment thus serves as the secondary
+search key. Each of these fingerprints is 16 bytes, so the hope is
+that the \tt{<PKFHeader>} will still be small enough that it can be
+read by a single disk operation.
+
+Here is the layout of the \tt{<PKFHeader>}:
+
+\begin{verbatim}
+   <PKFHeader>      ::= <CFPHeader> <PKFHeaderTail>
+   <CFPHeader>      ::= num type-code <CFPTypedHeader>
+   <PKFHeaderTail>  ::= pkEpoch namesEpoch <AllNames> <CommmonNames>
+   <AllNames>       ::= numNames <Name>*
+   <Name>           ::= nameLen byte*
+   <CommonNames>    ::= <BitVector>
+   <BitVector>      ::= numWords word*
+\end{verbatim}
+
+As before, there are several possibilities for the design of the
+\tt{<TypedCFPHeader>}. Abstractly, the \tt{<CFPHeader>} is a table
+that maps the common fingerprint value (16 bytes) to a \it{list} of cache
+entries with the same PK and \it{cfp} values. These designs are similar
+to the 3 \tt{<TypedHeader>} designs above, except that the schemes are
+generalized to accomodate lists of entries.
+
+\begin{verbatim}
+   <CFPTypedHeader> ::= <CFPSeqHeader> | <CFPHashHeader>
+\end{verbatim}
+
+\begin{enumerate}
+\item
+If the number of entries in a PKFile is small, we can simply search
+them sequentially, using the \tt{<SeqHeader>} structure described above.
+
+\begin{verbatim}
+   <CFPSeqHeader>   ::= <CFPHeaderEntry>*
+   <CFPHeaderEntry> ::= <CFP> offset
+   <CFP>            ::= fingerprint
+\end{verbatim}
+
+A \tt{<CFPSeqHeader>} consists of \it{num} \tt{<CFPHeaderEntry>}
+records. The \it{offset} of a \tt{<CFPHeaderEntry>} is the offset
+where its corresponding \tt{<PKEntries>} record begins. The
+\it{offset} is taken relative to the start of either the
+\tt{<PKFHeader>} or the \tt{<CFPHeader>} (whichever we think is easier
+to compute against).
+
+\item
+If a PKFile has several entries, we can use the \tt{<CFPSeqHeader>}
+representation, but store the \tt{<CFPEntry>}'s in sorted order by
+\it{cfp}. This would allow us to use binary search on the table.
+
+\item
+Another alternative when there are lots of entries with the same PK
+is to use a hash table, using the \tt{<HashHeader>} structure described
+above:
+
+\begin{verbatim}
+   <CFPHashHeader>  ::= len tblSize hashKey <Bucket>* <CFPBucketEntry>*
+   <Bucket>         ::= 0 | offset
+   <CFPBucketEntry> ::= bucketSize <CFPHeaderEntry>*
+\end{verbatim}
+
+The \it{len} field in the \tt{<CFPHashHeader>} is the total size of
+the \tt{<CFPHashHeader>}, so we can seek past the \tt{<CFPHeader>} to
+the \tt{<AllNames>} record without having to inspect the
+\it{bucketSize} values of the individual \tt{<CFPBucketEntry>}'s.
+\end{enumerate}
+
+We expect that we will use scheme 2 or 3 for the \tt{<CFPHeader>}.
+
+\section{\anchor{EntrySect}{The Structure of Cache Entries}}
+
+All that's left is to describe the format of the cache entries
+themselves. The data in a cache entry is split between the
+\tt{<PKEntry>} data required to perform the \it{Lookup} operation, and
+the \tt{<PKEntryExtra>} information required when MultiPKFiles are
+rewritten.
+
+Here is the structure of a \tt{<PKEntry>} record:
+
+\begin{verbatim}
+   <PKEntry>        ::= ci <UncommonNames> <UCFP> <Value>
+   <UncommonNames>  ::= <BitVector>
+   <UCFP>           ::= xortag fingerprint
+   <Value>          ::= numBytes byte*
+\end{verbatim}
+
+The \it{ci} and \it{numBytes} fields are integers, and the \it{xortag} is a
+one-word tag formed by XOR'ing together the uncommon fingerprints. The
+\tt{<UncommonNames>} bit vector is interpreted relative to the
+\tt{<AllNames>} record of the corresponding \tt{<PKFHeader>}. The
+\tt{<Value>} is simply a sequence of \it{numBytes} bytes.
+
+Here is the structure of a \tt{<PKEntryExtra>} record:
+
+\begin{verbatim}
+   <PKEntryExtra>   ::= numNames index* fingerprint*
+\end{verbatim}
+
+The \tt{<PKEntryExtra>} encodes the \it{fps} field of an entry
+(the fingerprints of the entry's free variables). The
+\it{numNames} value is an integer, followed by three lists each of
+\it{numNames} elements. The \it{index} values are integers representing the
+inverse of the mapping from the entry's PKFile header \tt{<AllNames>}
+indices to indices in the \it{fingerprint} list. If we denote
+the \it{j}th element of a list \it{list} by \it{list[j]}, then for all values
+\it{i} in the half-open interval [0, \it{numNames}), the fingerprint
+of the name \it{AllNames[index[i]]} is \it{fingerprint[i]}
+
+\section{\anchor{SyntaxSect}{Syntax Summary}}
+
+For reference, here is the complete MultiPKFile grammar:
+
+\begin{verbatim}
+   <MultiPKFile>    ::= <Header> <PKFile>*
+
+   <Header>         ::= version num totalLen type-code <TypedHeader>
+   <TypedHeader>    ::= <SeqHeader> | <HashHeader>
+   <SeqHeader>      ::= <HeaderEntry>*
+   <HashHeader>     ::= tblSize hashKey <Bucket>* <BucketEntry>*
+   <Bucket>         ::= 0 | offset
+   <BucketEntry>    ::= bucketSize <HeaderEntry>*
+   <HeaderEntry>    ::= <PK> offset
+   <PK>             ::= fingerprint
+
+   <PKFile>         ::= <PKFHeader> <PKEntries>*
+
+   <PKFHeader>      ::= <CFPHeader> <PKFHeaderTail>
+   <CFPHeader>      ::= num type-code <CFPTypedHeader>
+   <PKFHeaderTail>  ::= pkEpoch namesEpoch <AllNames> <CommmonNames>
+   <CFPTypedHeader> ::= <CFPSeqHeader> | <CFPHashHeader>
+   <CFPSeqHeader>   ::= <CFPHeaderEntry>*
+   <CFPHashHeader>  ::= len tblSize hashKey <Bucket>* <CFPBucketEntry>*
+   <Bucket>         ::= 0 | offset
+   <CFPBucketEntry> ::= bucketSize <CFPHeaderEntry>*
+   <CFPHeaderEntry> ::= <CFP> offset
+   <CFP>            ::= fingerprint
+   <AllNames>       ::= numNames <Name>*
+   <Name>           ::= nameLen byte*
+   <CommonNames>    ::= <BitVector>
+   <BitVector>      ::= numWords word*
+
+   <PKEntries>      ::= numEntries <PKEntry>* <PKEntryExtra>*
+   <PKEntry>        ::= ci <UncommonNames> <UCFP> <Value>
+   <UncommonNames>  ::= <BitVector>
+   <UCFP>           ::= xortag fingerprint
+   <Value>          ::= numBytes byte*
+   <PKEntryExtra>   ::= numNames index* fingerprint*
+\end{verbatim}
+
+\section{\anchor{AnalysisSect}{Analysis}}
+
+To determine how well this design meets our goal of minimizing the
+number of different disk reads per \it{Lookup}, we must first estimate
+the sizes of the various data records.
+
+First, consider the \tt{<Header>} record. Most of its space is devoted
+to the \tt{<HeaderEntry>}'s, which are at most 20 bytes (16 bytes for
+the \it{pk} and 4 bytes for the \it{offset}). So, the size of the
+\tt{<Header>} is roughly "20 * n", where \it{n} is the number of
+\tt{<PKFile>}'s in the \tt{<MultiPKFile>}. If the \tt{<HashHeader>}
+representation is used, then some more bytes are required by the
+\tt{<Bucket>}'s. If each \it{offset} is 2 bytes and the table is only
+half loaded, then "4 * n" bytes are required for the \tt{<Bucket>}'s.
+
+The operating system buffers disk operations, transferring data in
+blocks on the order of 8K bytes in size. So, with a single disk
+operation, we can do a search on the \tt{<Header>} using one disk read
+if the MultiPKFile contains at most on the order of 340 PKFiles. We
+don't expect to have nearly that many PKFile's per MultiPKFile.
+
+On to the \tt{<PKFHeader>}. As with the \tt{<Header>}, most of the
+space is devoted to the \tt{<CFPHeader>} table mapping common
+fingerprints to the offsets of the corresponding \tt{<PKEntries>}
+records. These tables have the same size as the \tt{<Header>} records,
+about "24 * n", where \it{n} is the number of entries in the table. In
+this case, however, we expect \it{n} to be quite a bit larger, so
+multiple disk reads may be required to complete this part of the
+\it{Lookup} operation. By storing the \it{epoch} value first, the
+cache can report an \it{FVMismatch} result without doing further disk
+reads.
+
+The \tt{<AllNames>} record may be quite long -- perhaps on the order
+of 600 bytes or more, assuming 30 20-character names. We might be able
+to do some simple compression on the names in an \tt{<AllNames>}
+record, since we expect that many of them will share common prefixes.
+
+Since the \tt{<AllNames>} and \tt{<CommonNames>} records only have to
+be read when those values have not been stored in the cache's
+in-memory data structures, it seems a shame to interpose them between
+the \tt{<CFPHeader>} and the \tt{<PKEntries>}. We might be able to
+reduce the number of disk reads in some cases by storing the
+\tt{<AllNames>} and \tt{<CommonNames>} records after the
+\tt{<PKEntries>}, at the expense of an extra field in the
+\tt{<PKFHeader>} indicating where the \tt{<AllNames>} record begins.
+
+The \tt{<PKEntry>}'s themselves are relatively small. The \it{ci},
+\tt{<UncommonNames>}, and \tt{<UCFP>} records require about 28 bytes.
+The \tt{<Value>} record varies from entry to entry. Most \tt{<Value>}
+records will be pointers to derived files in the repository, requiring
+only 20 bytes. But a small fraction of them will be pickled Vesta
+values, which can be quite large. Since the \tt{<Value>} records are
+only required in the event of a cache hit, it might be better to store
+all of the \tt{<Value>} records together after the \tt{<PKEntry>}'s at
+the cost of an extra integer offset in the \tt{<PKEntries>} record
+indicating where the \tt{<Value>} records begin.
+
+In a similar vein, notice how the \tt{<PKEntryExtra>}'s have been
+stored after the \tt{<PKEntry>}'s. This is because the
+\tt{<PKEntryExtra>}'s are not required on the \it{Lookup} path; storing
+their values within the \tt{<PKEntry>}'s would hurt data locality and
+increase the number of disk reads required per \it{Lookup}.
+
+The net result of this design is that we expect that misses in the
+cache can be determined in as few as 2 disk reads, but usually 3. We
+expect hits in the cache to require 4 or more disk reads.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{VCache.1.html}{VCache(1)}
+
+\section{\anchor{AuthorSect}{Author}}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Sun Apr  6 18:10:03 PDT 1997 by heydon
+\end{verbatim}

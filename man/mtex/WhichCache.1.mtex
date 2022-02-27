@@ -1,0 +1,96 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{WhichCache(1) man page}{WhichCache}{1}
+
+\section{Name}
+
+WhichCache - print the identity of the Vesta cache server
+
+\section{Description}
+
+The Vesta tools consult the user's Vesta configuration file to
+determine various things about the Vesta system's configuration. Among
+other things, the configuration file contains the identity of a Vesta
+cache server.
+
+A Vesta cache server is identified by three things:
+
+\begin{itemize}
+\item
+the hostname on which the cache server is running,
+\item
+the port on which that cache server is listening for connections, and
+\item
+the root directory of that cache server's stable cache
+\end{itemize}
+
+This simple shell script prints the values of those three
+configuration settings.
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{WhichCache} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The program first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+\it{WhichCache} are in the section denoted by \tt{[CacheServer]}.
+Here are the variables and their meanings; the types of the variables
+are shown in parentheses.
+
+\begin{description}
+\item{\tt{Host} (string)}
+The hostname of the machine on which the cache server is running.
+
+\item{\tt{Port} (integer)}
+The port number on the host named by \it{Host} to contact. This allows
+multiple cache servers to be running on the same machine; each one
+listens on a different port for connections.
+
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+Other configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored.
+\end{description}
+
+\section{See Also}
+
+\link{CleanCache.1.html}{CleanCache(1)},
+\link{CreateCacheDirs.1.html}{CreateCacheDirs(1)},
+\link{EraseCache.1.html}{EraseCache(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{ShowCache.1.html}{ShowCache(1)}.
+\link{VCache.1.html}{VCache(1)},
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:49:37 PST 1997 by heydon
+\end{verbatim}

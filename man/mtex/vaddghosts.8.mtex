@@ -1,0 +1,142 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vaddghosts - Fill in ghosts for version that should exist but don't in locally mastered packages}{vaddghosts}{8}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vaddghosts} - Fill in ghosts for version that should exist but don't in locally mastered packages
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vaddghosts}
+[\link{#-R}{-R \it{repos}}] 
+[\it{directory...}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Configuration}{Configuration}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section for
+definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.  See the
+\link{vrepl.1.html}{vrepl} man page's
+\link{vesta-intro.1.html#Vesta_Replication}{Vesta Replication Design}
+section for an introduction to the concepts of replication and
+mastership.
+
+In the unfortunate event that your repository is destroyed, you may
+find yourself recovering from a backup.  First, you should use
+\link{vrecoveragreement.8.html}{\bf{vrecoveragreement}}.  After that,
+if your repository has mastership of any packages or branches, there
+may be gaps left in the version history of your packages.  This tool
+fills in those holes with ghosts.
+
+For example, suppose that before a disaster, a package (or branch)
+mastered in your repository had versions 1 through 10.  You recover
+from a backup that only has versions 1 through 5.  By using
+\link{vrecoveragreement.8.html}{\bf{vrecoveragreement}} and the
+replicator, you get back versions 7, 9, and the intermediate snapshot
+snapshot checkout/10/1.  If you run this tool, it will deduce that
+versions up to 10 must have existed at some point.  It will therefore
+create ghosts in the package for 6, 8, and 10.  It will also create
+ghosts in the checkout sub-directory for any missing version numbers
+(6-9 in this example).
+
+This tool should be run by a user with write permission to all
+packages mastered in the local repository.  (The administrative user,
+normally named \tt{vadmin}, is probably the best choice.)
+
+By default, a depth-first search of the entire repository is performed
+to search for mastered packages to add ghosts to.  If one or more
+directories are specified on the command line, they will be used as
+the starting point of the depth-first search.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+
+\item{\anchor{-R}{-R \it{repos}}}
+Make changes to \it{repos} instead of the default local repository.
+The repository is specified by host name and TCP port number in the
+format \it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be
+omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+It's possible that version numbers higher than the highest one
+recoverable from a peer repository existed prior to the disaster from
+which you're recovering.  This tool has no way to discover that, so it
+may not add ghosts for all versions that existed before the disaster
+and are missing afterward.
+
+In the example given above, if versions 11 and 12 existed prior to the
+recovery, ghosts would not be created for them.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]}
+section of the Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vmaster.1.html}{\bf{vmaster}(1)},
+\link{vaddghosts.8.html}{\bf{vaddghosts}(8)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk \tt{<\link{mailto&#58;ken&#64;xorian&#46;net}{ken@xorian.net}>}
+
+\begin{verbatim}
+Last modified on Thu May 20 14:13:01 EDT 2004 by ken@xorian.net
+\end{verbatim}

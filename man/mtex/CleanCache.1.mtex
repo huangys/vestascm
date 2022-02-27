@@ -1,0 +1,82 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{CleanCache(1) man page}{CleanCache}{1}
+
+\section{Name}
+
+CleanCache - delete temporary files in the Vesta-2 stable cache
+
+\section{Synopsis}
+
+\bf{CleanCache} [ \bf{-f} ]
+
+\section{Description}
+
+The Vesta-2 cache server uses the VestaAtomicFile interface to write
+some of the files in the stable cache atomically. VestaAtomicFile
+works by creating the file under a temporary name. It commits a file
+by atomically renaming the temporary file to the intended filename.
+
+If the cache server crashes before some VestaAtomicFiles are committed,
+their temporary files are left in the stable cache. \it{CleanCache}
+deletes these stranded temporary files. It first lists all of the
+temporary files in the stable cache, and then asks for confirmation
+before deleting them. If the \bf{-f} option is supplied, deletion is
+forced without a request for confirmation.
+
+\bf{Warning!} It is quite dangerous to clean a stable cache that is in
+use by some cache server. Deleting a valid temporary file will most
+likely cause the cache server to crash. Be sure there is no cache
+server running on the stable cache in question before using this
+program.
+
+\section{Configuration Variables}
+
+\it{CleanCache} deletes files contained in a part of the filesystem
+pointed to by the current Vesta configuration file. In particular, it
+reads the following values from the \it{CacheServer} section of the
+configuration file:
+
+\begin{verbatim}
+MetaDataRoot     - root of Vesta-2 meta-data
+  MetaDataDir    - root of cache server meta-data sub-tree
+    SCacheDir    - root of stable cache entries sub-tree
+    SVarsDir     - root of stable variables sub-tree
+\end{verbatim}
+
+Nesting indicates how the directory tree corresponding to these names
+is structured. If the \it{MetaDataRoot} value is the empty string,
+then the current directory is used.
+
+\section{See Also}
+
+\link{CreateCacheDirs.1.html}{CreateCacheDirs(1)},
+\link{EraseCache.1.html}{EraseCache(1)},
+\link{ShowCache.1.html}{ShowCache(1)},
+\link{VCache.1.html}{VCache(1)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Fri Feb 28 10:49:43 PST 1997 by heydon
+\end{verbatim}

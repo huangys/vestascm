@@ -1,0 +1,9 @@
+
+cd src
+make
+
+cd mtex
+sh list
+
+cd man
+sh a.sh

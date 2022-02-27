@@ -1,0 +1,15 @@
+(* out parameters *)
+
+PROC Main() IS
+    VAR n := 0, m := 0 IN
+      n, m := P();
+      { n = 2 AND m = 3 -> Wr("hello world\n")
+      | Wr("Oops\n")
+      }
+    END
+END;
+
+PROC x, y := P() IS
+    x := 2;
+    y := 3
+END;

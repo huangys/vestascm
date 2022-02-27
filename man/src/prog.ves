@@ -1,0 +1,33 @@
+// Created on Mon Apr 21 10:01:41 PDT 1997 by heydon
+
+// lim/prog.ves - exports the lim(1) executable
+
+files
+    lim_c = [
+      atom.c, emalloc.c, interpret.c, lim.c, parsetree.c, scope.c,
+      state.c, stdlimrd.c, stdlimwr.c ];
+    lim_h = [
+      atom.h, emalloc.h, interpret.h, limlex.h, limrd.h, limwr.h,
+      parsetree.h, scope.h, state.h, stdlimrd.h, stdlimwr.h ];
+    lex_source = [ llim.l ];
+    yacc_source = [ ylim.y ];
+/**waitdup**/
+{
+    // invoke lex and yacc
+    lex_res_c = ./lex/lex(lex_source, "llim");
+    yacc_res = ./yacc/yacc(yacc_source);
+
+    // libraries
+    c_libs = ./libs/c;
+    yacc_lib = if c_libs!yacc then <c_libs/yacc> else <>;
+    libs = yacc_lib + < c_libs/lex, c_libs/libc >;
+
+    // overrides
+    ovs = [ C/switches = [ compile = [ optimize = "-O", debug = "-g3" ],
+			   program = [ debug = "-g" ] ] ];
+
+    // build the program
+    c_files = lim_c + yacc_res/c + lex_res_c;
+    h_files = lim_h + yacc_res/h;
+    return ./C/program("lim", c_files, h_files, libs, ovs);
+}

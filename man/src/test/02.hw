@@ -1,0 +1,5 @@
+(* test semicolon *)
+
+PROC Main() IS
+    Wr("hello"); Wr(" world\n")
+END;

@@ -1,0 +1,161 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vesta.cfg - Vesta configuration file}{vesta.cfg}{5}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vesta.cfg} - Configuration file for the Vesta configuration management system
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Locations}{Locating the Configuration Files}
+\item \link{#Syntax}{Configuration File Syntax}
+\item \link{#Example}{Example Configuration File}
+\item \link{#See_Also}{See Also}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+Most Vesta tools use a standard mechanism for
+determining configuration information about a Vesta installation.
+This mechanism attempts to locate a configuration file named
+\it{vesta.cfg} by searching in a number of locations. The 
+\link{vgetconfig.1.html}{\bf{vgetconfig}(1)} man page
+describes a command-line interface for determining the location of the
+configuration file and for printing the value of a particular
+configuration variable. The meanings of the configuration variables
+recognized by the various tools are documented in their individual man
+pages.
+
+\section{\anchor{Locations}{Locating the Configuration File}}
+
+The Vesta tools search for the \it{vesta.cfg} file in the following
+locations:
+
+\begin{enumerate}
+\item
+The file named by the VESTACONFIG environment variable is used if that
+environment variable is defined and the file exists.
+\item
+Otherwise, the \it{vesta.cfg} file in the directory named by the HOME
+environment variable is used if that environment variable is defined
+and the file exists.
+\item
+Otherwise, \it{/etc/vesta.cfg} is used if it exists.
+\end{enumerate}
+
+If all of these search locations fail, the Vesta tools that require
+the configuration file will print an error message and exit.
+
+A few tools (such as vgetconfig and QuickWeed) take command line paramaters
+to override the location of configuration files.
+
+\section{\anchor{Syntax}{Configuration File Syntax}}
+
+Here is a EBNF grammar for Vesta configuration files.
+
+\begin{verbatim}
+  config-file  ::= ws section ws new-line line*
+  line         ::= ws ( section | option | comment ) ws new-line
+  section      ::= '[' ws name ws ']' 
+		 | '[' "include" ws name ws ']'
+  option       ::= name ws '=' ws value
+  comment      ::= ( ';' | "//" ) non-new-line* | <empty>
+  name         ::= ( letter | digit | special )+
+  value        ::= non-new-line*
+  new-line     ::= <ASCII CR> | <ASCII LF>
+  non-new-line ::= <any ASCII character except those for new-line>
+  ws           ::= <space> | <tab>
+\end{verbatim}
+
+This grammar is slightly ambiguous, but the intent should be clear.
+The file is a sequence of lines, each of which is either a section name
+in square brackets, a <name,value> pair separated by an equal sign, or
+a comment.  Leading and trailing white space is ignored, as are blank
+lines and comment lines.  A comment line has a semicolon or two slashes
+as its first non-whitespace characters.
+
+The configuration file defines a two-level naming structure, with
+sections as the upper level and the names of <name, value> pairs as the
+lower level.  Once the file has been parsed, the basic operation is
+to lookup a <section, name> pair, obtaining the associated value.
+See the \link{#Example}{example configuration file} below.
+
+There is a facility for one configuration file to refer to other
+ones.  Notice the second alternative for the \it{section} nonterminal
+in the grammar above.  When this form is used, it doesn't introduce
+a section name; instead, if \it{name} specifies a file, it is read and processed.
+That is, if a file contains a line of the form:
+\begin{verbatim}
+  [include /proj/vesta/pkg/config-file/vesta.cfg]
+\end{verbatim}
+then the line will effectively be replaced by the sections contained in
+the file \tt{/proj/vesta/pkg/config-file/vesta.cfg}. If instead, \it{name}
+specifies a directory, all of the files in it and any sub-directories are
+read and processed.  The file names are sorted as strings, but comparing
+embedded sequences of digits as decimal integers.  (So, for example "foo_10_bar" will
+sort after "foo_2_bar".)  Files in sub-directories are sorted first by the
+name of the sub-directory itself and then within the sub-directory by file name.
+
+All options must be in a section.  Any file (included or the main file)
+must have a named section before any options.  See the example below.
+
+This mechanism is chiefly intended for overriding a set of shared
+defaults.  A configuration file containing standard definitions is
+stored in a public location (usually /etc/vesta.cfg).  A second
+configuration file is stored in the user's home directory or at the
+location specified by the environment variable VESTACONFIG.  This
+second file begins with an \it{include} line that mentions the first
+file, then continues with additional sections that either add to or
+override the standard definitions.  Thus, it is not an error for a
+<section, name> pair to appear more than once in the course of
+configuration file processing (which may involve reading multiple
+files).  The value encountered last wins.
+
+\section{\anchor{Example}{Example Configuration File}}
+
+Here is a sample configuration file. This file includes a central
+configuration file, and then overrides some configuration variables
+in the \it{Evaluator} and \it{Run_Tool} sections.
+
+\begin{verbatim}
+  // Include standard configuration file
+  [include /etc/vesta.cfg]
+  
+  // ----------------------------------------------
+  [Evaluator]
+  
+  // always print a stack trace on runtime errors
+  Switches = -stack
+  
+  // host to use for DU4.0 builds
+  DU4.0 = rowdy.pa.dec.com
+  
+  // ----------------------------------------------
+  [Run_Tool]
+  
+  // print RunToolServer debugging info
+  helper_switches = -d
+\end{verbatim}
+
+\section{\anchor{See_Also}{See Also}}
+\link{vgetconfig.1.html}{\bf{vgetconfig}(1)}
+\link{QuickWeed.1.html}{\bf{QuickWeed}(1)}

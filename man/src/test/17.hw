@@ -1,0 +1,8 @@
+VAR n := 1;
+
+PROC Main() IS
+    EVAL P();
+    { n = 2 -> Wr("hello world\n") | Wr("oops\n") }
+END;
+
+PROC res := P() IS n := 2; res := 0 END;

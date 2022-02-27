@@ -1,0 +1,498 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vesta-intro - Introduction to Vesta}{vesta-intro}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vesta-intro} - Introduction to the Vesta configuration management system
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Terminology}{Terminology}
+\item \link{#ConfigFiles}{Configuration Files}
+\item \link{#Name_Interpretation}{Name Interpretation}
+\item \link{#See_Also}{See Also}
+\item \link{#Limitations}{Limitations}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+Vesta is a system for software configuration management.
+It consists of a source code storage and control component,
+comprising the \it{repository} and \it{repository tools},
+and a building component, comprising
+the \it{evaluator}, the \it{function cache}, and the \it{weeder}.
+For an overview, see the paper
+\link{http://gatekeeper.dec.com/pub/DEC/SRC/research-reports/abstracts/src-rr-168.html}{\it{The Vesta Approach to Software Configuration Management}}, 
+available as Research Report 168, Compaq Systems Research Center.
+Additional documentation is available in the references listed 
+under \link{#See_Also}{See Also} below.
+
+\section{\anchor{Terminology}{Terminology}}
+
+Here is a brief introduction to some basic Vesta terminology.
+The terms are ordered to avoid forward references as much as possible.
+
+Alphabetical list:
+\link{#advance}{advance},
+\link{#agreement}{agreement},
+\link{#appendable_directory}{appendable directory},
+\link{#base}{base},
+\link{#branch}{branch},
+\link{#checkin}{checkin},
+\link{#checkout}{checkout},
+\link{#ConfigFiles}{configuration file},
+\link{#evaluator}{evaluator},
+\link{#function_cache}{function cache},
+\link{#ghost}{ghost},
+\link{#immutable}{immutable},
+\link{#immutable_directory}{immutable directory},
+\link{#immutable_file}{immutable file},
+\link{#import}{import},
+\link{#master}{master},
+\link{#master_stub}{master stub},
+\link{#model}{model},
+\link{#mutable_attributes}{mutable attributes},
+\link{#mutable_directory}{mutable directory},
+\link{#mutable_file}{mutable file},
+\link{#nonmaster_stub}{nonmaster stub},
+\link{#package}{package},
+\link{#replication}{replication},
+\link{#repository}{repository},
+\link{#repository_tools}{repository tools},
+\link{#reservation_stub}{reservation stub},
+\link{#runtool_server}{runtool server},
+\link{#SDL}{SDL},
+\link{#session}{session},
+\link{#snapshot}{snapshot},
+\link{#standard_construction_environment}{standard construction environment},
+\link{#stub}{stub},
+\link{#symlink-to}{symlink-to},
+\link{#version}{version},
+\link{#ConfigFiles}{vesta.cfg},
+\link{#volatile_directory}{volatile directory},
+\link{#weeder}{weeder},
+\link{#working_directory}{working directory}
+
+\begin{description}
+\item{\anchor{repository}{repository}} The Vesta \it{repository} is responsible for
+long-term data storage in files and directories.  It acts as an NFS
+file server, making all source code stored in Vesta visible in the
+ordinary file name space.  See \link{repository.8.html}{\bf{repository}(8)}.
+
+\item{\anchor{repository_tools}{repository tools}} The repository has several special features
+not shared by ordinary NFS servers, which are accessible through the
+command line tools referenced below.  Many of the standard Vesta
+conventions and policies are implemented in the tools, not in the
+repository proper, making them relatively easy to change.
+The documentation for each tool is referenced under
+\link{#See_Also}{See Also} below.
+
+\item{\anchor{immutable}{immutable}} All source code permanently stored by the repository
+is \it{immutable}; that is, it cannot be modified.  Once a filename is
+bound to a particular file, that file cannot be edited or replaced
+with a different file.  This feature supports reproducible building
+and simplifies both source replication and build caching.
+
+\item{\anchor{version}{version}} By convention, every file permanently stored in the
+repository has a \it{version number} somewhere in its name.  Thus,
+although each file is immutable, the repository can represent an
+evolving program as a sequence of files with different version
+numbers.
+
+\item{\anchor{package}{package}} We have found it convenient to organize sources into
+\it{packages}.  A package is a tree of files and directories that
+typically change together.  The Vesta repository tools do versioning
+at the package level, not the level of individual files: each package
+is a sequence of versions.  For example,
+\tt{/vesta/src.dec.com/vesta/repos/74/src/RepositoryMain.C}
+is one of the files in version 74 of the package named
+\tt{/vesta/src.dec.com/vesta/repos}.
+The \link{vcreate.1.html}{\bf{vcreate}(1)} tool creates a package.
+
+\item{\anchor{branch}{branch}} The versions of a package are numbered in a linear
+sequence.  To represent forked or parallel development, the repository
+tools support the concept of a \it{branch}.  A branch is a new package
+that is placed as a subdirectory of the parent package, with a name
+based on one of the versions of the parent package (the branch base),
+and with a version 0 that is identical to the branch base.
+The \link{vbranch.1.html}{\bf{vbranch}(1)} tool creates a branch.
+
+\item{\anchor{appendable_directory}{appendable directory}} An \it{appendable directory} is a
+directory in which new names can be inserted, but existing names
+cannot be deleted and reused.  Packages are stored in a tree of
+appendable directories that is conventionally mounted as \tt{/vesta}.
+Each package is itself an appendable directory so that new versions
+can be added.
+
+\item{\anchor{immutable_directory}{immutable directory}} An \it{immutable directory} is a directory
+that cannot be changed at all; names can neither be created nor
+deleted.  A package version is stored as a tree of immutable directories.
+
+\item{\anchor{immutable_file}{immutable file}}  An \it{immutable file} is a file whose contents
+cannot be changed.  The files in a package version are immutable.
+
+\item{\anchor{mutable_attributes}{mutable attributes}} A source object's \it{mutable attributes}
+are a set of (name, value) pairs that the repository attaches to the
+object.  The repository tools use mutable attributes to store
+many kinds of information; for example, when and by whom a package was
+created, and on what previous versions a new version was based.
+The \link{vattrib.1.html}{\bf{vattrib}(1)} tool can be used to
+view or modify mutable attributes.
+
+\item{\anchor{mutable_directory}{mutable directory}} A \it{mutable directory} is a directory
+implemented by the repository that looks much like an ordinary
+filesystem directory; files and subdirectories in such a directory can
+be freely created, deleted, or edited.  Mutable directories are
+stored in a tree that is conventionally mounted as \tt{/vesta-work}.
+
+\item{\anchor{mutable_file}{mutable file}} A \it{mutable file} is a file in a mutable
+directory.  Internally, a mutable file may be implemented as a link to
+an immutable file, with copy-on-write if a user attempts to edit the
+file, but this detail is not visible through the NFS interface.
+
+\item{\anchor{base}{base}} The repository can quickly create a mutable directory that
+is \it{based on} (initialized from) any immutable directory.
+
+\item{\anchor{snapshot}{snapshot}} The repository can quickly create an immutable
+directory that is a \it{snapshot} (immutable copy) of any mutable directory.
+
+\item{\anchor{working_directory}{working directory}}  A \it{working directory} is a mutable
+directory created for the purpose of editing sources and developing
+new package versions.  It may either be initially empty or based on
+a previous package version.
+
+\item{\anchor{checkout}{checkout}} To \it{check out} a package means to initiate
+development of the package's next version.  The repository tools use a
+locking (pessimistic) concurrency control model, so the next version
+number is reserved at checkout time.  The
+\link{vcheckout.1.html}{\bf{vcheckout}(1)} tool is used to check out a
+package.  By default, it creates a working directory based on the
+most recent previous package version.  It also creates a session
+directory and a reservation stub, described next.
+
+\item{\anchor{session}{session}} Because the Vesta evaluator (builder)
+can operate only on
+immutable sources, Vesta users end up creating a large number of
+versions, most of which are of little long-term interest.  For
+example, each attempt to modify and recompile a program will generate a
+new version. Typically many of these versions will have syntax errors or
+other simple bugs.  We have therefore found it convenient to
+distinguish between two kinds of package versions: \it{public versions},
+which a developer typically creates when he is ready to release code
+for use by others, and \it{session versions}, in-between versions
+created during development and debugging.  A \it{session directory}
+holds session versions.  For example, the versions in the development
+session that led up to the creation of version
+\tt{/vesta/src.dec.com/vesta/repos/74} appear in the session
+directory \tt{/vesta/src.dec.com/vesta/repos/checkout/74}, under
+the names \tt{0}, \tt{1}, \tt{2}, etc.
+
+\item{\anchor{advance}{advance}} To \it{advance} a session means to create the
+next session version, by making a snapshot of the working directory
+and placing it in the session directory.
+The \link{vadvance.1.html}{\bf{vadvance}(1)} tool handles this task.
+
+\item{\anchor{stub}{stub}} A \it{stub} is an object that can appear in the repository
+name space as a placeholder.  A stub is manifested through the NFS
+interface as an empty file with unusual access permissions (details below).
+
+\item{\anchor{reservation_stub}{reservation stub}} A \it{reservation stub} is a stub created by
+the checkout tool as a placeholder to reserve the next package version
+number.  On a reservation stub, all the read and execute permissions
+are turned off, but the setuid bit is turned on. The write permissions
+are meaningful, so they are allowed to show through. Thus a reservation
+stub will typically appear in an ``ls -l'' listing with mode
+\tt{--wS------} or \tt{--wS-w----}.
+
+\item{\anchor{checkin}{checkin}} To \it{check in} a package means to create a new public
+version.  The \link{vcheckin.1.html}{\bf{vcheckin}(1)} tool handles
+this task.  It works by replacing the reservation stub created at
+checkout time with a copy of the last version in the session
+directory.  Checkin also ends the session by deleting the working directory.
+
+\item{\anchor{ghost}{ghost}} Although names in appendable directories can never be
+deleted and reused for different objects, the repository does support
+a limited form of deletion.  A \it{ghost} is a placeholder for an
+object that has been deleted.  The ghost preserves the knowledge that
+its name was used for a real (non-ghost) object in the past and must
+not be used for a different object in the future.  A ghost can safely
+be replaced with an exact copy of the deleted object if one can be
+found, but it is otherwise unchangeable and cannot be deleted.  A ghost
+is manifested through the NFS interface as an empty file with all
+access permissions turned off and the sticky bit turned on, so ``ls -l''
+will show \tt{---------T}.
+
+\item{\anchor{replication}{replication}} Conceptually, all objects in all
+Vesta repositories are named in one large hierarchical namespace
+rooted at \tt{/vesta}.  (We exclude mutable and volatile directories here.)
+Each repository may contain some subtree of the global namespace.
+\it{Replication} exists when the subtrees stored at two or more
+repositories overlap.  The \link{vrepl.1.html#Vesta_Replication}{Vesta
+Replication} section in the \link{vrepl.1.html}{\bf{vrepl}(1)} man
+page explains replication in more detail.
+
+\item{\anchor{agreement}{agreement}} Roughly speaking, in the presence of replication, one or
+more repositories \it{agree} (are consistent) if (1) there are no cases
+where the same name means something different in two different
+repositories, and (2) each name is marked as master in at most one
+repository.  Agreement is a somewhat subtle concept that is explained
+more fully in the \link{vrepl.1.html#Vesta_Replication}{Vesta Replication}
+section of the \link{vrepl.1.html}{\bf{vrepl}(1)} man page, and
+defined precisely in \it{Vesta: A System for Software Configuration
+Management}.
+
+\item{\anchor{master}{master}} Each object under \tt{/vesta} has a boolean \it{master} flag.
+Mastership is used for several purposes, explained more fully in
+the \link{vrepl.1.html#Vesta_Replication}{Vesta Replication}
+section of the \link{vrepl.1.html}{\bf{vrepl}(1)} man page.
+
+\item{\anchor{master_stub}{master stub}}  A stub whose master flag is true.
+A reservation stub is always a master stub.
+
+\item{\anchor{symlink-to}{symlink-to}} The repository stores symbolic links in a somewhat
+odd way, as stubs or ghosts with the mutable attribute \tt{symlink-to}.
+The value of this attribute is the link value.  This detail is not
+visible through the NFS interface, but is mentioned in the man
+pages for some of the repository tools.
+
+\item{\anchor{nonmaster_stub}{nonmaster stub}} A stub whose master flag is false.  A nonmaster
+stub is used as a placeholder for an object that may exist in some
+repository, but is not replicated locally.  On a non-master stub, all
+permissions are turned off, but the setgid bit is turned on, so ``ls
+-l'' will show \tt{------S---}.
+
+\item{\anchor{SDL}{SDL}} The Vesta \it{software description language} is a specialized
+language used to describe how to build a software system from its
+components.  It includes native data structures suited for
+representing files and directories, a primitive for invoking
+external tools like compilers and linkers, and general-purpose
+language features such as functions, conditionals, arithmetic, lists,
+and string manipulation.
+See \link{http://gatekeeper.dec.com/pub/DEC/SRC/technical-notes/abstracts/src-tn-1997-005.html}{\it{The Vesta-2 Software Description Language}}, also
+available as an appendix in \it{Vesta: A System for Software Configuration Management}.
+
+\item{\anchor{model}{model}}  A \it{model} or \it{system model} 
+is a program written in the Vesta SDL.
+
+\item{\anchor{import}{import}} The Vesta SDL is modular; the description of a large software
+system can be broken up into many different models.  One model uses
+another by \it{importing} it.
+
+\item{\anchor{standard_construction_environment}{standard construction environment}} The \it{standard construction
+environment} is a standard set of build tools (such as compilers and
+linkers), libraries, and header files.  User-written models gain
+access to this environment by importing a Vesta-provided model that
+describes it.  For example, the standard construction 
+environment models that are used to build Vesta on Red Hat i686 Linux come
+from the package \tt{/vesta/vestasys.org/platforms/linux/redhat/i686/std_env}.
+
+\item{\anchor{evaluator}{evaluator}}  The \it{evaluator} is an interpreter for the
+Vesta SDL.  See \link{vesta.1.html}{\bf{vesta}(1)}.
+
+\item{\anchor{runtool_server}{runtool server}}  The \it{runtool server} is a server process
+that runs on each Vesta client machine.  It assists the evaluator
+in invoking external tools like compilers and linkers.  See 
+\link{RunToolServer.1.html}{\bf{RunToolServer}(1)}.
+
+\item{\anchor{function_cache}{function cache}} The \it{function cache} is a central server that
+stably caches the results of past Vesta evaluations in order to speed up
+future evaluations.  See \link{VCache.1.html}{\bf{VCache}(1)}.
+
+\item{\anchor{weeder}{weeder}} The \it{weeder} deletes material from the function
+cache that is no longer wanted, in order to free up disk space.
+See \link{VestaWeed.1.html}{\bf{VestaWeed}(1)}.
+
+\item{\anchor{volatile_directory}{volatile directory}} \it{Volatile directories} allow tools
+started by the evaluator to view Vesta bindings as filesystem
+directories, with the changes the tools make recorded by the
+repository and available to the evaluator.  The volatile directory
+tree is conventionally mounted under \tt{/vesta-work/.volatile}.
+It should normally never be accessed directly by users, to avoid
+creating false dependencies in ongoing evaluations.
+\end{description}
+
+\section{\anchor{ConfigFiles}{Configuration Files}}
+
+Most Vesta tools use a standard mechanism for
+determining configuration information about a Vesta installation.
+This mechanism attempts to locate a configuration file named
+\it{vesta.cfg} by searching in a number of locations. The 
+\link{vgetconfig.1.html}{\bf{vgetconfig}(1)} man page
+describes a command-line interface for determining the location of the
+configuration file and for printing the value of a particular
+configuration variable. The meanings of the configuration variables
+recognized by the various tools are documented in their individual man
+pages.
+
+For information on configuration file location and syntax, see the
+\link{vesta.cfg.5.html} {\bf{vesta.cfg}(5)} man page.
+
+\section{\anchor{Name_Interpretation}{Name Interpretation}}
+
+Although the names that you can give on the command line to a Vesta
+repository tool look like filenames, they have somewhat different
+properties, because they must be looked up directly in the
+repository, not in the local filesystem.
+
+First, if a name is unqualified (does not have "\tt{/}", "\tt{.}", or
+"\tt{..}" as its first arc), it is usually qualified by prepending an
+appropriate default directory name, as explained in the individual
+documentation for each tool.
+
+Next, a name that does not begin with "\tt{/}" is handled by asking the
+system for the absolute name of the current working directory (using
+the \bf{getcwd}(3) library routine) and prepending the string that is
+returned.  This is the only case where the state of the local
+filesystem matters.
+
+Next, the name is textually processed to remove "\tt{.}", empty, and
+"\tt{..}" arcs.  Note that we do not check whether an arc cancelled
+out by "\tt{..}" actually exists in the repository.
+
+Finally, a name that begins with \tt{/vesta} or
+\it{[UserInterface]AppendableRootName} is looked up in the
+appendable part of the repository.  Usually the default local
+repository is used, but some of the tools have command line options to
+let you specify a different repository, and some will automatically
+find the master copy or another copy of the specified source, as
+explained in their individual documentation.  Similarly, a name that
+begins with \tt{/vesta-work} or \it{[UserInterface]MutableRootName} is
+always looked up in the mutable part of the default local repository.
+It makes no difference whether the default repository (or even
+some other repository) is NFS mounted on the machine where you run the
+command.
+
+Any name that does not begin with one of the recognized prefixes
+is rejected with the error message "not in the Vesta repository".
+
+Note that symbolic links are not expanded during this name processing
+and are not understood by the repository.  Thus, for example,
+the command "\tt{vcheckout -o latest foo/bar}" will not use the
+latest version of foo/bar as the old version; it will attempt to
+use the "latest" link itself as the old version, which will not work.
+
+\section{\anchor{See_Also}{See Also}}
+
+\bf{Papers and books}
+\begin{flushleft}
+\link{http://gatekeeper.dec.com/pub/DEC/SRC/research-reports/abstracts/src-rr-168.html}{\it{The Vesta Approach to Software Configuration Management}}.\newline
+\link{http://gatekeeper.dec.com/pub/DEC/SRC/technical-notes/abstracts/src-tn-1997-005.html}{\it{The Vesta-2 Software Description Language}}.\newline
+\it{Vesta: A System for Software Configuration Management}.\newline
+\end{flushleft}
+
+\bf{Standard construction environment}
+\begin{flushleft}
+\link{vmodels.5.html}{\bf{vmodels}(5)} - Writing standard user models.\newline
+\link{vlibraries.5.html}{\bf{vlibraries}(5)} - Organization of libraries in Vesta.\newline
+\link{voverrides.5.html}{\bf{voverrides}(5)} - Building with overrides.\newline
+\link{vtypes.5.html}{\bf{vtypes}(5)} - Standard types.\newline
+\end{flushleft}
+
+\bf{Evaluator}
+\begin{flushleft}
+\link{vmake.1.html}{\bf{vmake}(1)} - Delete junk, advance to the next version, and run the evaluator.\newline
+\link{vimports.1.html}{\bf{vimports}(1)} - Determine model imports.\newline
+\link{RunToolServer.1.html}{\bf{RunToolServer}(1)} - Start a RunToolServer for running external tools.\newline
+\end{flushleft}
+
+\bf{Repository tools}
+\begin{flushleft}
+\link{repos-ui.1.html}{\bf{repos-ui}(1)} - Overview.\newline
+\link{vcreate.1.html}{\bf{vcreate}(1)} - Create a package.\newline
+\link{vcheckout.1.html}{\bf{vcheckout}(1)} - Check out a package.\newline
+\link{vadvance.1.html}{\bf{vadvance}(1)} - Advance a checkout session.\newline
+\link{vcheckin.1.html}{\bf{vcheckin}(1)} - Check in a package.\newline
+\link{vbranch.1.html}{\bf{vbranch}(1)} - Create a branch.\newline
+\link{vwhohas.1.html}{\bf{vwhohas}(1)} - Who has packages checked out.\newline
+\link{vlatest.1.html}{\bf{vlatest}(1)} - Find latest package versions.\newline
+\link{vattrib.1.html}{\bf{vattrib}(1)} - Manipulate mutable attributes.\newline
+\end{flushleft}
+
+\bf{Replication}
+\begin{flushleft}
+\link{vrepl.1.html}{\bf{vrepl}(1)} - Replicate sources from one repository to another.\newline
+\link{vmaster.1.html}{\bf{vmaster}(1)} - Move mastership of a source to a different replica.\newline
+\end{flushleft}
+
+\bf{Repository server}
+\begin{flushleft}
+\link{repository.8.html}{\bf{repository}(8)} - Main program.\newline
+\link{mountrepos.8.html}{\bf{mountrepos}(8)} - Mount the repository on a client machine.\newline
+\link{umountrepos.8.html}{\bf{umountrepos}(8)} - Unmount the repository.\newline
+\link{TestShortId.8.html}{\bf{TestShortId}(8)},
+\link{TestVDirSurrogate.8.html}{\bf{TestVDirSurrogate}(8)} - Test programs.\newline
+\end{flushleft}
+
+\bf{Cache server}
+\begin{flushleft}
+\link{VCache.1.html}{\bf{VCache}(1)} - Main program.\newline
+\link{WhichCache.1.html}{\bf{WhichCache}(1)} - Identify the cache.\newline
+\link{CleanCache.1.html}{\bf{CleanCache}(1)},
+\link{EraseCache.1.html}{\bf{EraseCache}(1)},
+\link{ShowCache.1.html}{\bf{ShowCache}(1)} 
+- List/erase stable cache files.\newline
+\link{VCacheMonitor.1.html}{\bf{VCacheMonitor}(1)} - Monitor a running cache.\newline
+\link{CreateCacheDirs.1.html}{\bf{CreateCacheDirs}(1)} - Configure the cache.\newline
+\link{FlushCache.1.html}{\bf{FlushCache}(1)} - Flush volatile cache entries to stable cache.\newline
+\link{VCacheStats.1.html}{\bf{VCacheStats}(1)}
+- Print statistics about the contents of the stable cache.\newline
+\link{PrintCacheLog.1.html}{\bf{PrintCacheLog}(1)},
+\link{PrintGraphLog.1.html}{\bf{PrintGraphLog}(1)},
+\link{PrintMPKFile.1.html}{\bf{PrintMPKFile}(1)} 
+- Print contents of various cache files.\newline
+\link{ChkptCache.1.html}{\bf{ChkptCache}(1)} - Manually checkpoint the cache.\newline
+\link{TestCache.1.html}{\bf{TestCache}(1)},
+\link{TestCacheRandom.1.html}{\bf{TestCacheRandom}(1)} 
+- Test programs.\newline
+\end{flushleft}
+
+\bf{Weeder}
+\begin{flushleft}
+\link{VestaWeed.1.html}{\bf{VestaWeed}(1)} - Real weeder.\newline
+\link{QuickWeed.1.html}{\bf{QuickWeed}(1)} - Conservative weeder.\newline
+\end{flushleft}
+
+\bf{Miscellaneous}
+\begin{flushleft}
+\link{vesta.cfg.5.html}{\bf{vesta.cfg}(5)} - Configuration file for Vesta.\newline
+\link{vgetconfig.1.html}{\bf{vgetconfig}(1)} - Read the Vesta config file.\newline
+\link{vmount.8.html}{\bf{vmount}(8)} - Vesta mount program.\newline
+\link{vdumplog.8.html}{\bf{vdumplog}(8)},
+\link{vappendlog.8.html}{\bf{vappendlog}(8)} 
+- Simple tools for VestaLog atomically appendable logs.\newline
+\end{flushleft}
+
+\section{\anchor{Limitations}{Limitations}}
+
+This man page should probably cover the SDL, evaluator, cache, and
+weeder in more detail.  Maybe the glossary should be divided into sections.
+
+\section{\anchor{Author}{Author (of this document)}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Fri Nov  9 12:14:21 EST 2001 by ken@xorian.net  
+     modified on Fri Mar  9 16:56:30 PST 2001 by mann  
+     modified on Tue Jul 20 14:59:25 PDT 1999 by heydon
+\end{verbatim}

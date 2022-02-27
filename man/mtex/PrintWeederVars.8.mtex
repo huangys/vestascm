@@ -1,0 +1,89 @@
+% Copyright (C) 1999, 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+% Created on Wed Apr 14 11:24:43 PDT 1999 by heydon
+
+\manpage{PrintWeederVars(8) man page}{PrintWeederVars}{8}
+
+\section{Name}
+
+PrintWeederVars - print VestaWeed(1) stable state
+
+\section{Synopsis}
+
+\bf{PrintWeederVars}
+
+\section{\anchor{DescSect}{Description}}
+
+\it{PrintWeederVars} prints the stable state written by the
+VestaWeed(1) program to the standard output in a human-readable form.
+It is intended to be used for debugging purposes.
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, \it{PrintWeederVars} reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The program first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The weeder uses variables
+in the \tt{[CacheServer]} and \tt{[Weeder]} sections of the
+configuration file. Here are the variables and their meanings; the
+types of the variables are shown in parentheses. Those variables
+corresponding to paths or directories should \it{not} end with a slash
+("/") character.
+
+The following variable is read from the \tt{[CacheServer]} section
+of the configuration file:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+Other configuration variables are interpreted relative to this path.
+\end{description}
+
+The following variables are read from the \tt{[Weeder]} section of the
+configuration file:
+
+\begin{description}
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the $MetaDataRoot) in which the weeder's
+metadata is stored.
+
+\item{\tt{Weeded}, \tt{MiscVars} (strings)}
+The files (relative to $MetaDataRoot/$MetaDataDir)
+corresponding to stable weeder variables.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VestaWeed.1.html}{VestaWeed(1)}
+
+\section{Author}
+
+\link{http://src-www.pa.dec.com/~heydon/home.html}{Allan Heydon}
+(\tt{heydon@pa.dec.com})
+
+\begin{verbatim}
+Last modified on Tue Nov 13 13:09:23 EST 2001 by ken@xorian.net  
+     modified on Tue Jun 27 16:27:19 PDT 2000 by mann  
+     modified on Wed Apr 14 11:35:37 PDT 1999 by heydon
+\end{verbatim}

@@ -1,0 +1,13 @@
+Better error message for unterminated string literals  DONE
+
+Maybe:
+Better syntax errors from yacc
+Overflow runtime errors
+Predefined TRUE and FALSE
+CONST keyword
+Exceptions
+Warnings
+Modules
+Non-integer types
+Optimizing parse tree; e.g., commuting Rd and Wr.
+Lim to C or bytecodes or Automata

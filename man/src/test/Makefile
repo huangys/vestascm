@@ -1,0 +1,5 @@
+all:
+	runtest
+
+debug:
+	debugtest

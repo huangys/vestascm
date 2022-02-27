@@ -1,0 +1,276 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{PrintMPKFile(1) man page}{PrintMPKFile}{1}
+
+\section{Name}
+
+PrintMPKFile - print the contents of Vesta-2 MultiPKFiles
+
+\section{Synopsis}
+
+\bf{PrintMPKFile}
+[ \link{#-verbose}{\bf{-verbose}} ]
+[ \link{#-html}{\bf{-html}} [\it{directory}] ]
+[ \link{#-url-patterns}{\bf{-url-patterns}} \it{mpkfile-pattern} \it{pkfile-pattern} \it{cfp-group-pattern} \it{entry-pattern} ]
+\it{file} ...2
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescSect}{Description}
+\begin{itemize}
+\item \link{#TextSect}{Text Output}
+\item \link{#HTMLSect}{HTML Output}
+\end{itemize}
+\item \link{#OptionsSect}{Options}
+\item \link{#ConfigSect}{Configuration Variables}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescSect}{Description}}
+
+\it{PrintMPKFile} prints the contents of Vesta-2 MultiPKFile(s)
+\it{file}. A MultiPKFile is a file written by the Vesta-2 cache
+server; it contains persistent cache entries. If \it{file} is a
+relative pathname, it is interpreted relative to the cache server's
+directory of stable cache entries as specified by the Vesta
+\link{#ConfigSect}{configuration file}.
+
+A MultiPKFile is a collection of PKFiles. A PKFile is a collection of
+cache entries with the same primary key. Within a PKFile, the cache
+entries are grouped by a secondary key, namely, the combined
+fingerprint of the values of the entry's common names. See
+\link{MultiPKFile.5.html}{MultiPKFile(5)} for a complete description
+of the MultiPKFile file format.
+
+\section{\anchor{TextSect}{Text Output}}
+
+By default, a consice representation of the named MultiPKFiles are
+written. This concise representation does not include the contents of
+the cache entries themselves; only the number of cache entries with
+particular primary and secondary keys are printed. If
+\link{#-verbose}{\bf{-verbose}} is specified, then the complete
+contents of the named MultiPKFiles are printed.
+
+\section{\anchor{HTMLSect}{HTML Output}}
+
+If \link{#-html}{\bf{-html}} is specified, a collection of HTML files
+representing the complete contents of the named MultiPKFiles are
+generated.
+
+When generating HTML, the output filenames are based on uniquely
+identifying information for each component.  This makes it possible to
+generate HTML from multiple MultiPKFiles is a single directory.
+Specifically the filenames generated are as follows:
+
+\begin{description}
+
+\item{mpkfile_\it{XXXX}.html}
+
+The top-level HTML file for each MultiPKFile.  The name includes the
+four-digit hexadecimal \it{primary key prefix} which uniquely identifies this
+MultiPKFile.  Example:
+
+\begin{verbatim}
+mpkfile_2692.html
+\end{verbatim}
+
+\item{pkfile_\it{XXXXXXXXXXXXXXXX}_\it{XXXXXXXXXXXXXXXX}.html}
+
+An HTML file is generated for each PKFile. The name includes the
+128-bit \it{primary key} in hexadecimal.  Example:
+
+\begin{verbatim}
+pkfile_269213d607e78eff_df0df13ff2a2b0c4.html
+\end{verbatim}
+
+\item{pkfile_\it{XXXXXXXXXXXXXXXX}_\it{XXXXXXXXXXXXXXXX}_cfp_\it{XXXXXXXXXXXXXXXX}_\it{XXXXXXXXXXXXXXXX}.html}
+
+An HTML file is generated for each \it{common fingerprint group}. The
+name includes both the 128-bit \it{primary key} and the 128-bit
+\it{common fingerprint} in hexadecimal.  Example:
+
+\begin{verbatim}
+pkfile_269213d607e78eff_df0df13ff2a2b0c4_cfp_e644e8f54221bbb7_f534801e81349752.html
+\end{verbatim}
+
+\item{ci_\it{#}.html}
+
+An HTML file is generated for each individual cache entry.  The name
+includes the entry's \it{cache index} in decimal.  Example:
+
+\begin{verbatim}
+ci_134897.html 
+\end{verbatim}
+
+\end{description}
+
+Each HTML file includes a set of links down to all the lower-level
+HTML files, and up to the enclosing HTML files.
+
+The HTML output includes some additional information not present in
+the text output that may help in understanding the contents of the
+cache.  Specifically:
+
+\begin{itemize}
+
+\item In each CFP group HTML file, a table is printed showing which
+secondary names are different between the current CFP group and the
+other CFP groups within the same PKFile.
+
+\item In each CFP group HTML file, the set of uncommon secondary
+dependencies that are common between all entries in the CFP group are
+printed.
+
+\item In cache entry files, derived files are turned into \tt{file://}
+links into the repository's storage pool where applicable.
+
+\end{itemize}
+
+Also, some information that's included in the text output but is
+primarily of interest when debugging the cache server is not included
+in the HTML output, including:
+
+\begin{itemize}
+
+\item File offsets
+
+\item The bit vectors representing the sets of common and uncommon
+names (\tt{commonNms} and \tt{unFVs})
+
+\item The fingerprints of the secondary dependencies recorded for each
+entry
+
+\item The name index map (\tt{imap})
+
+\end{itemize}
+
+The \link{#-url-patterns}{\bf{-url-patterns}} option makes it possible
+to customize the inter-page hyper-links.  This facilitates using a CGI
+gateway to PrintMPKFile.
+
+Without the \link{#-url-patterns}{\bf{-url-patterns}} option, the
+inter-page links are simple relative file links.  As long as the
+generated HTML files are kept in a single directory, the links will
+work.  In other words, the default patterns are:
+
+\begin{itemize}
+\item \tt{mpkfile_%m.html}
+\item \tt{pkfile_%p.html}
+\item \tt{pkfile_%p_cfp_%c.html}
+\item \tt{ci_%i.html}
+\end{itemize}
+
+\link{#-url-patterns}{The URL pattern replacements are described
+below}.
+
+\section{\anchor{OptionsSect}{Options}}
+
+PrintMPKFile  recognizes the following command-line options:
+
+\begin{description}
+
+\item{\anchor{-verbose}{\bf{-verbose}}}
+
+When producing text output, causes the complete contents of the named
+MultiPKFiles to be printed.  When producing HTML output, causes the
+name of each generated HTML file to be printed.
+
+\item{\anchor{-html}{\bf{-html}} [\it{directory}]}
+
+Generates HTML files representing the contents of the named
+MultiPKFiles, rather than text output.  The optional directory
+argument controls where the generated HTML files are written.  (The
+default is to write them in the current working directory.)
+
+\item{\anchor{-url-patterns}{\bf{-url-patterns}} \it{mpkfile-pattern} \it{pkfile-pattern} \it{cfp-group-pattern} \it{entry-pattern}}
+
+This option has no effect unless \link{#-html}{\bf{-html}} is also
+used.
+
+With this option, the inter-page hyper-links can be customized.  This
+makes it possible to use a CGI gateway to PrintMPKFile.  The patterns
+include the following replacements:
+
+\begin{description}
+
+\item{\bf{%m}} The 4-digit hexadecimal \it{primary key prefix}
+
+\item{\bf{%p}} The 128-bit \it{primary key} in hexadecimal, with '_'
+between the two 64-bit words
+
+\item{\bf{%n}} The \it{names epoch} as a decimal integer
+
+\item{\bf{%c}} The 128-bit \it{common fingerprint} in hexadecimal,
+with '_' between the two 64-bit words
+
+\item{\bf{%i}} The \it{cache index} in decimal
+
+\item{\bf{%%}} A literal '%'
+
+\end{description}
+
+\end{description}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, PrintMPKFile reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. It first looks for this file in the current directory;
+if none is found there, it looks in your home directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by
+PrintMPKFile are in the section denoted by \tt{[CacheServer]}. Here
+are the relevant variables and their meanings; the types of the
+variables are shown in parentheses:
+
+\begin{description}
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+Other configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored.
+
+\item{\tt{SCacheDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which the
+cache server stores cache entries.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{EraseCache.1.html}{EraseCache(1)},
+\link{PrintCacheVal.1.html}{PrintCacheVal(1)},
+\link{ShowCache.1.html}{ShowCache(1)},
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheStats.1.html}{VCacheStats(1)},
+\link{MultiPKFile.5.html}{MultiPKFile(5)}
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Fri Nov 14 11:05:16 EST 2003 by ken@xorian.net
+     modified on Thu May 29 15:33:32 PDT 1997 by heydon
+\end{verbatim}

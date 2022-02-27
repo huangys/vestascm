@@ -1,0 +1,4 @@
+PROC Main() IS
+  0 -> Wr("Oops\n")
+| Wr("hello world\n")
+END;

@@ -1,0 +1,199 @@
+% Copyright (C) 1998, 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{RunToolServer(1) man page}{RunToolServer}{1}
+
+\section{Name}
+
+RunToolServer - the Vesta-2 server for launching encapsulated tools
+
+\section{Synopsis}
+
+\bf{RunToolServer}
+
+\section{Description}
+
+The RunToolServer is the Vesta server process responsible for lauching
+tools (such as compilers and linkers) outside the Vesta system. It is
+usually run as a background process.  It must be run as the special
+"runtool" user (usually with the login \tt{vruntool}), which is
+specified by \link{repository.8.html#Configuration}{the repository
+configuration value \tt{[Repository]runtool_user}}.
+
+The vesta(1) evaluator contacts a RunToolServer via Remote Procedure
+Call (RPC) whenever it needs to launch a tool. Tools launched by the
+RunToolServer are run in an encapsulated environment in which all
+references to the file system are trapped by the Vesta repository and
+recorded as dependencies by the Vesta evaluator.
+
+The Vesta evaluator chooses which RunToolServer process to contact
+based on the build target platform name passed to the \tt{_run_tool}
+primitive.  Attributes of the platform and candidate hosts are looked
+up in the [Evaluator] section of the Vesta configuration file.  The
+host on which the evaluator itself is running is preferred.  See the
+\link{vesta.1.html#configuration}{vesta(1)} man page for details.
+
+In the event that a Vesta evaluator is killed, a background thread
+in the RunToolServer will kill any tools launched by such evaluators
+by sending the tools a SIGTERM signal. Normally, such tools would
+terminate on their own, but the background ``child killer'' thread is
+useful for reaping long- or infinitely-running children.
+
+\section{Configuration Variables}
+
+Like most Vesta-2 applications, the RunToolServer reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. The RunToolServer first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. The variables used by the
+RunToolServer are in the section denoted by \tt{[Run_Tool]}. Here
+are the variables and their meanings; the types of the variables are
+shown in parentheses.
+
+\begin{description}
+\item{SRPC_port (integer)}
+The port number on which the RunToolServer exports its RPC interface.
+
+\item{server_max_threads (integer)}
+The maximum number of tools that can be launched and running
+simultaneously by the RunToolServer.
+
+\item{server_max_pending (integer)}
+When the server_max_threads limit is reached, launch requests remain
+pending in a queue.  The server_max_pending value specifies the
+maximum size of the queue before a tool request is rejected with a
+``server busy'' error.  Note that even when the server is holding some
+tool requests pending, it still responds to information queries.
+
+\item{helper (string)}
+Specifies the complete pathname of the privileged program used to
+launch a tool. The helper program must have root privileges in order
+to execute the chroot(2) system call. Currently, the helper program
+is named ``tool_launcher''.
+
+\item{helper_switches (string)}
+Switches passed to the helper program. The current helper program
+(i.e., ``tool_launcher'') understands two switches: \bf{-t} (testing
+mode), which causes tool_launcher not to execute the chroot(2) system
+call; and \bf{-d} (debugging mode), which causes tool_launcher to
+print debugging output to the standard output each time a tool is
+launched or completes execution.
+
+\item{sysname (string)}
+\item{release (string)}
+\item{version (string)}
+These values describe the operating system on
+which the server will run tools.  They should normally \it{not} be
+set in the configuration file; the RunToolServer will get the correct
+values from the uname(2) system call.
+
+\item{machine (string)}
+\item{cpus (int)}
+\item{cpuMHz (int)}
+\item{memKB (int)}
+These values describe the hardware platform on
+which the server will run tools.  They should normally \it{not} be
+set in the configuration file; the RunToolServer will get the correct
+value from the uname(2) and getsysinfo(2) system calls.
+
+\item{sync_after_tool (integer)}
+After a tool exits, issue the sync() system call the given number of
+times before returning control to the evaluator.  The default is
+currently 1.  
+
+This feature is meant to work around a problem that may cause large
+tool output files to be incompletely written under heavy load.  NFS is
+supposed to provide write-through on close semantics, but it seems
+that the Tru64 Unix kernel may only schedule the write-back to start
+immediately, not actually wait until it is complete.  Or at least,
+this may be happening in the special case where a process exits and
+its files are automatically closed; its parent may be told that it has
+exited before all the data has been flushed through to the NFS server.
+
+Even calling sync() does not necessarily fix this problem, as its
+specification does not guarantee that writes are complete when it
+returns, only that they are scheduled to be started immediately.
+Historically people have called sync() two or three times in an
+attempt to work around this limitation, but it is not clear that this
+actually makes any difference.
+
+Also, sync() is expensive on a shared machine where other file writing
+is being done.  Therefore, it may be preferable to set sync_after_tool
+to zero and instead modify tools that write very large files to call
+fsync() before closing them; or if the files are memory-mapped, to
+call msync() before unmapping them.
+
+\item{coredumpsize_limit (integer)}
+If set, causes the RunToolServer to change the soft limit on core dump
+size at startup.  This limit is inherited by all tools started by the
+RunToolServer, so this value can be used to set limits on the ability
+of tools to create core dump files.
+
+If set to zero, the core dump size limit will be set to zero,
+effectively disabling core dumps.  If set to a negative value, the
+core dump size limit will be set to the maximum possible value.  If
+set to a value greater than zero, the core dump size limit will be set
+to the specified value or the maximum possible value, whichever is
+lower.
+\end{description}
+
+\section{Environment Variables}
+
+If set, the following environment variables can be used for debugging
+purposes.  They cause the RunToolServer to pause at one point or
+another during tool execution, print the name under which the tool's
+encapsulated file system is mounted, and wait until you hit enter
+before continuing.  This gives you a chance to cd into the
+encapsulated file system from a shell and look at its contents.  If
+you modify anything in the file system, you'll get a non-reproducible
+build, so beware!
+
+\begin{description}
+\item{STOP_BEFORE_TOOL}
+Stop just before each tool execution.
+
+\item{STOP_AFTER_TOOL}
+Stop just after each tool execution.
+
+\item{STOP_AFTER_TOOL_SIGNALED}
+Stop just after any tool execution that was terminated by a signal.
+The terminating signal is printed.
+
+\item{STOP_AFTER_TOOL_ERROR}
+Stop just after any tool execution that was not terminated 
+by a signal, but did exit with nonzero status.
+The exit status is printed.
+\end{description}
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{vesta.1.html}{vesta(1)}
+
+\section{Author}
+
+\link{http://research.microsoft.com/users/roylevin/}{Roy Levin}
+(\tt{roylevin@microsoft.com})
+
+\section{Author of Documentation}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+

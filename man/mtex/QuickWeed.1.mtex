@@ -1,0 +1,252 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{QuickWeed(1) man page}{QuickWeed}{1}
+
+\section{Name}
+
+QuickWeed - a fast but conservative Vesta-2 weeder
+
+\section{Synopsis}
+
+\bf{QuickWeed}
+[\link{#nOpt}{\bf{-n}}]
+[\link{#iOpt}{\bf{-i}}]
+[\link{#pOpt}{\bf{-p}}]
+[\link{#noCacheOpt}{\bf{-no-cache}}]
+[\link{#cfOpt}{\bf{-cf} \it{config-file}}] ...
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#DescSect}{Description}
+\item \link{#OptionsSect}{Options}
+\item \link{#DiagSect}{Diagnostics}
+\item \link{#ExampleSect}{Examples}
+\item \link{#ConfigSect}{Configuration Variables}
+\item \link{#BugsSect}{Bugs}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{DescSect}{Description}}
+
+\it{QuickWeed} is a fast but conservative weeder for Vesta-2.
+As opposed to the real weeder \link{VestaWeed.1.mtex}{VestaWeed(1)},
+\it{QuickWeed} treats \it{every} entry in the cache
+as a root of its mark phase. Hence, every cache entry is retained.
+The only files deleted are those that are not mentioned 
+as deriveds in any cache entry and not mentioned as sources in
+any directory in the repository.
+
+Normally, \it{QuickWeed} cannot be run if there is an incomplete
+\it{VestaWeed} in progress.  In particular, if \it{VestaWeed} (or the
+cache) crashes before it has finished, you must run \it{VestaWeed}
+again to finish the old weed and clean up its state before a new weed
+can be started by either \it{QuickWeed} or \it{VestaWeed}.
+\it{QuickWeed} will exit with an informative message if it detects
+that another \it{VestaWeed} or \it{QuickWeed} is in progress.
+
+\it{QuickWeed} also has a special mode for use with a repository that
+has no associated cache (e.g. one used for replication but never for
+building).  If both \link{#iOpt}{\bf{-i}} and
+\link{#noCacheOpt}{\bf{-no-cache}} are specified, \it{QuickWeed} will
+cause the repository to do its part of the weeding process but keeps
+no derived files.  This should only be used if there is no cache
+associated with the repository, as it invalidates any such cache.
+
+Since \it{QuickWeed} must write a file into the Vesta repository
+specifying which deriveds to keep, it must be run as the Vesta administrator.
+This requirement does not apply if the \link{#nOpt}{\bf{-n}} option
+is being used.
+
+\section{\anchor{OptionsSect}{Options}}
+
+\begin{description}
+\item{\anchor{nOpt}{\bf{-n}}}
+If the \bf{-n} option is specified, \it{QuickWeed} computes the
+short-ID's of the derived files to be kept and writes them to the
+standard output, but it does not actually do the work of weeding
+any source or derived files.  Also implies the \bf{-p} option.
+
+\item{\anchor{pOpt}{\bf{-p}}}
+Suppresses checkpointing the repository.  By default, \it{QuickWeed}
+tells the repository to checkpoint itself after the weed is complete,
+which compacts the repository's memory and
+speeds up recovery the next time the repository is restarted.
+
+\item{\anchor{cfOpt}{\bf{-cf} \it{config-file}}}
+The \bf{-cf} option can be specified any number of times. Each
+instance names a new configuration file to be consulted. If
+\it{config-file} is a pathname ending in "/", the filename
+"\tt{vesta.cfg}" is automatically appended.
+For each additional configuration file consulted, \it{QuickWeed}
+contacts the cache server named in the configuration file and records
+the names of the derived files in that cache server's graph log.
+Thus, all the derived files in all the named caches are protected from
+deletion.
+
+Specifying more than one cache to \it{QuickWeed} is useful only in the very
+unusual situation that multiple caches are being used with the same
+repository.  This is not ordinarily done, and in fact, \it{VestaWeed} does
+not support it.  \it{QuickWeed} supports multiple caches only for
+historical reasons; the feature was useful when the cache server was
+first being implemented and debugged.
+
+\item{\anchor{iOpt}{\bf{-i}}}
+Ignores the default configuration file. By default, \it{QuickWeed}
+determines the deriveds to retain by contacting the cache named in the
+user's Vesta configuration file. When \bf{-i} is specified, the
+user's configuration file is ignored. The program reports an error if
+\bf{-i} is specified without \link{#cfOpt}{\bf{-cf}}, unless
+\link{#noCacheOpt}{\bf{-no-cache}} is also sepcified.
+
+\item{\anchor{noCacheOpt}{\bf{-no-cache}}}
+Allows all caches to be ignored completely.  In other words, it
+enables performing the repository's part of the weeding process but
+keeps no derived files.  This is intended for use with repositories
+that do not have associated caches (e.g. ones used for replication but
+never for building).  Both \link{#iOpt}{\bf{-i}} and \bf{-no-cache}
+must be specified together to activate this feature.  The program
+reports an error if \bf{-no-cache} is specified without
+\link{#iOpt}{\bf{-i}} or with \link{#cfOpt}{\bf{-cf}}.
+\end{description}
+
+\section{\anchor{DiagSect}{Diagnostics}}
+
+\it{QuickWeed} prints diagnostic messages to the standard error
+output. It prints the start and end times of each
+graph log scan, the derived weed, and the deletion phase.
+(The repository performs source weeding together with the deletion phase;
+see its event log for the messages it prints.)
+\it{QuickWeed} also prints the names of the
+configuration files consulted, the host and port of the corresponding
+cache server, the number of graph log entries
+processed, and the total number of derived files named in those entries.
+(The latter figure may double-count if the same derived file is named in
+more than one graph log entry).
+
+\section{\anchor{ExampleSect}{Examples}}
+
+\begin{description}
+\item{\tt{$ QuickWeed -n > /tmp/deriveds}}
+Runs \it{QuickWeed}, but doesn't do any deletions.
+The list of deriveds to keep is saved in the named file. The following
+output appears on the standard error output:
+\begin{verbatim}
+09:48:13.156 -- Started graph log scan
+  Configuration file: /tmp_mnt/shellgame/r/dlusers9/heydon/vesta.cfg
+  Hostname:port: rafael.pa.dec.com:21763
+  Graph log: /rafael/vesta-srv/cache/graphLog
+09:48:13.460 -- Finished graph log scan
+  Graph log entries processed = 1114
+  Derived files found = 2293
+\end{verbatim}
+
+\item{\tt{$ QuickWeed}}
+Same as above, only this time, the source and derived weeds do occur.
+Here is the output from this run:
+\begin{verbatim}
+Writing ShortIds of deriveds to keep to file fcb0c000
+14:32:41.935 -- Started marking derived files to keep
+14:32:41.937 -- Started graph log scan
+  Configuration file: /tmp_mnt/shellgame/r/dlusers9/heydon/vesta.cfg
+  Hostname:port: rafael.pa.dec.com:21763
+  Graph log: /rafael/vesta-srv/cache/graphLog
+14:32:43.402 -- Finished graph log scan
+  Graph log entries processed = 1114
+  Derived files found = 2293
+14:32:49.054 -- Finished marking derived files to keep
+14:32:55.769 -- Started marking sources and deleting unreachable files
+14:44:03.693 -- Finished marking sources and deleting unreachable files
+\end{verbatim}
+\end{description}
+
+\section{\anchor{ConfigSect}{Configuration Variables}}
+
+Like most Vesta-2 applications, the cache server reads site-specific
+configuration information from a Vesta-2 \it{configuration file} named
+\it{vesta.cfg}. \it{QuickWeed} first looks for this file in the
+current directory; if none is found there, it looks in your home
+directory. The \link{#iOpt}{\bf{-i}} option disables consultation of
+the default configuration file, and the \link{#cfOpt}{\bf{-cf}} option
+allows you to specify other configuration files.
+
+The configuration file is divided into a number of sections, denoted
+in the file by \tt{[}\it{SectionName}\tt{]}. \it{QuickWeed} determines
+which derived files to keep by reading the cache server's graph log.
+The following variables in the \tt{[CacheServer]} section of the
+configuration file are read to determine the location of this file:
+
+\begin{description}
+
+\item{\tt{MetaDataRoot} (string)}
+The pathname of the directory in which the Vesta system's metadata is
+stored. If this variable is undefined, the current directory is used.
+Other configuration variables are interpreted relative to this path.
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to the MetaDataRoot) in which the cache
+server's metadata is stored.
+
+\item{\tt{GraphLogDir} (string)}
+The directory (relative to the MetaDataRoot/MetaDataDir) in which
+the cache server stores its graph log.
+\end{description}
+
+There are also some variables used from the \tt{[Weeder]} section of
+the configuration file:
+
+\begin{description}
+
+\item{\tt{MetaDataDir} (string)}
+The directory (relative to \tt{[CacheServer]MetaDataRoot}) in which
+the weeder's metadata is stored.
+
+\item{\tt{Weeded} (string)}
+The file (relative to
+\tt{[CacheServer]MetaDataRoot}/\tt{[Weeder]MetaDataDir}) in which the
+set of cache entries to be deleted by the normal weeder
+(\it{VestaWeed}) is stored.  QuickWeed checks this as a precaution to
+make sure that the normal weeder isn't in the middle of doing its
+work.
+
+\item{\tt{GracePeriod} (integer)}
+This optional setting specifies an amount of time (in seconds) to
+subtract from the weeder start time.  Any files in the repository
+(source or derived) changed after that time will be kept during
+weeding.  This closes a small hole which can allow files written by
+long-running tools that finish close to when the weeder starts to be
+deleted incorrectly.  An ideal setting would be the duration of the
+longest running tool.  Defaults to 60 seconds if not set.  Ignored if
+set to a negative value.
+\end{description}
+
+\section{\anchor{BugsSect}{Bugs}}
+
+There are no known bugs.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VestaWeed.1.html}{VestaWeed(1)},
+\link{VCache.1.html}{VCache(1)}
+
+\section{Author}
+
+\link{http://src-www.pa.dec.com/~heydon/home.html}{Allan Heydon}
+(\tt{heydon@pa.dec.com})
+

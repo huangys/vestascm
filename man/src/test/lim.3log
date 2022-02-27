@@ -1,0 +1,38 @@
+Third Degree, version 0.1
+Copyright (c) 1993, 1994, Digital Equipment Corporation
+Bugs, wishes and comments to third-degree@decwrl.dec.com
+    lim.3rd run by bourdonc on ???, Mon Feb 28 15:24:49 1994
+
+//////////////  begin .3rd  ///////////////////
+-----------------------------------------------
+memory_errors yes
+
+# all objects at_exit
+all leaks at_exit
+
+object_min_percent 1.0
+leak_min_percent 1.0
+
+ignore rus yyparse
+ignore rus bindscope
+ignore rus main
+-----------------------------------------------
+//////////////  end  .3rd ///////////////////
+
+
+_______________________________________________________________________
+-----------------------------------------------------------------------
+  Searching for all leaks in heap before 1st call of _exit
+  We found no leaks
+_______________________________________________________________________
+-----------------------------------------------------------------------
+		General Statistics
+_______________________________________________________________________
+-----------------------------------------------------------------------
+           stack      10352 bytes [0x11fffd790..0x120000000]
+            text     114688 bytes [0x120000000..0x12001c000]
+       init data      40960 bytes [0x140000000..0x14000a000]
+     uninit data      30144 bytes [0x14000a000..0x1400115c0]
+            heap     330404 bytes [0x1400115c0..0x140062064]
+
+Instrumented program ran in 0.380640 sec

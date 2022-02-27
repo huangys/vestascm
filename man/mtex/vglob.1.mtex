@@ -1,0 +1,178 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vglob - Expand a file pattern with metacharacters in the Vesta repository}{vglob}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vglob} - Expand a file pattern with metacharacters in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vglob}
+    [\link{#-v}{-v}]
+    [\link{#-R}{-R} \it{host}[:\it{port}]]
+    \it{patterns...}
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Patterns}{Patterns}
+\item \link{#Environment}{Environment}
+\item \link{#Configuration}{Configuration}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vglob} command expands filename patterns with metacharacters
+in the Vesta repository.  It accepts the same kinds of patterns as the
+\bf{vrepl} command.
+
+\bf{vglob} can be an aid in developing replicator instructions and can
+also be used by scripts to expand filename patterns in local or remote
+repositories.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-v}{-v}}
+Turn on verbose output.  When there are multiple patterns given, this
+makes it clear which pattern expanded to which pathnames.  This is
+more human-readable, but less useful for scripts.
+
+\item{\anchor{-R}{-R} host[:port]}
+Specifies which repository to contact. This makes it possible to
+expand patterns in remote repositories.  Defaults to the local
+repository.
+
+\end{description}
+
+\section{\anchor{Patterns}{Patterns}}
+
+The pattern language uses a syntax similar to Unix shell filename
+wildcards with some extensions.
+
+A pathname pattern is a sequence of arcs separated by '\tt{/}'
+characters.  Metacharacters can appear within an arc, but a
+metacharacter cannot match a '\tt{/}' except as specifically noted
+below.  The following metacharacters are recognized.
+
+\begin{description}
+\item{\tt{*}} Matches zero or more characters.
+
+\item{\tt{#}} Matches zero or more decimal digits.
+
+\item{\tt{?}} Matches a single character.
+
+\item{\tt{[}\it{chars}\tt{]}} Matches one of the characters listed in
+\it{chars}.  The notation \it{b-e} may be used to mean the range of
+ASCII characters from \it{b} through \it{e} inclusive.  Most
+metacharacters lose their special meanings within brackets, but '\tt{/}'
+may not appear, '\tt{]}' may appear only if it is the first character in
+the list, '\tt{^}' may appear only if it is not the first character in the
+list, and '\tt{-}' or '\tt{,}' may appear only if it is the first or last
+character in the list.
+
+\item{\tt{[^}\it{chars}\tt{]}} As above, but matches one of the characters not
+in \it{chars}.
+
+\item{\tt{\{}\it{p1}\tt{,}\it{p2}\tt{,}...\tt{,}\it{pn}\tt{\}}}
+Matches any one of the patterns
+\it{p1} through \it{pn}.  The patterns can contain arbitrary
+metacharacters including nested \tt{\{ \}}'s, but they cannot contain '\tt{/}'
+characters.
+
+\item{\tt{FIRST}} Matches an arc in the current directory (as specified by
+the previous arcs in the pattern) that consists entirely of decimal
+digits, has no leading zeroes, is not bound to a ghost or stub, and
+has the smallest numeric value of all such arcs.
+
+\item{\tt{LAST}} Same as \tt{FIRST}, except that the arc with the largest
+numeric value is matched.
+
+\item{\tt{[}exprLow\tt{,}exprHigh\tt{]}} Matches a nonempty sequence of decimal
+digits whose numeric value is in the closed interval [exprLow,
+exprHigh].  Here \it{exprLow} and \it{exprHigh} are integer-valued
+expressions <expr> of the form <value> or <expr><op><value>, where
+<value> is either a decimal number, \tt{FIRST}, or \tt{LAST}, and <op> is 
+either '\tt{+}' or '\tt{-}'.  The 
+tokens \tt{FIRST} and \tt{LAST} have the same meaning as when
+they appear alone.  For example, "/vesta/foo/bar/[LAST-2,LAST]" would
+match any of the three most recent versions of the foo/bar package.
+
+\item{\tt{%}} If the first character of a pattern arc is '\tt{%}', 
+the remainder 
+of the pattern arc matches zero or more complete arcs in the repository.
+For example, the pattern "/vesta/%*/checkout" matches every checkout
+directory in the repository, no matter how many levels below the root
+it is.  This is the only case where a metacharacter can match a string
+containing '\tt{/}'.
+
+\end{description}
+
+\section{\anchor{Environment}{Environment}}
+
+As with all Vesta tools, \tt{$VESTACONFIG} can be used to override the
+default location for the Vesta configuration file.  No other
+environment variables are used.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the Vesta configuration file
+(vesta.cfg).
+
+From the \tt{[Repository]} section:
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+Host name of the default local repository.
+\item{\it{VestaSourceSRPC_port}}
+TCP port number of the default local repository.
+\end{description}
+
+From the \tt{[UserInterface]} section:
+\begin{description}
+\item{\it{realm}}
+Name of the local realm.  \tt{@}\it{realm} is appended to local user names
+to obtain global user names.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\begin{flushleft}
+\link{vrepl.1.html}{\bf{vrepl}(1)},
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\end{flushleft}
+
+\section{\anchor{Author}{Author}}
+
+\begin{flushleft}
+Ken Schalk <\link{mailto:ken@xorian.net}{\tt{ken@xorian.net}}>
+
+Most of the actual pattern matching code is common with
+\link{vrepl.1.html}{\bf{vrepl}(1)}, and was written by Tim Mann.
+Portions of this man page are copied directly from the
+\link{vrepl.1.html}{\bf{vrepl}(1) man page}, also by Tim Mann.
+\end{flushleft}
+
+\begin{verbatim}
+Last modified on Mon May 12 11:27:07 EDT 2003 by ken@xorian.net         
+\end{verbatim}

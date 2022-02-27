@@ -1,0 +1,173 @@
+PROC Main() IS
+    DO WhiteSpace(); { Op() | Id() | Number() } OD;
+    { WhiteSpace(); Eof() | Wr(lexError); DO Wr(Rd()) OD }
+END;
+
+VAR
+    null := 0,
+    id := 9,
+    number := 14,
+    lexError := 5,
+    lbrace := '{',
+    rbrace := '}',
+    lbrack := '[',
+    rbrack := ']',
+    lpren := '(',
+    rpren := ')',
+    semi := ';',
+    comma := ',',
+    arrow := 'A',
+    bar := '|',
+    colon := ':',
+    lt := '<',
+    gt := '>',
+    le := 'L',
+    ge := 'g',
+    equals := '=',
+    differs := '#',
+    or := '|',
+    and := '&',
+    not := '!',
+    minus := '-',
+    plus := '+',
+    times := '*',
+    div := 'D',
+    var := 'V',
+    implies := 'I',
+    in := 'i',
+    end := 'E',
+    dot := '.',
+    query := '?',
+    slash := '/',
+    perfspec := 'P',
+    def := 'd',
+    solve := 'S',
+    timed := 'T',
+    event := 'e',
+    nested := 'N',
+    interval := 'n',
+    assert := 'a',
+    data := 't',
+    cor := 'C',
+    metrics := 'M',
+    where := 'W',
+    import := 'm',
+    domain := 'O',
+    mod := 'o';
+
+PROC Op() IS
+    Rd("perfspec"); Wr('P'); Wr("perfspec")
+  | Rd("def"); Wr('d'); Wr("def")
+  | Rd("solve"); Wr('S'); Wr("solve")
+  | Rd("timed"); Wr('T'); Wr("timed")
+  | Rd("event"); Wr('e'); Wr("event")
+  | Rd("nested"); Wr('N'); Wr("nested")
+  | Rd("interval"); Wr('n'); Wr("interval")
+  | Rd("assert"); Wr('a'); Wr("assert")
+  | Rd("data"); Wr('t'); Wr("data")
+  | Rd("cor"); Wr('C'); Wr("cor")
+  | Rd("metrics"); Wr('M'); Wr("metrics")
+  | Rd("where"); Wr('W'); Wr("where")
+  | Rd("import"); Wr('m'); Wr("import")
+  | Rd("domain"); Wr(domain); Wr("domain")
+  | Rd("mod"); Wr(mod); Wr("mod")
+  | Rd("MOD"); Wr(mod); Wr("MOD")
+  | Rd("DOMAIN"); Wr(domain); Wr("DOMAIN")
+  | Rd("PERFSPEC"); Wr('P'); Wr("PERFSPEC")
+  | Rd("DEF"); Wr('d'); Wr("DEF")
+  | Rd("SOLVE"); Wr('S'); Wr("SOLVE")
+  | Rd("TIMED"); Wr('T'); Wr("TIMED")
+  | Rd("EVENT"); Wr('e'); Wr("EVENT")
+  | Rd("NESTED"); Wr('N'); Wr("NESTED")
+  | Rd("INTERVAL"); Wr('n'); Wr("INTERVAL")
+  | Rd("ASSERT"); Wr('a'); Wr("ASSERT")
+  | Rd("DATA"); Wr('t'); Wr("DATA")
+  | Rd("COR"); Wr('C'); Wr("COR")
+  | Rd("METRICS"); Wr('M'); Wr("METRICS")
+  | Rd("WHERE"); Wr('W'); Wr("WHERE")
+  | Rd("IMPORT"); Wr('m'); Wr("IMPORT")
+  | Rd("->"); Wr(arrow); Wr("->")
+  | Rd("<="); Wr(le); Wr("<=")
+  | Rd(">="); Wr(ge); Wr(">=")
+  | Rd("div"); Wr(div); Wr("div")
+  | Rd("in"); Wr(in); Wr("in")
+  | Rd("end"); Wr(end); Wr("end")
+  | Rd("var"); Wr(var); Wr("var")
+  | Rd("DIV"); Wr(div); Wr("DIV")
+  | Rd("IN"); Wr(in); Wr("IN")
+  | Rd("END"); Wr(end); Wr("END")
+  | Rd("VAR"); Wr(var); Wr("VAR")
+  | Rd("!="); Wr(differs); Wr("!=")
+  | Rd("=>"); Wr(implies); Wr("=>")
+  | EchoOp(lbrace)
+  | EchoOp(rbrace)
+  | EchoOp(lbrack)
+  | EchoOp(rbrack)
+  | EchoOp(dot)
+  | EchoOp(query)
+  | EchoOp(lpren)
+  | EchoOp(rpren)
+  | EchoOp(semi)
+  | EchoOp(comma)
+  | EchoOp(colon)
+  | EchoOp(lt)
+  | EchoOp(gt)
+  | EchoOp(equals)
+  | EchoOp(minus)
+  | EchoOp(plus)
+  | EchoOp(times)
+  | EchoOp(slash)
+  | EchoOp(not)
+  | EchoOp(and)
+  | EchoOp(or)
+END;
+
+PROC Id() IS
+    Wr(id);
+    EchoLetter();
+    DO EchoLetter() | EchoDigit() | Echo('_') OD
+END;
+
+PROC Number() IS
+    Wr(number);
+    EchoDigit();
+    DO EchoDigit() OD;
+    { Echo('.');
+      DO EchoDigit() OD;
+      { { Echo('d') | Echo('D') };
+        { Echo('-') | SKIP };
+        DO EchoDigit() OD
+        | SKIP
+      }
+      | SKIP
+    }
+END;
+
+PROC WhiteSpace() IS
+    Wr(null);
+    DO Echo(' ')
+     | Echo('\t')
+     | Echo('\n')
+     | Echo('\r')
+     | Comment()
+    OD;
+    Wr(null)
+END;
+
+PROC Comment() IS
+    Echo('%'); TIL Echo('\n') DO Wr(Rd()) END
+END;
+
+PROC EchoLetter() IS Echo2('a', 'z') | Echo2('A', 'Z') END;
+
+PROC Echo2(lo, hi) IS
+    VAR c := Rd() IN lo <= c AND c <= hi -> Wr(c) END
+END;
+
+PROC EchoDigit() IS Echo2('0', '9') END;
+
+PROC Echo(c) IS Rd(c); Wr(c) END;
+
+
+PROC EchoOp(c) IS Rd(c); Wr(c); Wr(c) END;
+

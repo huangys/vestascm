@@ -1,0 +1,767 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{VCacheImpl(7) man page}{VCacheImpl}{7}
+
+\section{Name}
+
+VCacheImpl - notes on the implementation of the Vesta-2 cache server
+
+\section{Contents}
+
+\begin{itemize}
+\item \link{#ReqsSect}{Limitations and Architectural Dependencies}
+\item \link{#LogUsage}{Cache Server Logs and Stable Variables}
+\item \link{#CacheTables}{Indexing of VPKFiles}
+\item \link{#VToSCacheSect}{Implementing \tt{VToSCache}}
+\item \link{#CacheLog}{Supporting deletions in the CacheLog}
+\item \link{#Evictions}{Eviction of VPKFiles and VMultiPKFiles}
+\item \link{#SeeAlsoSect}{See Also}
+\end{itemize}
+
+\section{\anchor{ReqsSect}{Limitations and Architectural Dependencies}}
+
+This section describes the known limitations and dependencies of the
+\it{VCache} implementation.
+
+\begin{description}
+%
+\item{Representing Fingerprints}
+The current implementation of fingerprints is heavily
+machine-dependent. In particular, the implementation assumes that the
+machine uses little-endian byte order and that the C++ compiler provides
+a 64-bit integer type.  (The Vesta header file Basics.H defines the names
+Word and Bit64 for this type; the fingerprint implementation uses Word.)
+
+\item{Marshalling Fingerprints}
+The fingerprint marshalling code treats the fingerprint as a buffer of
+bytes, so the format of the fingerprint on the wire depends on the
+endian-ness of the machine sending the fingerprint. In particular, the
+current code will not work in a heterogeneous environment where the
+endian-ness of clients and servers differ. If the SRPC interface were
+extended to provide procedures for sending 64-bit integers in a
+canonical form down the wire, it would be trivial to marshal
+fingerprints in a canonical way as well.
+
+\item{Marshalling Timestamps}
+The \tt{OtherTypes} interface defines a "\tt{TS::T}" to be equivalent
+to the Unix type "\tt{time_t}", which happens to be defined as an
+"\tt{int}". A "\tt{TS::T}" value is marshalled as an "\tt{int}".
+However, if the type of "\tt{time_t}" were changed, this strategy
+would break.
+%
+\end{description}
+
+\section{\anchor{LogUsage}{Cache Server Logs and Stable Variables}}
+
+This section describes the logs and stable variable files used by the
+cache server. For each log, this includes an indication as to whether
+the log is checkpointed, and if so, which method performs the
+checkpoint and what the checkpoint contains.
+
+\bf{Log Files}
+
+\begin{description}
+\item{CacheLog}
+The CacheLog contains a record of the cache entries that have not been
+written to the stable cache (i.e., to some MultiPKFile). The CacheLog
+is checkpointed by the \tt{CacheS::CleanCacheLog} procedure, which
+prunes the CacheLog by filtering out all cache entries whose
+\tt{pkEpoch} values indicate that the cache entry has been written to
+the stable cache. The checkpoint file is written by a background
+thread while other threads can continue to add entries to the
+CacheLog.  Entries in the CacheLog consist of the arguments sent by
+the client when adding the entry plus the cache index allocated for
+the entry and the \tt{pkEpoch} of its PKFile when it was added.
+
+\item{CILog}
+The CILog contains the set of cache entry indices (CIs) in use. It is
+checkpointed by the \tt{CacheS::ChkptUsedCIs} method, which is called
+by the \tt{CacheS_DoDeletions} function after all of the MultiPKFiles
+that have weeded entries have been rewritten. Hence, a new CILog
+checkpoint is created in response to a successful run of the weeder.
+A CILog checkpoint file contains a bit vector of the CIs in use, while
+the log files contain \tt{Intvl::T} records.
+
+\item{EmptyPKLog}
+The EmptyPKLog contains a sequence of "(pk, pkEpoch)" pairs recording
+the pkEpoch values of PKFile's that have become empty (or that once
+were empty. The EmptyPKLog is checkpointed by the
+\tt{CacheS::CleanCacheLog} procedure, as part of cleaning the cache
+log. Once the cache log has been cleaned, values that were placed in
+the EmptyPKLog before the start of cleaning are no longer needed (but
+any values placed in the log during cleaning are still required).  The
+cache server deletes old EmptyPKLog entries by beginning an EmptyPKLog
+checkpoint just before starting cleaning and committing it just after
+cleaning is successfully completed.  Nothing is written to the
+checkpoint file.
+
+\item{GraphLog}
+The GraphLog is a representation of the cache entry DAG that is
+written by the cache server and read by the weeder. The GraphLog
+contains two kinds of entries: nodes and roots. The nodes correspond
+to cache entries, and the roots correspond to top-level evaluations
+(or checkpoints of partially-completed evaluations) that the weeder
+uses as roots of its mark phase.
+
+The GraphLog is checkpointed by the \tt{CacheS::StartMark} method, and
+the checkpoint is committed by the \tt{CacheS::CommitChkpt} method.
+Both of these methods are invoked by the weeder, and it is the weeder
+that actually writes the checkpoint file. The checkpoint file is in
+the same format as the log files.
+
+\item{WeededLog}
+Abstractly, the WeededLog contains a lower bound on the number of
+MultiPKFiles in the MPKsToWeed file that have been successfully
+processed. The WeededLog is only meaningful if the Deleting stable
+variable is true, that is, while cache entries are being deleted in
+response to a successful run of the weeder. If the cache server
+crashes while performing such deletions, the WeededLog is recovered so
+that all of the deletions do not have to be repeated.
+
+The log contains a sequence of integers, the sum of which denotes the
+number of MultiPKFiles that have been successfully processed. The
+WeededLog is checkpointed by the \tt{CacheS::ResetWeededMPKs} method
+during the \tt{CacheS::EndMark} method. Nothing is written into the
+checkpoint file; the purpose of performing the checkpoint is to simply
+start a new empty log. New entries are written to the log by the
+\tt{CacheS::AddToWeededMPKs} method, which is called by the
+\tt{CacheS_DoDeletions} function after it processes every tenth (or
+so) MPKFile.
+\end{description}
+
+\bf{Stable Variables}
+
+\begin{description}
+\item{Deleting}
+The Deleting file records one of the Boolean values ``true'' or
+``false'', indicating whether or not the cache server is processing a
+deletion request from the weeder. It is written by the
+\tt{CacheS::SetStableDeleting} method, is set to ``true'' in the
+\tt{CacheS::EndMark} method, and is set to ``false'' in the
+\tt{CacheS_DoDeletions} function.
+
+\item{HitFilter}
+The HitFilter is a bit vector recording the cache entries on which
+hits should be blocked (so long as they are not leased). It is written
+by the \tt{CacheS::WriteHitFilter} method, is set to non-empty
+values in the \tt{CacheS::SetHitFilter} and \tt{CacheS::EndMark} methods,
+and is set to the empty set in the \tt{CacheS_DoDeletions} function.
+
+\item{MPKsToWeed}
+The MPKsToWeed file records the PKPrefix values of the MultiPKFiles
+that have cache entries to be deleted. The file is only relevant if
+the stable Deleting variable is true. The file is written by the
+\tt{CacheS::SetMPKsToWeed} method during the \tt{CacheS::EndMark}
+method. The WeededLog value is interpreted relative to this file as
+described above.
+\end{description}
+
+\section{\anchor{CacheTables}{Indexing of VPKFiles}}
+
+Since PKFiles are organized in the stable cache in groups called
+MultiPKFiles, we need a convenient way in the volatile cache for
+enumerating the set of VPKFiles stored together in a single
+MultiPKFile on the disk.
+
+The way we do this currently is by storing two tables in the volatile
+cache:
+\begin{itemize}
+\item cache: FP::Tag -> VPKFile*
+\item mpkTbl: PKPrefix::T -> VMultiPKFile
+\end{itemize}
+The cache is responsible for maintaining the invariant that any
+VPKFile reachable through the \it{cache} table is also reachable
+through the \it{mpkTbl} table. With this organization, we can
+enumerate the VPKFile's for a give MultiPKFile simply by iterating
+over the appropriate VMultiPKFile in the \it{mpkTbl}.
+
+Another approach would be to use a two-level hierarchy for
+storing VPKFiles in the volatile cache. The \tt{CacheS} object has a
+table \tt{cache: PKPrefix -> VMultiPKFile*}. Each \tt{VMultiPKFile}
+then has a table \tt{tbl: FP::Tag -> VPKFile*}.
+
+With this organization, we can enumerate the VPKFiles stored in the
+volatile cache under a give PKPrefix (i.e., in the same MultiPKFile)
+by simply looking up the VMultiPKFile object stored under the prefix
+in \tt{CacheS::cache}, and then iterating over the VPKFile's stored in
+the resulting VMultiPKFile. The advantage to this scheme is that it
+requires less space and does not require the implementation to
+maintain the invariant mentioned earlier. However, this design imposes
+two table lookups on every \it{Lookup} and \it{AddEntry} call.
+
+Yet another design would be to have a single table \tt{cache: FP::Tag
+-> VPKFile*} that maps PK's directly to the corresponding VPKFile in
+the volatile cache. There would also be a separate table in the CacheS
+object \tt{mpkTbl: Prefix -> VPKFile*}. The \tt{mpkTbl} would map a
+given prefix to a linked list of VPKFile's in the volatile cache that
+share the same prefix. In this implementation, each VPKFile would
+contain a pointer to the next VPKFile in the list. The difficulty with
+this implementation would be updating the linked list when a VPKFile
+was added or removed.
+
+\section{\anchor{VToSCacheSect}{Implementing \tt{VToSCache}}}
+
+The \tt{VToSCache} function in the cache server specification is
+responsible for writing the new entries of a VPKFile to stable
+storage. It is also passed a set of the CI's to delete. If any of the
+new cache entries in the VPKFile or any of the existing cache entries
+in the corresponding SPKFile in stable storage is in this set, the
+\tt{VToSCache} function is also responsible for deleting them.
+
+In the implementation, the \tt{VToSCache} function is implemented by
+the (surprise!) "\tt{CacheS::VToSCache}" method. However, this method
+does very little of the work. Since the disk files correspond to
+groups of PKFiles, called \it{MultiPKFiles}, it is the volatile
+MultiPKFiles that are flushed.  Hence, VToSCache does its work by
+calling methods of the "\tt{VMultiPKFile}" and "\tt{SMultiPKFile}"
+classes.
+
+The work of re-writing is de-composed into the following steps:
+
+\begin{enumerate}
+
+\item The VMultiPKFile's "\tt{LockForWrite}" method is called to
+ensure that the calling thread is the only one that is writing this
+MultiPKFile.  It blocks if the MultiPKFile in question is already
+being flushed by a different thread.  It also updates the
+VMultiPKFile's state to indicate that a flush is in progress, which
+protects it from \it{eviction} (see "\link{#Evictions}{Eviction of
+VPKFiles and VMultiPKFiles}" below).
+
+\item "\tt{SMultiPKFile::PrepareForRewrite}" is called to read the
+header of the stable MultiPKfile.  The header information is used to
+ensure that a VPKFile object exists for each stable PKFile before we
+begin the flush to disk.  This is necessary to protect against a
+VPKFile being created for one of the stable PKFiles by a client call
+during the flush, leaving that VPKFile out of sync with the updates to
+the stable PKFile.  (See \link{#UpdatingFreeVars}{the discussion of
+removal of free variables and updating the \it{commonNames} and
+\it{uncommonNames} sets} below.)
+
+\item The VMultiPKFile's "\tt{ChkptForWrite}" method is called to
+snapshot any new entries to be written to the stable cache, which in
+turn calls "\tt{SMultiPKFile::ChkptForRewrite}".  This allows clients
+to continue to add new entries in parallel without changing the data
+being used by the ongoing flush to disk.
+
+\item The CILog and GraphLog are flushed.  This ensures that the
+allocations of the cache indicies used by any new entries as well as
+their relationships to other entries are committed before writing the
+entries themselves to the stable cache.
+
+\item The VMultiPKFile's "\tt{ToSCache}" method is called.  However,
+this is just a thin wrapper around the "\tt{SMultiPKFile::Rewrite}"
+method which does most of the work.
+
+\end{enumerate}
+
+The signature of "\tt{SMultiPKFile::Rewrite}" is:
+
+\begin{verbatim}
+  void SMultiPKFile::Rewrite(
+    const PKPrefix &pfx,
+    bool mpkFileExists,
+    ifstream &ifs,
+    SMultiPKFileRep::Header *hdr,
+    const VPKFileMap &vpkFiles,
+    ChkPtTbl &vpkChkptTbl,
+    const BitVector *toDelete,
+    EmptyPKLog *emptyPKLog,
+    EntryState &state)
+    throw (FS::Failure, FS::EndOfFile, VestaLog::Error);
+\end{verbatim}
+
+\begin{description}
+
+\item{Its parameters are:}
+
+\begin{description}
+
+\item{\it{pfx}}
+The PK prefix that identifies the MultiPKFile to rewrite.
+
+\item{\it{mpkFileExists}}
+Whether the stable MultiPKFile already exists on disk.  (Taken from
+the return value of "\tt{SMultiPKFile::PrepareForRewrite}".)
+
+\item{\it{ifs}}
+An input stream for the old stable MultiPKFile.  (If
+\it{mpkFileExists} is false, this stream is not open and will not be
+used.)
+
+\item{\it{hdr}}
+The header information read from disk by
+"\tt{SMultiPKFile::PrepareForRewrite}", or a new empty header is there
+is no old stable MultiPKFile.
+
+\item{\it{vpkFiles}}
+A table mapping all PK's with prefix \it{pfx} to their corresponding
+VPKFiles.  If \it{(pk, vpkfile)} is an entry in this table, then
+\it{pk} has prefix \it{pfx}, and hence, corresponds to a PK in the
+MultiPKFile in question.  The \it{vpkfile} is a pointer to a VPKFile
+that may or may not have some new entries that need to be flushed.
+Note that the entries in this table \bf{must} be a superset of the PKs
+in the old stable MultiPKFile.
+
+\item{\it{vpkChkptTbl}}
+A table of checkpoints of the VPKFiles in \it{vpkFiles}, generated by
+calling "\tt{SMultiPKFile::ChkptForRewrite}".
+
+\item{\it{toDelete}}
+A bit vector of cache entry indices (CI's) to delete, or NULL if there
+are no entries to delete.
+
+\item{\it{emptyPKLog}}
+The cache server's EmptyPKLog, used to record the pkEpoch values of
+PKFile's that become empty during the write (by having all of their
+entries deleted and no new entries added).  (See
+"\link{#CacheLog}{Supporting deletions in the CacheLog}" below.)
+
+\item{\it{state}}
+Output parameter used to return the changes in the cache server
+statistics (number and size of new entries waiting to be flushed to
+disk) made by the flush.
+
+\end{description}
+\end{description}
+
+\anchor{UpdatingFreeVars}{By definition of how the common names for a
+PKFile are computed, all the entries in an SPKFile have all the common
+names. This is not necessarily the case for the entries in a VPKFile.}
+
+If the set of common names changes, then the common and uncommon
+fingerprint tags for all of the entries have to be recomputed, as does
+the PKFile's \it{ts} value. This can happen for two reasons:
+
+\begin{itemize}
+\item
+If there are any \it{newUncommon} entries, then some names that used
+to be common no longer will be. Hence, this causes the set of common
+names to contract.
+
+\item
+If any entries for the PKFile in question are being deleted, then the
+set of common names can expand.
+\end{itemize}
+
+A natural way to represent the changes to the set of common names is
+by a pair of bit vectors named \it{exCommonNames} and
+\it{exUncommonNames}. The bits set in the former correspond to names
+that were common but are now uncommon, and bits set in the latter
+correspond to names that were uncommon but are now common. The
+intersection of these two bit vectors will always be empty. Given these
+bit vectors, a PKFile's \it{commonNames} are updated by code like this:
+
+\begin{verbatim}
+  commonNames ^= exCommonNames;
+  commonNames ^= exUncommonNames;
+\end{verbatim}
+
+The \it{uncommonNames} set of each of the PKFile's cache entries are
+then updated like this:
+
+\begin{verbatim}
+  uncommonNames -= exUncommonNames;
+  uncommonNames |= exCommonNames;
+\end{verbatim}
+
+There is another complication: if any entries are deleted, then the
+specification says that the set of all free variable names may
+contract. This could be a real problem, since the set of common names
+for the PKFile and the set of uncommon names for each entry are all
+represented by bit vectors interpreted relative to the list of all
+free variable names. If that list of names changes, then the bit
+vectors have to be packed accordingly. So, the natural algorithm is to
+make one pass to determine if any entries are being deleted, and if
+so, to test if any names need to be removed from the set of all free
+variable names. In that case, a slower path can be taken to convert
+the bit vectors.
+
+In the event that any names are removed from the set of all free
+variables, the relative order of the names must remain the same. A
+natural way to represent the shuffle is by the bit vector of the new
+names, called a \it{packMask} in the implementation. The operation of
+compacting the names corresponds to the operation of \it{packing} the
+bits in this bit vector. There is an operation defined for the
+\tt{BitVector} class that packs a bit vector according to such masks.
+Another way of representing the remapping is by a map from the old
+index of a name to its new (lower or equal) index. This map is called
+\it{reMap} in the implementation.
+
+In each cache entry, the \it{commonNames} bit vector in each PKFile
+and the \it{uncommonNames} bit vector in each cache entry must be
+packed according to the corresponding \it{packMask}. Similarly, the
+\it{imap} in the ``extras'' portion of each entry that maps indices in
+the list of all free variables to indices in the fingerprint and
+timestamp arrays must be modified to correspond to the new list of all
+variable names. This is easily done using the \it{reMap} table.
+
+Since there are both packed and unpacked versions of various bit
+vectors and maps when a PKFile is updated, care must be taken to avoid
+comparing or combining packed and unpacked values. In general, value
+packing is delayed to the end of the major methods, so most operations
+are performed on unpacked values.
+
+In the specification, the VToSCache work is divided into roughly two
+functions:
+
+\begin{description}
+\item{NewPF}
+Computes the entries in the stable PKFile. This includes adding any new
+entries from the volatile PKFile and deleting any entries in the
+\it{hitFilter}.
+
+\item{NewVF}
+Computes the entries in the volatile PKFile.
+\end{description}
+
+Roughly speaking, there is a function in the implementation
+corresponding to each of these functions in the specification. The
+correspondence between them is:
+
+\begin{itemize}
+\item \tt{SVCache.NewPF} is implemented by \tt{SPKFile::Update}
+\item \tt{SVCache.NewVF} is implemented by \tt{VPKFile::Update}
+\end{itemize}
+
+The \tt{SPKFile::Update} method computes and returns the
+\it{exCommonNames}, \it{exUncommonNames}, \it{packMask}, and
+\it{reMap} values that result from updating a particular PKFile. These
+values are salted away by the \tt{SMultiPKFile::Rewrite} method in an
+\tt{SMultiPKFileRep::HeaderEntry} structure for that PKFile. The
+values are then passed into the \tt{VPKFile::Update} method (along
+with the checkpoint) so the VPKFile can be updated to be consistent
+with the stable PKFile.
+
+\section{\anchor{CacheLog}{Supporting deletions in the CacheLog}}
+
+Butler's original SVCache specification has the following bug: it does not
+correctly handle the case where some entries are created (and hence
+written to the CacheLog) and then subsequently deleted. If the cache
+server crashes at this point without the CacheLog having been cleaned
+in the meantime, the deleted entries will be read from the CacheLog
+and installed in the cache!
+
+To avoid this problem (and to simplify the process of cleaning the
+CacheLog), we assign a \it{pkEpoch} field to each stable and volatile
+PKFile, and to each entry in the CacheLog. A new SPKFile or VPKFile
+has a pkEpoch of 0. Whenever a new entry is created, it is written to
+the CacheLog with the pkEpoch of its corresponding VPKFile. Whenever a
+VPKFile is ``flushed'' to the stable cache, the pkEpoch of the VPKFile
+is incremented before the SPKFile is written to disk. Hence, the
+pkEpoch values of all entries in a SPKFile are strictly less than the
+pkEpoch of the SPKFile itself, and at recovery (or in the
+CleanCacheLog procedure) any entry in the CacheLog with a pkEpoch
+strictly less than that of the corresponding SPKFile should be
+discarded.
+
+Other entries in the CacheLog, and each VPKFile in memory,
+usually have a pkEpoch value equal to that of the corresponding
+SPKFile on disk.  There are two exceptions:
+
+\begin{itemize}
+\item
+Flushing a VPKFile to the stable cache is not an atomic operation;
+more entries can be created and logged (or deleted) between the time
+when the cache server decides what version of the VPKFile will be made
+stable and the time when the new MultiPKFile containing the updated
+SPKFile is fully written and atomically replaces the old one on disk.
+The cache server atomically snapshots a particular state of the
+VPKFile to be written to disk by making a "checkpoint" of it, and the
+checkpoint determines what will actually be written to disk,
+regardless of later changes to the VPKFile.  Because any entries not
+in the checkpoint will not be flushed at this time, the VPKFile's pkEpoch
+must be incremented atomically with making the checkpoint.  Thus the new
+version of the SPKFile will have the correct pkEpoch, and any entries
+created after the checkpoint is made will also have this epoch, as they
+should.  (Minor detail: the implementation actually writes the old
+value of pkEpoch to the checkpoint data structure, but correctly uses the
+incremented value when writing the SPKFile to disk.)
+
+Note that after the VPKFile has been checkpointed but before the
+stable MultiPKFile has been written, any new entries that are written
+to the CacheLog for that PKFile will have a pkEpoch value greater than
+that of the SPKFile, not equal to it.  If the cache server crashes
+before the MultiPKFile has been written, this difference will be
+visible at recovery time.  (If the cache server crashes repeatedly,
+the difference can be more than 1.)  During recovery, it is important
+to recover this larger pkEpoch value and restore it to the VPKFile
+data structure; we do so by noticing when a cacheLog entry being
+recovered has a larger pkEpoch value than we have seen so far for the
+corresponding VPKFile and updating the latter accordingly.
+
+It would also be possible for the VPKFile and SPKFile's pkEpochs to
+differ by more than 1 if there were several flushes in progress at the
+same time, since starting each flush takes a checkpoint and increments
+the volatile pkEpoch by 1.  However, this scenario is prevented
+because VMultiPKFile::ToSCache refuses to flush the same MultiPKFile
+twice concurrently.  To be extra careful, though, the cache records a
+VPKFile's pkEpoch when checkpointing it, and when writing out the
+SPKFile from the checkpoint, it asserts that vpkfile->pkEpoch ==
+chkpt->pkEpoch+1.
+
+Finally, we introduce an extra complication to make epoch numbers grow
+more slowly.  Because all VPKFiles in a MultiPKFile must be
+checkpointed when the MultiPKFile is flushed, all their pkEpochs must
+be incremented at this time as well.  However, modifications are not
+necessarily made to all of the corresponding SPKFiles. To prevent the
+pkEpoch of an SPKFile from being incremented unnecessarily, the
+VPKFile pkEpoch is decremented back to its original value when the new
+SMultiPKFile is committed whenever it is safe to do so, namely when
+the SPKFile is deemed not to have been modified \it{and} when no new
+entries were created (with the incremented pkEpoch value) since the
+VPKFile was checkpointed.  (This decrementing and the code used to
+determine whether it is safe also depends for their validity on the fact
+that the same PKFile cannot be flushed twice concurrently, so there
+can be only one checkpoint in existence at a time.)
+
+\item
+Another case that causes difficulties occurs when all of the entries
+are deleted from a SPKFile. In this case, no record of the SPKFile is
+kept in the stable cache, so if the cache server were to crash, the
+SPKFile would be found to have a pkEpoch of 0 at recovery time. In
+that case, there could be entries in the CacheLog with arbitrarily large
+pkEpoch values, and they would be incorrectly kept. The problem is
+that there is no way to distinguish this case from the one in which we
+are starting a fresh, empty cache server with no history.
+
+To handle this case, we keep a second log called the \it{EmptyPKLog}
+that records when a SPKFile has become empty. We also record the new
+pkEpoch for that (empty) SPKFile in the EmptyPKLog. At \it{VToSCache}
+time, we must commit these log records \it{before} swinging the file
+pointer for the SMultiPKFile (or deleting the SMultiPKFile entirely if
+all its SPKFile's are now empty). If the cache server crashes after
+committing a EmptyPKLog record, but before committing the new
+SMultiPKFile, it will have a record at recovery indicating that a
+PKFile has been deleted when in fact it has not. The recovery process
+must be able to handle this case.
+
+At recovery, we first read the EmptyPKLog, building a table that maps
+PK's to the highest pkEpoch for that PK in the log. Once we have
+built the table, we scan the CacheLog. For each record in the
+CacheLog, we compare the pkEpoch of the entry to the pkEpoch of the
+SPKFile in the stable cache. If there is no such SPKFile, we look in
+the table of empty PKFiles and read the pkEpoch from there. If there
+is no such entry in the table, we use a pkEpoch of 0. Now, if the
+pkEpoch of the entry is less than that of the (possibly empty) PKFile,
+we ignore it. Otherwise, we add the entry to the volatile cache.
+
+When a new VPKFile is created, its pkEpoch is usually initialized to
+that of the corresponding SPKFile. However, if the SPKFile has been
+deleted, it is important to initialize the VPKFile's pkEpoch to be
+that of the entry in the EmptyPKLog. (Otherwise, we would initialize
+it to 0. This would be wrong if there were old cache log entries for
+the VPKFile, since they might be erroneously recovered.) So as to
+avoid having to read the EmptyPKLog whenever a new VPKFile is created,
+we keep the table of empty PK files read at recovery time permanently,
+and consult it whenever a new VPKFile is created. The cache server
+maintains the invariant that the table consists of the maximum pkEpoch
+values of the entries in the EmptyPKLog. It does this by augmenting
+the table whenever a new EmptyPKLog entry is written.
+\end{itemize}
+
+The \it{CleanCacheLog} procedure re-writes both the CacheLog and the
+EmptyPKLog, removing unnecessary entries from both. Unlike the
+recovery process, it does not read the EmptyPKLog from disk because
+that log's entries are already stored in its in-memory table. Like the
+recovery process, however, it reads through the entries in the
+CacheLog. Any entry in the CacheLog with a pkEpoch less than that
+specified by the corresponding stable PKFile or entry in the empty PK
+table is discarded; all others are copied to the new version of the log.
+
+Once the new CacheLog is written, there is no reason to save any
+entries in the EmptyPKLog (or its corresponding in-memory table) that
+were inserted before the start of cleaning: (1) A CacheLog entry that
+survived cleaning certainly does not need to be compared against the
+same old EmptyPKLog entries again. (2) A CacheLog entry added after
+the start of cleaning certainly cannot need to be discarded because
+its PKFile was deleted before the start of cleaning.
+
+We delete old entries from the EmptyPKLog by starting a checkpoint of
+the log at the beginning of cleaning, writing nothing to it, and
+committing it at the end of cleaning.  (We never write anything to an
+EmptyPKLog checkpoint.)  Thus new entries can accumulate in the
+EmptyPKLog during cleaning, but entries from before cleaning disappear
+when the checkpoint commits.  Handling the in-memory copy of the
+EmptyPKLog is slightly more complicated.  The EmptyPKLog class keeps
+two separate tables during cleaning, one for old entries and one for
+new ones.  Lookups examine both tables.  At the end of cleaning, the
+old table is freed.
+
+Because the CacheLog and EmptyPKLog are separate logs, we can't commit
+changes to both logs atomically, so we have to use careful ordering
+instead.  It is harmless if we fail to delete some old entries from
+the EmptyPKLog that could have been deleted, so we use the following
+ordering: (1) Begin EmptyPKLog checkpoint, (2) Begin CacheLog
+checkpoint, (3) Clean CacheLog, (4) Commit CacheLog checkpoint, (5)
+Commit EmptyPKLog checkpoint.
+
+\section{\anchor{Evictions}{Eviction of VPKFiles and VMultiPKFiles}}
+
+The original cache server design did not include any mechanism for
+removing VPKFiles and VMultiPKFiles from memory.  Once these data
+structures were created, they existed for the lifetime of the cache
+server.  The consequence of this was that a certain portion of the
+cache server's memory usage was monotonically increasing over time.
+
+However, due to the multi-threaded nature of the cache server,
+removing these data structures from the cache is not straightforward.
+If another thread were still using a VPKFile that had been removed,
+data could be lost (e.g. a newly added cache entry).  This section
+describes the methods used to avoid these problems and implement
+\it{eviction} of VPKFiles and VMultiPKFiles.
+
+Each VPKFile has a boolean "\tt{evicted}" member variable.  This is
+set to \bf{false} when the VPKFile is created, and becomes \bf{true}
+when the VPKFile is evicted from the cache.  When a thread locks a
+VPKFile, before using it in any way, it is responsible for first
+checking to make sure that it hasn't been evicted.  This is necessary
+because there is an implicit race between the thread responsible for
+evicting VPKFiles and any thread using a VPKFile.  This test is
+implemented as follows:
+
+\begin{verbatim}
+  // Lock the VPKFile we're about to use
+  vpkfile->mu.lock();
+
+  // Ensure that we don't have an evicted VPKFile
+  while(vpkfile->Evicted())
+    {
+      // Unlock the evicted one, as we won't be using it
+      vpkfile->mu.unlock();
+
+      // Get another VPKFile object for this PK (probably
+      // creating it)
+      CacheS.mu.lock();
+      (void)(CacheS.GetVPKFile(pk, /*OUT*/ vpkfile));
+      CacheS.mu.unlock();
+
+      // Lock our new VPKFile object
+      vpkfile->mu.lock();
+    }
+
+  // ...proceed with using the VPKFile...
+\end{verbatim}
+
+Each VPKFile also has a \it{freeing epoch} ("\tt{freePKFileEpoch}").
+Each time a VPKFile is used by a client call (FreeVariables, Lookup,
+or AddEntry), this is updated to the current value of a global counter
+("\tt{CacheS.freeMPKFileEpoch}").  Only VPKFiles that have not been
+used for a configurable amount of time (i.e. have a sufficiently low
+freeing epoch) are potential candidates for eviction.  This is done to
+avoid evicting VPKFiles that have had recent activity, as uses of a
+given PK have a degree of temporal locality.
+
+The process of evicting VPKFiles and VMultiPKFiles is handled by the
+same background thread which periodically flushes new entries to disk
+(implemented by the "\tt{CacheS_DoFreeMPKFiles}" function).  After new
+entries have been flushed to disk and old entries have been purged
+from memory, it searches for VPKFiles to evict.  A VPKFile is evicted
+if and only if:
+
+\begin{itemize}
+
+\item
+It has not been used recently by a client call (it has a sufficiently
+old freeing epoch).
+
+\item
+It has no new entries yet to be flushed to the stable cache.
+
+\item
+It currently has no old ("warm") entries paged in from the stable
+cache.
+
+\item
+It is not part of a VMultiPKFile that is currently being
+\link{#VToSCacheSect}{flushed to the stable cache} or that is going to
+be flushed to the stable cache in the near future.
+
+\end{itemize}
+
+A VPKFile is evicted by calling its "\tt{Evict}" method (which simply
+sets its "\tt{evicted}" member variable to \bf{true}), removing it
+from the table of VPKFiles ("\tt{CacheS.cache}"), and removing it from
+its VMultiPKFile's table of subordinate VPKFiles.  (See
+"\link{#CacheTables}{Indexing of VPKFiles}" above.)
+
+After evicting VPKFiles, VMultiPKFiles may be evicted.  A VMultiPKFile
+is evicted if and only if:
+
+\begin{itemize}
+
+\item
+It has zero subordinate VPKFiles.  (Thus, for a VMultiPKFile to be
+evicted, all of its VPKFiles must first be evicted.)
+
+\item
+It is neither currently being \link{#VToSCacheSect}{flushed to the
+stable cache} nor is going to be flushed to the stable cache in the
+near future.
+
+\end{itemize}
+
+A VMultiPKFile is evicted simply by removing it from the table of
+VMultiPKFiles ("\tt{CacheS.mpkTbl}").
+
+Note that, unlike VPKFiles, VMultiPKFiles do not have a member
+variable indicating whether they have been evicted.  This means that
+if a thread holds a pointer to a VMultiPKFile, it could be evicted out
+from under it.  However, the only case where this can happen is during
+"\link{#VToSCacheSect}{\tt{CacheS::VToSCache}}", in which case the
+VMultiPKFile is protected against eviction.  This is why, in the
+implementation of "\tt{CacheS::VToSCache}", the cache lock
+("\tt{CacheS.mu}") is held from before the pointer to the VMultiPKFile
+is acquired until after the VMultiPKFile is locked for writing (by
+calling "\tt{VMultiPKFile::LockForWrite}").
+
+Also note that, as of this writing, VMultiPKFiles that are to be
+re-written to process pending deletions (i.e. are in MPKsToWeed) are
+not protected from eviction, nor are their subordinate VPKFiles.  It
+might be nice to protect them from eviction, but currently MPKsToWeed
+is an unordered list of PK prefixes, which means that determining
+whether a given MultiPKFile is in the set would require a linear
+search.  However, protecting these VMultiPKFiles and VPKFiles from
+eviction is not strictly necessary, as the other constraints on
+eviction are sufficient to maintain correct behavior of the cache.
+
+Finally, the entire eviction design is predicated on the cache server
+use of garbage collection.  Pointers to the evicted VPKFiles and
+VMultiPKFiles are simply dropped.  This allows other threads time to
+deal with evicted VPKFiles.  Eventually, the garbage collector will
+reclaim the space used by the evicted objects.
+
+\section{\anchor{SeeAlsoSect}{See Also}}
+
+\link{VCache.1.html}{VCache(1)},
+\link{VCacheLocks.7.html}{VCacheLocks(7)},
+\link{VCacheSources.7.html}{VCacheSources(7)},
+\link{VCacheToDo.7.html}{VCacheToDo(7)}
+
+\section{Authors}
+
+Original version by: Allan Heydon (\tt{caheydon@yahoo.com})
+
+Updates and additions by: Ken Schalk (\tt{ken@xorian.net})
+
+\begin{verbatim}
+Last modified on Wed Apr  2 00:22:45 EST 2003 by ken@xorian.net  
+     modified on Wed Feb 23 17:27:30 PST 2000 by mann  
+     modified on Sat Aug 22 15:38:13 PDT 1998 by heydon
+\end{verbatim}

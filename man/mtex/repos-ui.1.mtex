@@ -1,0 +1,60 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{repos-ui - Vesta repository user interface}{repos-ui}{1}
+
+\section{Name}
+
+\bf{repos-ui} - Command-line user interface to the Vesta repository
+
+\section{Description}
+
+Vesta provides a set of simple command-line tools as a user interface
+to the repository.  See the documentation listed below for each tool.
+
+\section{See Also}
+
+\begin{flushleft}
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)} - Vesta introduction and glossary.\newline
+\link{vmkdir.1.html}{\bf{vmkdir}(1)} - Create a directory.\newline
+\link{vcreate.1.html}{\bf{vcreate}(1)} - Create a package.\newline
+\link{vcheckout.1.html}{\bf{vcheckout}(1)} - Check out a package.\newline
+\link{vadvance.1.html}{\bf{vadvance}(1)} - Advance a checkout session.\newline
+\link{vmake.1.html}{\bf{vmake}(1)} - Advance and build the next version.\newline
+\link{vcheckin.1.html}{\bf{vcheckin}(1)} - Check in a package.\newline
+\link{vbranch.1.html}{\bf{vbranch}(1)} - Create a branch.\newline
+\link{vwhohas.1.html}{\bf{vwhohas}(1)} - Who has packages checked out?\newline
+\link{vlatest.1.html}{\bf{vlatest}(1)} - Find latest package versions.\newline
+\link{vhistory.1.html}{\bf{vhistory}(1)} - Show package history.\newline
+\link{vattrib.1.html}{\bf{vattrib}(1)} - Manipulate mutable attributes.\newline
+\link{vrepl.1.html}{\bf{vrepl}(1)} - Replicate sources from one repository to another.\newline
+\link{vmaster.1.html}{\bf{vmaster}(1)} - Move mastership of a source to a different replica.\newline
+\link{repository.8.html}{\bf{repository}(8)} - The repository server.\newline
+\link{vid.1.html}{\bf{vid}(1)} - Get information about a user from the repository.\newline
+\link{vaccessrefresh.8.html}{\bf{vaccessrefresh}(8)} - Ask the repository to reload its access control tables.
+\end{flushleft}
+
+\section{Limitations}
+
+There is no graphical user interface.
+
+\begin{verbatim}
+Last modified on Wed Apr 30 00:00:53 PDT 2003 by mann
+     modified on Fri Jan 31 18:10:19 EST 2003 by ken@xorian.net
+     modified on Thu Nov  9 15:05:59 PST 2000 by mann
+\end{verbatim}

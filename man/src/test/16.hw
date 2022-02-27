@@ -1,0 +1,8 @@
+VAR g := 0;
+
+PROC Main() IS
+    g := 1;
+    Q()
+END;
+
+PROC Q() IS g -> Wr("hello world\n") END;

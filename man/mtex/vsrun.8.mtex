@@ -1,0 +1,276 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vsrun - Utility for starting a server process}{vsrun}{8}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vsrun} - Start a server process
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vsrun}
+[\link{#-u}{-u \it{user}}]
+[\link{#-p}{-p \it{pidfile}}]
+[\link{#-r}{-r \it{root}}]
+[\link{#-w}{-w \it{directory}}]
+[\link{#-m}{-m \it{monitor-pidfile} \it{termination-handler}}]
+[\link{#-s}{-s \it{syslog-prefix}}]
+[\link{#-d}{-d \it{directory} \it{keep-duration}}]
+--
+\it{command}
+
+In the most common usage, at least the \link{#-u}{user} and
+\link{#-p}{pidfile} options are used.
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Manager_Behavior}{Manager Behavior}
+\item \link{#Termination_Handler}{Termination Handler}
+\item \link{#Examples}{Examples}
+\item \link{#Limitations}{Limitations}
+\item \link{#Bugs}{Bugs}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+When starting a server process in the background it is often necessary
+to take care of several details first, including:
+
+\begin{itemize} 
+\item Changing to the right user id
+\item Writing a file containing the process ID of the server process,
+often in a location that's not world-writable such as \tt{/var/run}
+\item Limiting filesystem access to a particular directory with
+chroot(2)
+\end{itemize}
+
+It is often also desirable to take action if such a process dies, such
+as sending e-mail and/or restarting the server.
+
+Many server programs will take some or all of these steps themselves.
+However, several of these steps require super-user priviledges.  It's
+best to limit the size of code executed as the super-user.  For
+programs written in languages where control over initialization code
+may be limited (C++, scripting languages) it may be preferable to
+instead use a small C program to take care of these issues.  This is
+what \bf{vsrun} does.
+
+While it's distributed with Vesta for use with its servers, it can be
+used with other programs as well.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-u}{-u | --user \it{user}}}
+User to execute the server process as.
+\item{\anchor{-p}{-p | --pidfile \it{pidfile}}}
+File to write the server process ID into.  If the file exists, it will
+be overwritten.
+\item{\anchor{-r}{-r | --root \it{root}}}
+A directory to chroot to.
+\item{\anchor{-w}{-w | --work-dir \it{directory}}}
+A directory to be set as the working directory before starting the
+server.  Not that if the \link{#-r}{-r flag} is also given, the
+working directory is changed after the chroot, so \it{directory}
+should be relative to the new \it{root}.
+\item{\anchor{-m}{-m | --manager \it{monitor-pidfile} \it{termination-handler}}}
+Specifies that \bf{vsrun} should stay resident and monitor the server
+process to see whether it terminates.  The process ID of the monitor
+will be written to \it{monitor-pidfile} .  If the server dies,
+\it{termination-handler} will be invoked.
+\item{\anchor{-b}{-b | --background}}
+Fork and run in the background.  If this option is not given, the
+server process (or the \bf{vsrun} manager process) will remain in the
+foreground.
+\item{\anchor{-s}{-s | --syslog \it{syslog-prefix}}}
+Redirect all standard output/error from \bf{vsrun} and the server to
+syslog.  This works by executing a separate process with the command
+"\tt{logger -t \it{syslog-prefix}}".  It's assumed that the logger(1)
+command exists on your system and is on the \tt{$PATH} environment
+variable when \bf{vsrun} is started.  (It's normally in
+\tt{/usr/bin}.)  Note that this option is mutually exclusive with
+\link{#-d}{--logdir}.
+\item{\anchor{-d}{-d | --logdir \it{directory} \it{keep-duration}}}
+Redirect all standard output/error from \bf{vsrun} and the server to
+files in \it{directory}.  If the directory doesn't exist, it will be
+created.  Output from \bf{vsrun} (errors or information from the
+\link{#-m}{manager}) will be written to "\tt{vsrun.log}", output from
+the server will be written to "\tt{logfile}".  Older files with these
+names will be renamed to "\tt{vsrun.log.\it{N}}" and
+"\tt{logfile.\it{N}}" where N is an integer.  Any such files older
+than the \it{keep-duration} will be deleted.  The keep duration must
+be an integer followed by one of the following units: h (hours), d
+(days), w (weeks), m (months).  If no unit is given, defaults to days.
+Note that this option is mutually exclusive with \link{#-s}{--syslog}.
+\item{--}
+Denotes the end of the options to \bf{vsrun}.  Everything after this
+option will be taken as the server command to run.  \it{(Note that
+this option is mandatory.)}
+\end{description}
+
+\section{\anchor{Manager_Behavior}{Manager Behavior}}
+
+When managing a server process, \bf{vsrun} will restart the server
+unless it exits voluntarily.  If the server does exit voluntarily, the
+manager process will simply exit.
+
+If the manager process is sent the \tt{SIGHUP} signal, it will
+terminate (with \tt{SIGTERM}) and restart the server process.  This
+makes it possible to explicitly request that the manager restart the
+server.
+
+If the manager process is sent the \tt{SIGTERM} signal, it will
+terminate the server process (also with \tt{SIGTERM}) and then exit.
+This makes it possible to explicitly request that the manager shut
+down the server.
+
+Note that in the event of either an intentional kill or an intentional
+restart, \link{#Termination_Handler}{the termination handler} \it{is
+not invoked}.  (The termination handler is really only for an
+unexpected termination of the server process.)
+
+\section{\anchor{Termination_Handler}{Termination Handler}}
+
+The second argument to the \link{#-m}{-m flag} is a command to be
+invoked in the even that the server process terminates unexpectedly.
+This should be a single path to an executable file.  If you need to do
+something requiring arguments, create a small shell script for your
+termination handler.
+
+The following environment variables will be defined when the
+termination handler is invoked:
+
+\begin{description} 
+\item{VSRUN_SERVER_COMMAND}
+The command used to start the server.
+\item{VSRUN_SERVER_UPTIME}
+The number of seconds between when the server was started and when it
+exited
+\item{VSRUN_SERVER_EXITED}
+Set to 1 if the server exited volutarily, 0 otherwise
+\item{VSRUN_SERVER_EXITSTATUS}
+Set to the exit status of the server process if it exited volutarily.
+\item{VSRUN_SERVER_TERMSIG}
+Set of the number of the signal (e.g. 11 for segfault, 6 for abort)
+that caused the child process to terminate, if any.  (See signal(7)
+for a listing of numeric signal values.)
+\item{VSRUN_SERVER_COREDUMP}
+Set to 1 if the server created a core file when it exited, 0 otherwise
+\item{VSRUN_SERVER_EXPLAIN}
+A text string which summarizes the reason why the server exited
+(e.g. "exited with status 1" or "dumped core with signal 11").
+\item{VSRUN_SERVER_PID}
+The process ID of the server process.  (Obviously since the process
+has already terminated, this is most useful for informational messages
+or for locating core files whose name includes the process ID.)
+\end{description} 
+
+If the termination handler exits with status 0 (indicating success), the
+server process will be restarted by \bf{vsrun}.  Otherwise, the server
+will not be restarted and the \bf{vsrun} monitor process will exit.
+
+If the \link{#-u}{-u flag} is given, the termination handler will be
+executed as the same user as the server.
+
+A typical termination handler might include:
+
+\begin{itemize} 
+\item Sending e-mail to an administrator 
+\item Deleting, compressing, or archiving core files
+\item Exiting with an error if the server uptime is below some
+threshold (to avoid repeatedly restarting a broken server).
+\item Exiting with an error if the server was killed by certain normal
+termination signals (\tt{SIGTERM}, \tt{SIGQUIT}, \tt{SIGKILL}).
+\end{itemize}
+
+\section{\anchor{Examples}{Examples}}
+
+Start a server as a particular user writing a file containing its
+process ID:
+
+\begin{verbatim}
+vsrun -p /var/run/foo.pid -u foouser -- fooserver
+\end{verbatim}
+
+Same as above, but also Monitor the server and, if it crashes, run a
+script and restart it:
+
+\begin{verbatim}
+vsrun -p /var/run/foo.pid -u foouser -m /var/run/foo-manager.pid /home/foouser/foo-died -- fooserver
+\end{verbatim}
+
+Same as above, but send the server's output to syslog:
+
+\begin{verbatim}
+vsrun -p /var/run/foo.pid -u foouser -m /var/run/foo-manager.pid /home/foouser/foo-died -s foo -- fooserver
+\end{verbatim}
+
+Rather than sending the server's output to syslog, send it to files in a
+directory, keeping log files for 2 months:
+
+\begin{verbatim}
+vsrun -p /var/run/foo.pid -u foouser -m /var/run/foo-manager.pid /home/foouser/foo-died -d /var/log/foo 2m -- fooserver
+\end{verbatim}
+
+Run the server in the background as particular user with restricted
+filesystem access (i.e. in a chroot):
+
+\begin{verbatim}
+vsrun -b -r /var/lib/foo -w / -u foouser -- fooserver 
+\end{verbatim}
+
+\section{\anchor{Limitations}{Limitations}}
+
+\bf{vsrun} always redirects the standard input of the server to
+\tt{/dev/null}.
+
+\bf{vsrun} does not redirect standard output/error unless you use
+\link{#-s}{the -s flag} or the \link{#-d}{the -d flag}.
+
+\section{\anchor{Bugs}{Bugs}}
+
+If \link{#-d}{the -d flag} is used and the \link{#-w}{the -w flag} is
+\bf{not} used, the working directory of the server process will be the
+directory argument to \link{#-d}{the -d flag} rather than the current
+working directory where \bf{vsrun} is invoked.
+
+\section{\anchor{See_Also}{See Also}}
+
+chroot(1), chroot(2),
+signal(7),
+logger(1)
+
+Similar tools include:
+
+\begin{itemize}
+\item daemon: \link{http://www.libslack.org/daemon/}{http://www.libslack.org/daemon/}
+\item D. J. Bernstein's daemontools: \link{http://cr.yp.to/daemontools.html}{http://cr.yp.to/daemontools.html}
+\end{itemize}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk <\link{mailto:mailto&#58;ken&#64;xorian&#46;net}{\tt{ken@xorian.net}}>
+
+Based on \tt{smgr} written by Ted Wobber, Copyright 1988 Digital
+Equipment Corporation.

@@ -1,0 +1,11 @@
+(* in parameters *)
+
+PROC Main() IS
+    P(2, 3) 
+END;
+
+PROC P(n, m) IS
+    n = 2 AND m = 3 -> Wr("hello world\n")
+  | Wr("Oops\n")
+END;
+ 

@@ -1,0 +1,172 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vlatest - Find latest Vesta package versions}{vlatest}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vlatest} - Find the latest versions of Vesta packages
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vlatest} [\link{#-n}{-n} | \link{#-p}{-p} | \link{#-b}{-b} | 
+\link{#-c}{-c}] [\link{#-m}{-m}] [\link{#-t}{-t}] [\link{#-v}{-v}] 
+[\link{#-h}{-h \it{hints}}]
+[\link{#-R}{-R \it{repos}}] [\it{directory...}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the \link{vesta-intro.1.html}{vesta-intro} man page's
+\link{vesta-intro.1.html#Terminology}{Terminology} section
+for definitions of terms, and its
+\link{vesta-intro.1.html#Name_Interpretation}{Name Interpretation}
+section for an explanation of how names are looked up.
+
+The \bf{vlatest} command prints the latest checked-in version name for
+the given packages, or for the packages in the given directory trees.
+By default, it considers both the given directories and (recursively)
+any of their subdirectories that are not branches, and it prints the
+absolute pathname of each latest version found.
+
+In more detail, \bf{vlatest} walks the directory tree rooted at each
+of the given \it{package} arguments, with the extent of the walk
+controlled by the \link{#Flags}{flags} documented below.  For each
+package found, it prints out the version pathname whose last arc is
+entirely composed of decimal digits with no extra leading zeros and
+whose numeric value is highest.  A \it{package} argument can be either
+a package, or an appendable directory that might have packages in the
+subtree below it.
+
+If the name \it{package} is unqualified
+(does not have "\tt{/}", "\tt{.}", or "\tt{..}" as its first arc),
+it is interpreted relative to the site's default
+directory of packages, \link{#Configuration}{\it{DefaultPackageParent}}.  
+If \it{package} is omitted, it defaults to \tt{/vesta}.
+
+\bf{vlatest} returns status 0 for success, 1 for parameter syntax
+errors, or 2 for more serious errors.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-n}{-n}}
+No recursion.  Only the specified directories are searched for 
+package versions, not any branches or other subdirectories.  Each
+directory must be a package.
+\item{\anchor{-p}{-p}}
+Recurse to the package level.  All the specified directories are
+searched, and (recursively) any subdirectories that are not branches
+or checkout sessions.  This is the default.
+\item{\anchor{-b}{-b}}
+Recurse into branches.  All the specified directories are
+searched, and (recursively) any subdirectories that are not
+checkout sessions.
+\item{\anchor{-c}{-c}}
+Recurse into checkout sessions.  The specified directories and all
+subdirectories are searched, including branches and checkout sessions.
+\item{\anchor{-m}{-m}}
+Try to get more complete and authoritative information by accessing
+the master copy of each object.  Without this flag, packages and versions
+that are not replicated in the local repository are missed.
+\item{\anchor{-t}{-t}}
+Print only the tail of each package version name, that is, only
+the portion following what was given on the command line.  
+If you specify this flag, you may give at most one package argument.
+\item{\anchor{-v}{-v}}
+Print change history message for latest versions.
+\item{\anchor{-h}{-h} \it{hints}}
+When using \link{#-m}{-m}, \bf{vlatest} may need to search remote
+repositories for the master copy of the package and other directories.
+If \bf{vlatest} fails to find the master copy of a directory, you can
+suggest additional repositories for it to look in using this option.
+The \it{hints} argument is a space-separated list of repositories,
+specified by host name and TCP port number in the format
+\it{host}\tt{:}\it{port}.  The \tt{:}\it{port} portion may be omitted;
+it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+The local repository and any of those repositories listed in
+\link{#Configuration}{\it{[UserInterface]DefaultHints}} will always be
+checked, though \it{hints} supplied with this option will be checked
+first.
+\item{\anchor{-R}{-R \it{repos}}}
+Look in \it{repos} instead of the default local
+repository.  The repository is
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\end{description}
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{AppendableRootName}}
+The filename under which the global root directory of
+Vesta repositories is mounted.  Ordinarily set to \tt{/vesta}.
+\item{\it{DefaultPackageParent}}
+The default directory to put new packages in.  Ordinarily a
+subdirectory of the appendable root, named with an Internet domain name
+belonging to the local site.
+\item{\it{DefaultHints}}
+A space-separated list of additional repositories to search for the
+master copy of an object.  Each repository is specified by host name
+and TCP port number in the format \it{host}\tt{:}\it{port}.  The
+\tt{:}\it{port} portion may be omitted; it defaults to
+\it{[Repository]VestaSourceSRPC_port}.  This setting is optional.
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+If a package is mastered at one repository but has been checked out at
+another, it can be checked back in without the master repository's
+knowledge.  If this happens, "vwhohas -m" will not know about the new
+version.  This occurrence should be rare, however, since by default
+\bf{vcheckin} replicates the new version back to the package's master
+repository.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}

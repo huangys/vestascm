@@ -1,0 +1,67 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vdumplog - Dump a VestaLog file}{vdumplog}{8}
+
+\section{Name}
+
+\bf{vdumplog} - Dump a VestaLog file to standard output
+
+\section{Synopsis}
+
+\bf{vdumplog} [\link{#-n}{-n \it{number}}] [\link{#-l}{-l}] [\it{directory}]
+
+\section{\anchor{Description}{Description}}
+
+Linearize and dump the contents of a log file written by 
+VestaLog (see \tt{VestaLog.H}) to
+standard output.  If \it{directory} is omitted, the log is found in
+the current directory.
+
+This command is useful by itself for debugging Vesta components that
+write log files, particularly the repository.  It is useful together
+with \link{vappendlog.8.html}{\bf{vappendlog}(8)} if you need to
+manually edit the data in a log.  You can dump the log into a plain
+file with \bf{vdumplog}, edit the file with an ordinary text editor,
+and write the modified data to a new log with \bf{vappendlog}.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-n}{-n} \it{number}}
+If -n is omitted, the highest-numbered log file with a committed checkpoint 
+is dumped, or 0.log if there are no committed checkpoints.
+If -n is supplied, \it{number}.log is dumped.
+\item{\anchor{-l}{-l}}
+If -l is omitted, only the log records in one log file are dumped.
+If -l is supplied, the program loops through all higher-numbered log files 
+and appends their records as well.
+\end{description}
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{vappendlog.8.html}{\bf{vappendlog}(8)}.
+
+\section{\anchor{Author}{Author}}
+
+\link{http://www.tim-mann.org/}{Tim Mann}
+
+\begin{verbatim}
+Last modified on Fri Nov  9 14:19:11 EST 2001 by ken@xorian.net
+     modified on Thu May  2 16:17:58 PDT 1996 by mann
+\end{verbatim}

@@ -1,0 +1,46 @@
+#!/proj/mips/bin/lim
+
+PROC Main() IS
+    WhiteSpace(); S(0); DO ReadItem(); U(0) OD; E()
+END;
+
+PROC ReadItem() IS
+    { S(0);
+      Rd('(');
+      WhiteSpace();
+      Wr('(');
+      VAR count := 0 IN
+        DO U(4); ReadItem(); count := count + 1 OD;
+        { count # 0 -> U(0) | SKIP }
+      END;
+      Rd(')');
+      WhiteSpace();
+      Wr(')');
+      E()
+    }
+  | { VAR count := 0 IN
+        DO VAR c := Rd() IN
+               c = '\n' -> SKIP
+             | (c # '(' AND c # ')' AND c # ' ' AND c # '\t') -> Wr(c)
+           END;
+           count := count + 1
+        OD;
+        WhiteSpace();
+	count # 0 -> SKIP
+      END
+    }
+END;
+
+PROC WhiteSpace() IS DO Rd(' ') | Rd('\t') | Rd('\n') | Rd('\r') OD END;
+
+VAR setb := 1, endb := 2, united := 3, lazy := 4;
+
+PROC S(n) IS Wr(setb); Wr(n + 128) END;
+
+PROC B() IS Wr(lazy); Wr(128) END;
+
+PROC U(n) IS Wr(united); Wr(n + 128) END;
+
+PROC Z(n) IS Wr(lazy); Wr(n + 128) END;
+
+PROC E() IS Wr(endb) END;

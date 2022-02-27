@@ -1,0 +1,616 @@
+.nh
+.TH lim 1
+.SH NAME
+lim \- text processing language with pattern matching and backtracking
+.SH SYNTAX
+lim progfile
+.SH DESCRIPTION
+Parse and execute the LIM program in the file progfile.
+.PP
+LIM is a text processing language in the general family of lex,
+yacc, sed, awk, and trans, but is based on Dijkstra's calculus of
+guarded commands.  The name is an acronym for Language of the
+Included Miracle, because LIM programs can violate the so-called
+Law of the Excluded Miracle.  For details see "A Discipline of
+Programming", Edsger W. Dijkstra, Prentice-Hall, 1976, and "A
+generalization of Dijkstra's calculus", Greg Nelson, Trans. on
+Programming Languages and Systems, October 1989, (or technical
+report SRC-16).
+.SH "LIM LANGUAGE OVERVIEW"
+.PP
+Here are four important LIM primitives:
+.TP 10
+Wr(s)
+Write s
+.TP 10
+Rd(s)
+Read s, failing if it is not next in the input
+.TP 10
+A ; B
+Do A, then do B
+.TP 10
+A | B
+Do A, else do B if A fails
+In the first two commands, "s" is a string literal (for now).  The
+command "Rd(s)" reads s from the input if it is present, otherwise
+it fails.  The command "Wr(s)" writes the string s to the output;
+it never fails.  The command "A;B" fails if either "A" or "B" fail,
+while the command A|B fails only if both "A" and "B" fail.  For
+example, the command
+.ti -4
+.PP
+Rd("0"); Wr("0")  |  Rd("1"); Wr("1")
+.PP
+will copy a single zero or one from input to output.  (The
+semicolon binds more tightly than the vertical bar.)
+.PP
+The main novelty in LIM is that failing commands never have side
+effects.  If a long computation has side effects and then fails, it
+is as though the side effects never happened.  For example,
+.IP "" 4
+ Rd("0"); Wr("0")
+.PP
+and
+.IP "" 4
+Wr("0"); Rd("0")
+.PP
+mean exactly the same thing: copy a zero from input to output if
+possible, and otherwise fail without writing anything.
+.PP
+Here are four more LIM primitives, three of which are overloadings
+of the previous "Rd" and "Wr" operators:
+.TP 10
+Wr(c)
+write the character "c"
+.TP 10
+Rd(c)
+read the character "c"
+.TP 10
+Rd()
+read and return the next input character
+.TP 10
+DO A OD
+repeatedly execute "A" until it fails
+.PP
+"Rd()" fails only if the input is at end of file; otherwise it
+returns the (integer code for) the next character in the input, as
+it consumes that character.  "Rd(c)" reads the character "c" from the
+input or fails if the next character isn't "c".  "Wr(c)" never fails;
+it writes to output the character "c".
+.PP
+For example, the following program will copy input to output,
+replacing all occurrences of "gnelson" with "burrows" and "burrows"
+with "gnelson":
+.EX
+    DO Rd("burrows"); Wr("gnelson")
+    | Rd("gnelson"); Wr("burrows")
+    | Wr(Rd())
+    OD
+.EE
+As a final artificial example, the program
+.EX
+     DO Rd(Rd()) OD
+.EE
+reads pairs of identical characters from the input as long as
+possible.
+.SH "LIM LANGUAGE DEFINITION"
+.PP
+PROGRAM. A program consists of a sequence a procedure declarations
+or global variable declarations.  Each of these declarations is
+terminated by a semicolon.
+.PP
+The effect of executing a LIM program is to initialize all its
+global variables (in the order in which they are declared in the
+program) and then to execute the body of the procedure Main, which
+must be present and which must have no parameters.
+.PP
+For example, here is a complete LIM program for counting the number
+of newlines in a file
+.EX
+  VAR n := 0;
+
+  PROC Main() IS DO Rd('\en'); n := n + 1 | EVAL Rd() OD END;
+.EE
+
+  PROCEDURE DECLARATION.  A procedure declaration has the syntax
+.EX
+  PROC outs := inouts:P(ins) IS B END;
+.EE
+where "P" is an identifier, the name of the procedure, outs,
+inouts, and ins specify the parameters of various types, and "B" is
+a command, the body of the procedure. If there are no out
+parameters, "outs :=" must be omitted.  If there are no inout
+parameters, "inouts :"" must be omitted.  If there are no in
+parameters, "ins" must be empty, but the parentheses are still
+required.  Both "ins" and "inouts" are comma-separated lists of
+variables, but "inouts" is either a single variable, or a
+parenthesized comma-separated list of at least two variables.
+.PP
+For example,
+.EX
+    PROC Main() IS DO Wr(Rd()) OD END;
+
+    PROC n:Inc() IS n := n + 1 END;
+
+    PROC (x,y):Swap IS VAR t := x IN x := y; y := t END END;
+
+    PROC n := Square(m) IS n := m * m END;
+.EE
+.PP
+GLOBAL VARIABLE DECLARATION. A variable declaration has the syntax
+.EX
+    VAR vlist;
+.EE
+where "vlist" is a comma-separated list of expressions of the form
+.IP "" 4
+v := E
+.PP
+where "v" is an identifier (the name of the global variable being
+declared) and "E" is an expression (the initial value for the
+variable).
+.PP
+COMMAND. Here are the thirteen different types of LIM commands:
+.TP 20
+A ; B
+Execute "A", then execute "B".
+.TP 20
+P \-> A
+Evaluate "P"; if it is non-zero, execute "A", else fail.
+.TP 20
+A | B
+Execute "A", else execute "B" if "A" fails.
+.TP 20
+DO A OD
+Repeatedly execute "A" until it fails.
+.TP 20
+TIL A DO B END
+Repeatedly execute "B" until executing "A" succeeds.
+.TP 20
+VAR vl IN A END
+Introduce local variables "vl" and execute "A".
+.TP 20
+v := E
+Evaluate the expression "E" and assign its value to "v".  
+Fail if any function called by E fails.
+.TP 20
+EVAL E
+Evaluate the expression "E" and discard the result.
+Fail if any function called by E fails.
+.TP 20
+SKIP
+No-op
+.TP 20
+FAIL
+This command always fails.
+.TP 20
+ABORT
+Print an error message and abort the program.
+.TP 20
+outs := inouts:P(ins)
+Evaluate the expressions correponding to in
+parameters "ins", then call procedure "P" with
+the "out", "inout", and the values of the "ins" parameters. 
+Fails if any function called by the "ins" expressions fails, or if "P"
+fails.
+.TP 20
+{ A }
+Execute "A"; braces are just statement parentheses.
+
+.PP
+Semicolon binds more tightly than the guard arrow, which binds more
+tightly than else.  But "A ; P \-> B" means "A ; { P \-> B }" since this
+is the only legal interpretation. 
+.PP
+LIM has only integer variables.  The guard arrow therefore treats 0
+as false and any other value as true.
+
+The loop "DO A OD" is defined by unrolling it once:
+.PP
+.IP "" 4
+DO A OD  =  A; DO A OD | SKIP
+.PP
+Notice that "DO A OD" never fails.  For example, "DO FAIL OD" is the
+same as "SKIP".
+.PP
+The loop "TIL A DO B END" is defined by unrolling it once:
+.PP
+.IP "" 4
+TIL A DO B END   =   A  |  B; TIL A DO B END
+.PP
+(recall that semicolon binds more tightly than else.)  Notice that
+"TIL A DO B END" can fail if "A" and "B" both fail, either initially or
+after some number of iterations of "B".
+.PP
+For example, here is a procedure that skips everything up to and
+including the next blank line, where a blank line is defined as a
+line containing only blanks and tabs:
+.EX
+    PROC SkipToBlankLine() IS
+    TIL Blankline() DO ReadLine() END
+    END;
+
+     PROC BlankLine() IS
+     TIL Rd('\en') DO Rd(' ') | Rd('\et') END
+     END;
+
+     PROC ReadLine() IS"
+     TIL Rd('\en') DO EVAL Rd() END
+     END
+.EX
+It is easy to recode "BlankLine" using "DO OD" instead of "TIL DO END";
+but more troublesome for "ReadLine" and for "SkipToBlankLine".
+.PP
+The command
+.PP
+.IP "" 4
+    VAR v := E IN A END
+.PP
+introduces a local variable "v" and then executes "v := E; A".  The
+scope of "v" includes "E" and "A"; it is probably a mistake (undetected
+by LIM) if "v" occurs in "E".  Between "VAR" and "IN" there can be a
+comma-separated list of expressions of the form "v := E"; for example
+.PP
+.IP "" 4
+VAR v1 := E1, v2 := E2 IN A END
+.PP
+is short for
+.PP
+.IP "" 4
+VAR v1 := E1 IN VAR v2 := E2 IN A END END.
+.PP
+For example, the following procedure reads a decimal digit and
+returns its value, or fails if the next input character is not a
+digit:
+.EX
+    PROC n := DigitVal() IS
+      VAR c := Rd() IN"
+          '0' <= c AND c <= '9' \-> n := c \- '0'
+      END
+    END
+.EE
+A procedure call has the form
+.PP
+.IP "" 4
+outs := inouts:P(ins)     
+.PP
+where "P" is a procedure and "outs", "inouts", and "ins" specify
+the actual parameters of the various modes.  If there are no out
+parameters, "outs :=" must be omitted.  If there are no inout
+parameters, "inouts:" must be omitted.  If there are no in
+parameters, "ins" is empty, but the parentheses are still
+required.  Syntactically, "ins" is a comma-separated list of
+expressions, "outs" is a comma-separated list of identifiers, and
+"inouts" is either a single identifier or a parenthesized
+comma-separated list of at least two identifiers.
+.PP
+To execute the call, the procedure's in and inout formals are bound
+to the values of the corresponding actuals; then the body of the
+procedure is executed, and finally the out and inout actuals are
+bound to the values of the corresponding formals.
+.PP
+EXPRESSION.  Here are the operators allowed in LIM expressions,
+listed in groups.  Operators within a any group bind more tightly
+than those in the groups above them; operators in the same group
+have the same binding power and associate to the left.
+.TP 10
+e OR f
+logical disjunction; "f" is not evaluated if "e" is non-zero
+.TP 10   
+e AND f
+logical conjunction; "f" is not evaluated if "e" is zero
+.PP
+.TP 10
+NOT e
+logical negation
+.PP
+.TP 10
+e = f
+equals
+.TP 10
+e # f
+differs
+.TP 10
+e < f
+less than
+.TP 10
+e > f 
+greater than
+.TP 10
+e <= f
+at most
+.TP 10
+e >= f
+at least
+.TP 10
+e + f
+sum 
+.PP
+.TP 10
+e * f
+product
+.TP 10
+e DIV f
+the floor of the real quotient of "e" and "f"
+.TP 10
+e MOD f
+e \- f * (e DIV f)
+.PP
+.TP 10
+-e
+unary minus
+.PP
+The boolean operations produce 1 for true, 0 for false.  The "DIV"
+and "MOD" operations are the same as those of Modula-3 and Oberon.
+.PP
+Expressions can also have the forms:
+.TP 20
+inouts:P(ins)
+procedure call
+.TP 20
+v
+The value of the variable "v".
+.TP 20
+lit
+An integer, string, or character literal.
+.TP 20
+(e)
+round parentheses for grouping
+.PP
+A procedure can be called in an expression if it has exactly one
+out parameter.  The syntactic rule for inouts and for ins are the
+same as those previously-described for a procedure call used as a
+command, as are the rules for binding the in and inout parameters.
+However, after executing the body of the procedure, the value of
+its out parameter becomes the value of the expression.
+.PP
+An integer literal is a non-empty sequence of decimal digits; it is
+interpreted base ten.
+.PP
+A character literal is a single printing character or escape
+sequence enclosed in single quotes.  The escape sequences allowed
+are
+.TP 10
+\e\e
+backslash (\e)
+.TP 10
+\et
+tab
+.TP 10
+\en
+newline
+.TP 10
+\ef
+form feed
+.TP 10
+\er
+return
+.TP 10
+\es
+blank space
+.TP 10
+\eb
+backspace
+.TP 10
+\ev
+vertical tab
+.TP 10
+\ee
+escape
+.TP 10
+\e'
+single quote
+.TP 10
+\e"
+double quote
+.TP 10
+\eddd
+char with octal code ddd
+.TP 10
+\exhh
+char with hex code hh
+.PP
+A string literal is a sequence of printing characters or escape
+sequences surrounded by double-quotes.  It is not allowed to
+contain a newline.  String literals are allowed only as parameters
+to the built-in procedures "Rd", "Wr", "At", and "Err": they are not
+allowed in general expressions.
+.PP
+Variables are procedures are denoted by identifiers that consist of
+a sequence of letters, digits, and underbars beginning with a
+letter or underbar.
+.PP
+LIM tokens can be separated by white space and comments.  A comment
+is an arbitrary sequence of characters opened by "(*" and closed by
+"*)".  Comments nest.
+.PP
+BUILT-IN PROCEDURES.  LIM provides the following built-in
+procedures:
+.TP 10
+Rd(str)
+Read "str" (a string literal), or fail.
+.TP 10
+Rd(c)
+Read the character "c" (an expression), or fail.
+.TP 10
+Rd()
+Read and return the next character, or fail.
+.PP
+.TP 10
+Wr(str)
+Write "str" (a string literal).
+.TP 10
+Wr(c)
+Write the character "c" (an expression).
+.PP
+.TP 10
+At(str)
+A noop if "str" (a string literal) is next in the input; otherwise fails.
+.TP 10
+At(c)
+A noop is the next character is "c"; otherwise fails.
+.PP
+.TP 10
+Eof()
+A noop if at end of file; else fails.
+.PP
+.TP 10
+Err(str)
+Write "str" to standard error.
+.TP 10
+Err(c)
+Write the character "c" (an expression) to standard error.
+
+.PP
+The primitive "Err" is useful for debugging, but it does not obey
+the rules of LIM: the output that it performs will not generally be
+undone, even if the computation fails.  For example,
+.IP "" 4
+Err("A"); FAIL"
+.PP
+is NOT equivalent to "FAIL"; it will print "A" to standard error as
+it backtracks.  The exact output of a program containing calls to
+Err() depends on which internal optimizations the lim interpreter
+uses.
+.SH ERRORS
+LIM reports syntax errors or other static language violations with
+a line number.  Don't take the line number too seriously.  In this
+case the interpreter exits with Unix exit code 2.
+.PP
+Common syntax errors are to include a redundant trailing semicolon
+(within commands, LIM uses semicolon to denote sequential
+composition, not to end a statement) or to omit the required empty
+parentheses on a procedure with no in parameters.
+.PP
+If the LIM program aborts, the interpreter prints the line number
+at which it aborted and the number of characters the program had
+read and written at the time it aborted, and exits with code 2.
+.PP
+If the program fails, LIM prints the error message "guard failed",
+together with the maximum number of characters that the program
+read from the input at any time in the backtracking execution
+before it was determined to fail; then the interpreter exits with
+code 1. Often an examination of the input in the vicinity of the
+high-water mark for reading can help you detect the reason for the
+failure.
+.PP
+If the LIM program halts normally, the interpreter exits with
+code 0.
+.SH "LIM EXECUTABLE FILES"
+The interpreter ignores the first line of progfile if it starts
+with the character "#".  This allows the UNIX kernel to invoke the
+lim interpreter on LIM programs if the file has its execute bit
+set and starts with a line of the form:
+.IP "" 4
+#!lim_pathname
+.PP
+where "lim_pathname" is the pathname of the lim interpreter.
+You can find this pathname by typing "which lim" to your shell.
+.PP
+FURTHER HINTS AND EXAMPLES
+COMMON PITFALLS.  When using LIM to parse context-free syntax, it
+is important to left-factor the grammar to reflect the different
+binding powers of the different operators.  For example, here is a
+program that reads an arithmetic expression containing sums and
+products and parenthesized decimal numerals and prints its value:
+
+.EX
+    PROC Main() IS WriteInt(Eval()); Wr('\n') END;
+
+    PROC n := Eval() IS
+        n := Eval1();
+        DO Token('+'); n := n + Eval1() OD
+    END;
+
+    (* Eval1() evaluates an expression whose root operator is not "+". *)
+    PROC n := Eval1() IS
+        n := Eval2();
+        DO Token('*'); n := n * Eval2() OD
+    END;
+
+    (* Eval2() evaluates an expression without a binary root operator. *)
+    PROC n := Eval2() IS
+        n := ReadInt()
+      | Token('('); n := Eval(); Token(')')
+    END;
+
+    PROC n := ReadInt() IS
+        SkipWhite();
+        n := RdDigit();
+        DO n := 10 * n + RdDigit() OD
+    END;
+
+    PROC n := RdDigit() IS
+        VAR c := Rd() IN
+        '0' <= c AND c <= '9' -> n := c - '0'
+        END
+    END;
+
+    PROC Token(c) IS SkipWhite(); Rd(c) END;
+
+    PROC SkipWhite() IS
+        DO Rd(' ') | Rd('\t') | Rd('\n') OD
+    END;
+
+    PROC WriteInt(n) IS
+        n = 0 -> Wr('0')
+      | n < 0 -> Wr('-'); WI2(-n)
+      | WI2(n)
+    END;
+
+    PROC WI2(n) IS
+        n = 0 -> SKIP
+      | WI2(n DIV 10); Wr('0' + (n MOD 10))
+     END;
+.EE
+
+.PP
+A common error is to forget to properly sort the cases of a long
+syntactic category.  For example, consider something like the
+following, which attempts to read identifiers, integers, or
+function applications:
+.EX
+    PROCEDURE Expr() IS
+        Id()
+      | Int()
+      | Id(); Rd('('); DO Expr() OD; Rd(')')
+      ...
+.EE
+This is a mistake: the function application case will never be
+taken, since whenever it could be, the first case will be taken
+instead.
+.PP
+WRITING FAST LIM PROGRAMS.  The basic strategy of the current
+implementation is to save the state before executing "A | B"; if
+"A" fails, the implementation restores the old state before
+continuing with "B".  Similarly, the state must be saved before each
+iteration of the "DO A OD" or "TIL B DO A END".  However, the
+implementation omits saving the state if static analysis shows that
+it is unnecessary.  For example, to execute
+.IP "" 4
+ Wr('0'); Rd('0') | ...
+.PP
+the state must be saved, since it may be necessary to undo the
+write, but to execute
+.IP "" 4
+ Rd('0'); Wr('0') | ...
+.PP
+there is no need to save the state, since if the left argument to
+"|" fails, it does so before causing any side effects.  As a
+result, the second command executes somewhat faster than the
+first.
+.SH BUGS
+The interpreter does not detect arithmetic overflow in the program
+it is interpreting.
+.SH "SEE ALSO"
+.MS pplim 1
+.SH "AUTHORS OF OBJECT"
+Mike Burrows and Greg Nelson
+.SH "AUTHORS OF DOCUMENTATION"
+Mike Burrows and Greg Nelson
+.IP "" 1
+.ti -5
+.EX
+Last modified on Tue Jun  7 11:37:43 PDT 1994 by glassman
+     modified on Thu Jan 28 22:26:51 1993 by burrows
+     modified on Wed Jan 27 23:45:10 1993 by gnelson
+.EE

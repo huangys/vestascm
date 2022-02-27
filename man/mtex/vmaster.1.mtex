@@ -1,0 +1,262 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vmaster - Acquire Vesta mastership}{vmaster}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vmaster} - Acquire mastership of objects in the Vesta repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vmaster} [\link{#-r}{-r}]
+[\link{#-s}{-s} \it{srchost}[:[\it{srcport}][:\it{srcuser}]]]
+[\link{#-d}{-d} \it{dsthost}[:[\it{dstport}][:\it{dstuser}]]]
+[\link{#-h}{-h} \it{hints}] object ...
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#Diagnostics}{Diagnostics}
+\item \link{#Environment}{Environment}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+See the
+\link{vesta-intro.1.html#Terminology}{Terminology} section of the
+\link{vesta-intro.1.html}{vesta-intro} man page for definitions of
+terms.
+
+The \bf{vmaster} command tells the destination (-d) repository to
+acquire mastership of the specified objects from the source (-s)
+repository.  
+By default, the local repository is taken as the
+destination and the source repository is guessed; see below for details.
+The objects must be specified by their full global pathnames (that is, by
+names beginning with "/vesta").
+The objects must already exist in the destination repository;
+use the Vesta replicator
+\link{vrepl.1.html}{vrepl} first if they do not.
+If the destination repository already has mastership, the command
+has no effect; this is not considered an error.
+
+For mastership transfer on an object to be allowed, the user must have
+ownership permission in both the source and destination repositories.
+The source repository must be willing to cede mastership to the
+destination repository, and the destination repository must be willing
+to accept mastership from the source repository.  A repository is
+willing to cede (or accept) mastership on an object from another
+repository if, when searching upward from the object's pathname in its
+copy of the namespace, the first object it finds that has a
+\tt{#mastership-to} (or respectively \tt{#mastership-from}) attribute
+includes the other repository's host:port name (or '\tt{*}') in its
+value.  If no object with the appropriate attribute is found,
+permission is denied.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-r}{-r}}
+Recursively acquire mastership on all children of the specified
+objects, as well as the objects themselves.
+Default: off.
+
+\item{\anchor{-s}{-s} \it{srchost}[:[\it{srcport}][:\it{srcuser}]]}
+Specifies the source repository by host name and TCP port number.  If
+not specified, vmaster tries to guess the correct
+source repository, by looking for "master-repository" attributes on
+the specified objects or their ancestor directories.  If \it{srchost} is
+specified but \it{srcport} is omitted, \it{srcport} defaults to the local
+repository's port number as specified in the active Vesta
+configuration file (see the \link{#Configuration}{Configuration}
+section below).  Alternatively, the string "local" can be given to
+explicitly specify the local repository.
+
+You can also specify the global user name under which you will access
+the source repository.  The default is \it{user}@\it{realm}, where
+\it{user} is your local user name and \it{realm} is the value of
+[UserInterface]realm in the active Vesta configuration file.
+If vrepl cannot authenticate you to the source repository as 
+being the specified user, the transfer will fail with an error message.
+
+\item{\anchor{-d}{-d} \it{dsthost}[:[\it{dstport}][:\it{dstuser}]]}
+Specifies the destination repository by host name and TCP port number.
+Both \it{dsthost} and \it{dstport}
+default to the values specified for the local
+repository in the active Vesta configuration file (see the 
+\link{#Configuration}{Configuration} section below).  Alternatively, the string
+"local" can be given to explicitly specify the local repository.
+
+You can also specify the global user name under which you will access
+the destination repository.  The default is \it{user}@\it{realm}, where
+\it{user} is your local user name and \it{realm} is the value of
+[UserInterface]realm in the active Vesta configuration file.
+If vrepl cannot authenticate you to the destination repository as 
+being the specified user, the transfer will fail with an error message.
+
+\item{\anchor{-h}{-h} \it{hints}}
+If you do not give the -s flag to specify the source repository
+explicitly, and \bf{vmaster} fails to guess it,
+you can suggest additional repositories to look in using this option.
+The \it{hints} argument is a comma- or space-separated list of repositories,
+specified by host name and TCP port number 
+in the format \it{host}\tt{:}\it{port}.
+The \tt{:}\it{port} portion may be omitted; it
+defaults to \link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+
+\end{description}
+
+\section{\anchor{Diagnostics}{Diagnostics}}
+
+Here are the most common error messages you are likely to see and what they
+generally mean.
+
+\it{Can't find master replica}: The algorithm for guessing the
+appropriate source repository failed.  The object's name and a list of
+repositories that were unsuccessfully tried follows on the same line.
+You can correct the problem by either explicitly specifying the source
+repository with the -s flag, supplying additional hints with the -h
+flag, or correcting the object's \tt{master-repository} attribute in
+the destination repository.
+
+\it{Invalid argument}: Returned for implementation errors where one of
+the two repositories supplies invalid data to the other; these should
+never occur.
+
+\it{Name too long}: Overly long arc in pathname.
+
+\it{No permission}: Permission to change either the destination
+or source repository was denied.
+
+\it{Not a directory}: Invalid pathname that has arcs beyond a leaf.
+
+\it{Not found}: The object was not found in the destination repository.
+You may need to use the Vesta replicator
+\link{vrepl.1.html}{vrepl} first to copy it in.
+
+\it{Not master replica}: The specified source repository
+is not the master for this object.  This includes the case where the
+source repository does not have a copy of the object (or a stub
+or ghost).
+
+\it{Operation not available on given source type}: Mastership transfer
+is not permitted between the specified object types.  The forbidden
+types of transfer are:
+\begin{itemize}
+\item To a stub from a non-stub.
+\item To an appendable directory from a ghost.
+\item To a ghost from a non-ghost.  (Technically legal,
+but disallowed because it probably represents a mistake.)
+\item On an object
+that does not have independent mastership (e.g., a file in an
+immutable directory).
+\item Between types that should not occur together
+because they violate the replica agreement invariant (e.g., to an immutable
+directory from a file).
+\end{itemize}
+
+\it{Remote call from repository to another server failed}:
+A remote procedure call from destination to source repository failed.
+One of the following two messages will normally appear on the next line:
+\begin{itemize}
+\item \it{Note: transfer was not started}: The error occurred before the 
+transfer protocol got under way.  Neither repository was modified.
+\item \it{Note: transfer is still in progress; may finish later}: The error
+occurred after the transfer was partially done.  The destination
+object is left with a "#master-request" attribute set, and the
+destination repository has forked a recovery thread to complete 
+or abort the transfer.  This thread runs periodically, persisting even after
+reboots, until the source repository can be contacted to resolve the
+transfer.  If necessary, you can force the destination to give up on recovery
+by manually removing the "#master-request" attribute, but this may leave
+the object with no master replica, and/or leave a dangling "#master-grant" 
+attribute on the source replica.
+\end{itemize}
+
+\it{SRPC failure}: The remote procedure call from \bf{vmaster} to the
+destination repository failed.  More information about the failure
+follows on the same line, and if it is possible that the call was
+started, the message "\it{Note: transfer might have been started}"
+appears on the next line.  If the transfer was in fact started, it may
+either have finished successfully, have been aborted, or be still in progress
+as described above.
+
+\section{\anchor{Environment}{Environment}}
+
+As with all Vesta tools, $VESTACONFIG can be used to override the
+default location for the Vesta configuration file.  No other
+environment variables are used.
+
+\section{\anchor{Configuration}{Configuration}}
+
+The following values are obtained from the Vesta configuration file
+(vesta.cfg).
+
+From the \tt{[Repository]} section:
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+Host name of the default local repository.
+\item{\it{VestaSourceSRPC_port}}
+TCP port number of the default local repository.
+\end{description}
+
+From the \tt{[UserInterface]} section:
+\begin{description}
+\item{\it{realm}}
+Name of the local realm.  \tt{@}\it{realm} is appended to local user names
+to obtain global user names.
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+!! It might be nice to optionally call the replicator for the
+specified objects (but not their children) first.  -r should
+probably not make this recursive, but maybe a stronger (-R?) flag should
+be available to do so.  What about all the flags the replicator
+can take, though?
+
+!! When/if GSS-API authentication is added, your credentials for the
+source repository will have to be delegatable to the destination
+repository.
+
+\section{\anchor{See_Also}{See Also}}
+
+\begin{flushleft}
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{vmaster.1.html}{\bf{vrepl}(1)},
+\link{repository.8.html}{\bf{repository}(8)}\newline
+\it{Vesta: A System for Software Configuration Management}
+\end{flushleft}
+
+\section{\anchor{Author}{Author}}
+
+\begin{flushleft}
+\link{http://www.tim-mann.org/}{Tim Mann}
+\end{flushleft}
+
+\begin{verbatim}
+Last modified on Fri Nov  9 14:37:59 EST 2001 by ken@xorian.net  
+     modified on Fri Jun  1 16:05:43 PDT 2001 by mann  
+\end{verbatim}

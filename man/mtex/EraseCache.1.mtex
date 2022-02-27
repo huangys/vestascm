@@ -1,0 +1,119 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{EraseCache(1) man page}{EraseCache}{1}
+
+\section{Name}
+
+EraseCache - delete files maintained by the Vesta-2 cache server
+
+\section{Synopsis}
+
+\bf{EraseCache} [ \bf{-f} ] [ \bf{-v} ]
+
+\section{Description}
+
+\it{EraseCache} deletes files maintained by the Vesta-2 cache server.
+In particular, it deletes the cache server's log files, stable cache
+files (i.e., all of the so-called MultiPKFiles), and stable
+variable files. It also deletes any stable files written by the
+Vesta-2 weeder, \link{VestaWeed.1.html}{VestaWeed(1)}.
+
+By default, the files containing the stable cache entries are not
+listed when they are deleted, since there are likely to be so many of
+them. If you specify the \bf{-v} switch, all of the stable cache files
+are listed as they are deleted.
+
+Since erasing a cache server's cache is a serious operation,
+by default \it{EraseCache} displays the directory of the cache
+that will be erased, and then asks for confirmation:
+
+\begin{verbatim}
+  Are you sure you want to erase this cache (y/n)?
+\end{verbatim}
+
+The cache will only be erased if your response begins with the letter
+"y". The \bf{-f} switch forces the cache to be erased without a
+request for confirmation.
+
+When you erase the cache files created by some cache server, you must
+run \it{EraseCache} as the same user that ran the cache server that
+created those files. In particular, to erase the centralized cache,
+you must run \it{EraseCache} as \it{vestasrv}.
+
+When you run \it{EraseCache}, cache entries are only deleted from the
+disk, not from the memory of a running cache server
+\link{VCache.1.html}{VCache(1)}. To run the cache server on an empty
+cache, you must kill any running instance of the cache server, run
+\it{EraseCache}, and then restart the server.
+
+\bf{Warning!} You should never erase a stable cache that is in use by
+some cache server. Doing so will most likely cause the cache server to
+crash. Be sure there is no cache server running on the stable cache in
+question before using this program.
+
+\section{Configuration Variables}
+
+\it{EraseCache} deletes files contained in a part of the filesystem
+pointed to by the current Vesta configuration file. In particular, it
+reads the following values from the \it{CacheServer} section of the
+configuration file:
+
+\begin{verbatim}
+[CacheServer]
+MetaDataRoot     - root of Vesta-2 meta-data
+  MetaDataDir    - root of cache server meta-data sub-tree
+    SCacheDir    - root of stable cache entries sub-tree
+    SVarsDir     - root of stable variables sub-tree
+    WeededLogDir - directory containing log of weeded MPKFiles
+    CacheLogDir  - directory containing the cache log
+    GraphLogDir  - directory containing the graph log
+    CILogDir     - directory containing the used cache index log
+\end{verbatim}
+
+It also reads the following value from the \it{Weeder} section of
+the configuration file:
+
+\begin{verbatim}
+[Weeder]
+  MetaDataDir    - root of weeder meta-data files
+\end{verbatim}
+
+Nesting indicates how the directory tree corresponding to these names
+is structured. If the \it{MetaDataRoot} value is the empty string,
+then the current directory is used.
+
+\section{See Also}
+
+\link{CleanCache.1.html}{CleanCache(1)},
+\link{CreateCacheDirs.1.html}{CreateCacheDirs(1)},
+\link{PrintMPKFile.1.html}{PrintMPKFile(1)},
+\link{ShowCache.1.html}{ShowCache(1)},
+\link{VCache.1.html}{VCache(1)},
+\link{VestaWeed.1.html}{VestaWeed(1)},
+\link{WhichCache.1.html}{WhichCache(1)}.
+
+\section{Author}
+
+Allan Heydon
+(\tt{caheydon@yahoo.com})
+
+\begin{verbatim}
+Last modified on Thu Nov  8 12:48:54 EST 2001 by ken@xorian.net
+     modified on Sun Oct  4 19:22:45 PDT 1998 by heydon
+\end{verbatim}

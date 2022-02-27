@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
   /* 如果 / 下有个 tmp 的目录, 则将 tmpfs 伪文件系统 mount 上.
    * 有些应用程序需要 lock /tmp 目录里的文件, 如 icc 等. */
   if ((stat("/tmp", &sb) == 0) && (S_IFDIR & sb.st_mode)) {
-    if (mount("none", "/tmp", "tmpfs", 0, "size=512M" ) == -1) {
+    if (mount("none", "/tmp", "tmpfs", 0, "size=4096M" ) == -1) {
       giveup(mount_tmpfs_failure, errno);
     }
   }

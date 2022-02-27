@@ -1,0 +1,172 @@
+% Copyright (C) 2001, Compaq Computer Corporation
+% 
+% This file is part of Vesta.
+% 
+% Vesta is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+% 
+% Vesta is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+% 
+% You should have received a copy of the GNU Lesser General Public
+% License along with Vesta; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+\manpage{vid - Get user access control information from the repository}{vid}{1}
+
+\section{\anchor{Name}{Name}}
+
+\bf{vid} - Get user access control information from the repository
+
+\section{\anchor{Synopsis}{Synopsis}}
+
+\bf{vid} [\link{#-R}{-R \it{repos}}] [\it{user}]
+
+\section{\anchor{Contents}{Contents}}
+
+\begin{itemize}
+\item \link{#Description}{Description}
+\item \link{#Flags}{Flags}
+\item \link{#ExamplesSect}{Examples}
+\item \link{#Configuration}{Configuration}
+\item \link{#Limitations}{Limitations}
+\item \link{#See_Also}{See Also}
+\item \link{#Author}{Author}
+\end{itemize}
+
+\section{\anchor{Description}{Description}}
+
+The \bf{vid} command prints out access control information about
+users.  It gets this information from the repository, which makes it
+possible to determine exactly what permissions a user has.  It can be
+useful for debugging permissions problems.
+
+\bf{vid} prints out several pieces of information:
+
+\begin{itemize}
+\item The user's global name and aliases are displayed one per line.
+These are represented as global usernames (\it{user}@\it{realm}).
+(The first name listed is the global name about which the request was
+made.)
+\item The user's group memberships are displayed one per line.  These
+are represented as global group names (^\it{group}@\it{realm}).
+\item The user's UNIX user id.  (This is the user id used in the NFS
+interface for anything owned by the user.  For non-local users, this
+will be \tt{[Repository]vforeign_uid}.)
+\item The user's UNIX primary group id.
+\item Any special powers granted to the user are displayed.
+Specically, these include: \tt{root} (the user is
+\tt{[Repository]root_user}), \tt{admin} (this user has administrator
+access), \tt{wizard} (this user has wizard access), \tt{runtool} (this
+user is \tt{[Repository]runtool_user}),
+\end{itemize}
+
+Users with administrator access may inquire about any user.  The
+optional \it{user} may be specified either as a global username
+(\it{user}@\it{realm}) or as a local username without a realm, in
+which case the local realm will be assumed.
+
+If you are inquiring about yourself at the local repository (the -R
+option is not used), \bf{vid} will check that your user ID on the
+client machine matches the user ID that the repository has for you.
+If it doesn't (which probably indicates a misconfiguration), a warning
+will be printed.
+
+\bf{vid} returns status 0 for success, 1 for configuration errors, and
+2 for network or permissions errors.
+
+\section{\anchor{Flags}{Flags}}
+
+\begin{description}
+\item{\anchor{-R}{-R \it{repos}}}
+Make the request for user information to \it{repos} instead of the
+default local repository.  The repository is specified by host name
+and TCP port number in the format \it{host}\tt{:}\it{port}.  The
+\tt{:}\it{port} portion may be omitted; it defaults to
+\link{#Configuration}{\it{[Repository]VestaSourceSRPC_port}}.
+\end{description}
+
+\section{\anchor{ExamplesSect}{Examples}}
+
+Sample output for a normal user:
+
+\begin{verbatim}
+% vid
+User names and aliases:
+  john@smith.org
+  jsmith@example.com
+Groups:
+  ^john@smith.org
+  ^vesta@smith.org
+  ^staff@example.com
+  ^users@example.com
+Unix (NFS) user ID:          1012
+Unix (NFS) primary group ID: 1015
+\end{verbatim}
+
+Sample output for an administrator inquiring about the wizard user:
+
+\begin{verbatim}
+# vid vwizard 
+User names and aliases:
+  vwizard@example.com
+Groups:
+  ^vadmin@example.com
+  ^vesta@example.com
+Unix (NFS) user ID:          1002
+Unix (NFS) primary group ID: 1003
+Special permissions:
+  admin
+  wizard
+\end{verbatim}
+
+\section{\anchor{Configuration}{Configuration}}
+
+
+The following values are obtained from the \tt{[UserInterface]} section of the
+Vesta configuration file (vesta.cfg).
+
+\begin{description}
+\item{\it{realm} (optional)}
+If set, specifies the default realm to be used with an unqualified
+\it{user} argument (i.e. one containing no "@").  (If not set,
+\tt{[Repository]realm} is used.)
+\end{description}
+
+The following values are obtained from the \tt{[Repository]} section of the
+Vesta configuration file.
+\begin{description}
+\item{\it{VestaSourceSRPC_host}}
+The host name of the default (local) repository.
+\item{\it{VestaSourceSRPC_port}}
+The default TCP port number for repositories.
+\item{\it{realm}}
+If \tt{[UserInterface]realm is not set}, specifies the default realm
+to be used with an unqualified \it{user} argument
+\end{description}
+
+\section{\anchor{Limitations}{Limitations}}
+
+To inquire about any user (even yourself), you must be granted access
+to the repository.  If you have no access, you cannot make inquiries.
+
+As mentioned above, normal users can only inquire about themselves.
+Administrators can inquire about anyone.
+
+\section{\anchor{See_Also}{See Also}}
+
+\link{repository.8.html#AccessControl}{\bf{repository}(8), "Access Control" section},
+\link{vesta-intro.1.html}{\bf{vesta-intro}(1)},
+\link{repos-ui.1.html}{\bf{repos-ui}(1)}
+
+\section{\anchor{Author}{Author}}
+
+Ken Schalk <\link{mailto:ken@xorian.net}{\tt{ken@xorian.net}}>
+
+\begin{verbatim}
+Last modified on Wed Jan 22 23:04:28 EST 2003 by ken@xorian.net
+\end{verbatim}
