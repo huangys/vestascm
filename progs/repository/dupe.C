@@ -234,7 +234,7 @@ new_rpc(SVCXPRT* xprt, struct rpc_msg* msg)
   pthread_once(&once, dupe_init);
 
   unsigned int table_index =
-    dupeTableIndex(msg->rm_xid, as_sockaddr_in(xprt->xp_raddr));
+    dupeTableIndex(msg->rm_xid, as_sockaddr_in((struct sockaddr_in&)(xprt->xp_raddr)));
   assert(dupeTables != NULL);
   return dupeTables[table_index].new_rpc(xprt, msg);
 }
@@ -243,7 +243,7 @@ bool DupeTable::new_rpc(SVCXPRT* xprt, struct rpc_msg* msg)
 {
   RPCValue* oldv;
   RPCValue* newv = NEW_CONSTR(RPCValue,
-			      (msg->rm_xid, as_sockaddr_in(xprt->xp_raddr),
+			      (msg->rm_xid, as_sockaddr_in((struct sockaddr_in&)(xprt->xp_raddr)),
 			       NULL, 0));
   this->mu.lock();
   bool isDupe = this->dupeTable.Get(newv->key, oldv);
@@ -310,7 +310,7 @@ completed_rpc(SVCXPRT* xprt, struct rpc_msg* msg, int replylen)
   pthread_once(&once, dupe_init);
 
   unsigned int table_index =
-    dupeTableIndex(msg->rm_xid, as_sockaddr_in(xprt->xp_raddr));
+    dupeTableIndex(msg->rm_xid, as_sockaddr_in((struct sockaddr_in&)(xprt->xp_raddr)));
   assert(dupeTables != NULL);
 
   dupeTables[table_index].completed_rpc(xprt, msg, replylen);
@@ -318,7 +318,7 @@ completed_rpc(SVCXPRT* xprt, struct rpc_msg* msg, int replylen)
 
 void DupeTable::completed_rpc(SVCXPRT* xprt, struct rpc_msg* msg, int replylen)
 {
-  RPCKey k(msg->rm_xid, as_sockaddr_in(xprt->xp_raddr));
+  RPCKey k(msg->rm_xid, as_sockaddr_in((struct sockaddr_in&)(xprt->xp_raddr)));
   RPCValue* v;
   this->mu.lock();
 
