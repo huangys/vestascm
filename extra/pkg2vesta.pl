@@ -1491,6 +1491,10 @@ sub owning_package ($ )
       {
 	return owning_tru64_subset($fname);
       }
+    elsif($Options{'pkg-type'} eq "tgz")
+      {
+        return undef;   # 脏补丁: 不知如何查找相关,返回不知道
+      }
 
     print STDERR ("Fatal Error: Don't know how to find owning package ",
 		  "of $fname\n");
