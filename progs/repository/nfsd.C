@@ -411,18 +411,18 @@ nfsd_thread(void *arg)
       r.rq_cred = msg.rm_call.cb_cred;
 
       /* Authenticate */
-      if ((why =
-#if defined(HAVE__AUTHENTICATE)
-	   _authenticate(&r, &msg)
-#elif defined(HAVE___AUTHENTICATE)
-	   __authenticate(&r, &msg)
-#else
-# error Need server-side RPC authentication function
-#endif
-	   ) != AUTH_OK) {
-	svcerr_auth(xprt, why);
-	continue;
-      }
+//       if ((why =
+// #if defined(HAVE__AUTHENTICATE)
+// 	   _authenticate(&r, &msg)
+// #elif defined(HAVE___AUTHENTICATE)
+// 	   __authenticate(&r, &msg)
+// #else
+// # error Need server-side RPC authentication function
+// #endif
+// 	   ) != AUTH_OK) {
+// 	svcerr_auth(xprt, why);
+// 	continue;
+//       }
       RECORD_TIME_POINT;
 
       /* Check this is really an NFS call */
